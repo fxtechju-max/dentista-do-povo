@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Users, Calendar, DollarSign, TrendingUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,6 +7,7 @@ import {
   formatCurrency,
   type AppointmentStatus,
 } from "@/lib/admin/labels";
+import { ADMIN_MODULES } from "@/lib/modules";
 
 export const Route = createFileRoute("/admin/")({
   component: Dashboard,
@@ -48,7 +49,17 @@ function Dashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [upcoming, setUpcoming] = useState<UpcomingAppointment[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [disabledModules, setDisabledModules] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    supabase
+      .from("clinic_settings")
+      .select("disabled_modules")
+      .eq("id", "default")
+      .maybeSingle()
+      .then(({ data }) => setDisabledModules(data?.disabled_modules ?? []));
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -142,6 +153,24 @@ function Dashboard() {
             <p className="mt-1 text-2xl font-extrabold">{loading ? "…" : card.value}</p>
           </div>
         ))}
+      </div>
+
+      <div className="mt-6">
+        <h2 className="font-bold">🗂️ Quadro de módulos</h2>
+        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          {ADMIN_MODULES.filter((m) => !disabledModules.includes(m.id)).map((m) => (
+            <Link
+              key={m.id}
+              to={m.to}
+              className="animate-in fade-in flex flex-col items-center gap-2 rounded-2xl border border-border bg-card p-4 text-center transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
+            >
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <m.icon className="h-5 w-5" />
+              </span>
+              <span className="text-xs font-bold leading-tight">{m.label}</span>
+            </Link>
+          ))}
+        </div>
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr]">

@@ -428,6 +428,7 @@ export type Database = {
           address: string | null;
           ai_secretary_enabled: boolean;
           clinic_name: string | null;
+          disabled_modules: string[];
           id: string;
           phone: string | null;
           updated_at: string;
@@ -436,6 +437,7 @@ export type Database = {
           address?: string | null;
           ai_secretary_enabled?: boolean;
           clinic_name?: string | null;
+          disabled_modules?: string[];
           id?: string;
           phone?: string | null;
           updated_at?: string;
@@ -444,6 +446,7 @@ export type Database = {
           address?: string | null;
           ai_secretary_enabled?: boolean;
           clinic_name?: string | null;
+          disabled_modules?: string[];
           id?: string;
           phone?: string | null;
           updated_at?: string;

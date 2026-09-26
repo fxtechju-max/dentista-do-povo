@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Check, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/admin/PageHeader";
+import { ADMIN_MODULES } from "@/lib/modules";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,11 +21,14 @@ function Configuracoes() {
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [aiSecretaryEnabled, setAiSecretaryEnabled] = useState(false);
+  const [disabledModules, setDisabledModules] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingClinic, setSavingClinic] = useState(false);
+  const [savingModules, setSavingModules] = useState(false);
   const [savedProfile, setSavedProfile] = useState(false);
   const [savedClinic, setSavedClinic] = useState(false);
+  const [savedModules, setSavedModules] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -41,13 +45,14 @@ function Configuracoes() {
       }
       const { data: clinic } = await supabase
         .from("clinic_settings")
-        .select("clinic_name, phone, address, ai_secretary_enabled")
+        .select("clinic_name, phone, address, ai_secretary_enabled, disabled_modules")
         .eq("id", "default")
         .maybeSingle();
       setClinicName(clinic?.clinic_name ?? "");
       setPhone(clinic?.phone ?? "");
       setAddress(clinic?.address ?? "");
       setAiSecretaryEnabled(clinic?.ai_secretary_enabled ?? false);
+      setDisabledModules(clinic?.disabled_modules ?? []);
       setLoading(false);
     })();
   }, []);
@@ -76,6 +81,22 @@ function Configuracoes() {
     setSavingClinic(false);
     setSavedClinic(true);
     setTimeout(() => setSavedClinic(false), 2000);
+  }
+
+  function toggleModule(id: string, enabled: boolean) {
+    setDisabledModules((prev) => (enabled ? prev.filter((m) => m !== id) : [...prev, id]));
+  }
+
+  async function saveModules() {
+    setSavingModules(true);
+    await supabase.from("clinic_settings").upsert({
+      id: "default",
+      disabled_modules: disabledModules,
+      updated_at: new Date().toISOString(),
+    });
+    setSavingModules(false);
+    setSavedModules(true);
+    setTimeout(() => setSavedModules(false), 2000);
   }
 
   if (loading) {
@@ -174,6 +195,48 @@ function Configuracoes() {
             )}
           </Button>
         </div>
+      </div>
+
+      <div className="rounded-2xl border border-border bg-card p-6">
+        <h2 className="font-bold">🗂️ Módulos do sistema</h2>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Desative aqui os módulos que não usa — eles somem do menu e do quadro do Dashboard.
+        </p>
+        <div className="mt-4 space-y-2">
+          {ADMIN_MODULES.map((m) => {
+            const enabled = !disabledModules.includes(m.id);
+            return (
+              <div
+                key={m.id}
+                className="flex items-center justify-between rounded-lg border border-border px-3 py-2"
+              >
+                <div className="flex items-center gap-2">
+                  <m.icon className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <Label htmlFor={`mod-${m.id}`}>{m.label}</Label>
+                    <p className="text-xs text-muted-foreground">{m.description}</p>
+                  </div>
+                </div>
+                <Switch
+                  id={`mod-${m.id}`}
+                  checked={enabled}
+                  onCheckedChange={(checked) => toggleModule(m.id, checked)}
+                />
+              </div>
+            );
+          })}
+        </div>
+        <Button className="mt-4" onClick={saveModules} disabled={savingModules}>
+          {savedModules ? (
+            <>
+              <Check /> Salvo
+            </>
+          ) : savingModules ? (
+            "Salvando..."
+          ) : (
+            "Salvar módulos"
+          )}
+        </Button>
       </div>
     </div>
   );

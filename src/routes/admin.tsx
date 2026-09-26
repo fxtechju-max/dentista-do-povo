@@ -1,20 +1,8 @@
 import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   LayoutDashboard,
-  Calendar,
-  Users,
-  Activity,
-  Receipt,
-  DollarSign,
-  TrendingUp,
-  MessageCircle,
-  Phone,
-  FileText,
-  ClipboardList,
-  BarChart3,
   Sparkles,
-  Globe,
   Settings,
   LogOut,
   ChevronLeft,
@@ -23,6 +11,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { ADMIN_MODULES } from "@/lib/modules";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -34,24 +23,6 @@ export const Route = createFileRoute("/admin")({
   }),
   component: AdminLayout,
 });
-
-const NAV_ITEMS = [
-  { to: "/admin", label: "📊 Dashboard", icon: LayoutDashboard },
-  { to: "/admin/agenda", label: "📅 Agenda", icon: Calendar },
-  { to: "/admin/pacientes", label: "👥 Pacientes", icon: Users },
-  { to: "/admin/tratamentos", label: "🦷 Tratamentos", icon: Activity },
-  { to: "/admin/orcamentos", label: "🧾 Orçamentos", icon: Receipt },
-  { to: "/admin/financeiro", label: "💰 Financeiro", icon: DollarSign },
-  { to: "/admin/crm", label: "🤝 CRM", icon: TrendingUp },
-  { to: "/admin/suporte", label: "💬 Suporte", icon: MessageCircle },
-  { to: "/admin/whatsapp", label: "📱 WhatsApp", icon: Phone },
-  { to: "/admin/documentos", label: "📄 Documentos", icon: FileText },
-  { to: "/admin/receitas", label: "💊 Receitas", icon: ClipboardList },
-  { to: "/admin/relatorios", label: "📈 Relatórios", icon: BarChart3 },
-  { to: "/admin/ia", label: "🤖 IA", icon: Sparkles },
-  { to: "/admin/cms-site", label: "🌐 CMS Site", icon: Globe },
-  { to: "/admin/configuracoes", label: "⚙️ Configurações", icon: Settings },
-] as const;
 
 function greeting() {
   const hour = new Date().getHours();
@@ -66,9 +37,32 @@ function AdminLayout() {
   const [status, setStatus] = useState<"loading" | "denied" | "ok">("loading");
   const [email, setEmail] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState(false);
+  const [disabledModules, setDisabledModules] = useState<string[]>([]);
   const [notifPermission, setNotifPermission] = useState<NotificationPermission | "unsupported">(
     "default",
   );
+
+  useEffect(() => {
+    supabase
+      .from("clinic_settings")
+      .select("disabled_modules")
+      .eq("id", "default")
+      .maybeSingle()
+      .then(({ data }) => setDisabledModules(data?.disabled_modules ?? []));
+  }, []);
+
+  const navItems = useMemo(() => {
+    const modules = ADMIN_MODULES.filter((m) => !disabledModules.includes(m.id)).map((m) => ({
+      to: m.to,
+      label: m.label,
+      icon: m.icon,
+    }));
+    return [
+      { to: "/admin", label: "📊 Dashboard", icon: LayoutDashboard },
+      ...modules,
+      { to: "/admin/configuracoes", label: "⚙️ Configurações", icon: Settings },
+    ];
+  }, [disabledModules]);
 
   useEffect(() => {
     (async () => {
@@ -163,7 +157,7 @@ function AdminLayout() {
         </div>
 
         <nav className="flex-1 space-y-0.5 overflow-y-auto p-2">
-          {NAV_ITEMS.map((item) => {
+          {navItems.map((item) => {
             const active =
               item.to === "/admin" ? pathname === "/admin" : pathname.startsWith(item.to);
             const Icon = item.icon;
