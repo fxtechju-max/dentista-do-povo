@@ -5,7 +5,7 @@
 // backup can never lock the admin out of their own system.
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import type { RowDataPacket } from "mysql2";
+import type { Row as RowDataPacket } from "@/integrations/mysql/pool.server";
 import { tableColumns, type TableName } from "@/integrations/mysql/tables";
 import type { Json } from "@/integrations/mysql/types";
 
@@ -129,7 +129,7 @@ export const restoreBackup = createServerFn({ method: "POST" })
           const values = keys.map((k) => {
             const v = row[k];
             if (v == null) return null;
-            if (BOOLEAN_COLUMNS.has(k)) return v ? 1 : 0;
+            if (BOOLEAN_COLUMNS.has(k)) return Boolean(v);
             if (k.endsWith("_at") && typeof v === "string") return new Date(v);
             if (Array.isArray(v)) return JSON.stringify(v);
             return v as string | number;
@@ -137,7 +137,7 @@ export const restoreBackup = createServerFn({ method: "POST" })
           const mutable = keys.filter((k) => k !== pk);
           await conn.execute(
             `INSERT INTO \`${table}\` (${keys.map((k) => `\`${k}\``).join(",")}) VALUES (${keys.map(() => "?").join(",")})
-             ON DUPLICATE KEY UPDATE ${mutable.length ? mutable.map((k) => `\`${k}\`=VALUES(\`${k}\`)`).join(",") : `\`${pk}\`=\`${pk}\``}`,
+             ON CONFLICT (${pk}) ${mutable.length ? "DO UPDATE SET " + mutable.map((k) => `"${k}"=EXCLUDED."${k}"`).join(",") : "DO NOTHING"}`,
             values,
           );
           restored++;

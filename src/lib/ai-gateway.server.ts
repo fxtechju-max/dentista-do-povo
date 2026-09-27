@@ -3,7 +3,7 @@
 // env vars. The api key column is never selected outside this file and
 // functions.ts's getAiGatewaySettings (which only ever returns a masked
 // preview) — never send it to the browser in full.
-import type { RowDataPacket } from "mysql2";
+import type { Row as RowDataPacket } from "@/integrations/mysql/pool.server";
 import { getPool } from "@/integrations/mysql/pool.server";
 
 type GatewayConfig = { apiKey: string; baseUrl: string; model: string };
