@@ -355,6 +355,7 @@ export const needsFirstAdmin = createServerFn({ method: "POST" }).handler(async 
     );
     return { data: rows.length === 0, error: null };
   } catch (error) {
+    console.error("[banco] Falha ao conectar:", error);
     return {
       data: false,
       error: { message: error instanceof Error ? error.message : "Banco indisponível." },

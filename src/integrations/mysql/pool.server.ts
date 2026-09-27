@@ -73,7 +73,11 @@ let schemaReady: Promise<void> | undefined;
 
 export function getSql() {
   if (!client) {
-    const url = databaseUrl();
+    const raw = databaseUrl();
+    // A integração Supabase ↔ Vercel acrescenta parâmetros como
+    // "?sslmode=require&supa=base-pooler.x" que o driver repassaria ao
+    // servidor (e ele recusa). O SSL já é configurado abaixo, então removemos.
+    const url = raw.split("?")[0] ?? "";
     if (!url)
       throw new Error(
         "Banco de dados não configurado. Conecte o Supabase ao projeto na Vercel (variável POSTGRES_URL).",
