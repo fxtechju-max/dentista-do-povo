@@ -4,7 +4,7 @@ import { Images, X } from "lucide-react";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { ChatWidget } from "@/components/site/ChatWidget";
-import { db, galleryPhotoUrl } from "@/integrations/supabase/client";
+import { db, galleryPhotoUrl } from "@/integrations/mysql/client";
 
 export const Route = createFileRoute("/galeria")({
   head: () => ({
@@ -20,7 +20,7 @@ export const Route = createFileRoute("/galeria")({
   component: Galeria,
 });
 
-type Photo = { id: string; title: string | null; storage_path: string };
+type Photo = { id: string; title: string | null };
 
 function Galeria() {
   const [photos, setPhotos] = useState<Photo[]>([]);
@@ -29,7 +29,7 @@ function Galeria() {
 
   useEffect(() => {
     db.from("gallery_photos")
-      .select("id, title, storage_path")
+      .select("id, title")
       .order("sort_order")
       .order("created_at", { ascending: false })
       .then(({ data }) => {
@@ -63,7 +63,7 @@ function Galeria() {
                 className="group aspect-square overflow-hidden rounded-2xl border border-border bg-muted"
               >
                 <img
-                  src={galleryPhotoUrl(photo.storage_path)}
+                  src={galleryPhotoUrl(photo.id)}
                   alt={photo.title ?? "Foto da Dentista do Povo"}
                   loading="lazy"
                   className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
@@ -87,7 +87,7 @@ function Galeria() {
             <X className="h-5 w-5" />
           </button>
           <img
-            src={galleryPhotoUrl(open.storage_path)}
+            src={galleryPhotoUrl(open.id)}
             alt={open.title ?? "Foto da Dentista do Povo"}
             className="max-h-[90vh] max-w-full rounded-lg object-contain"
           />

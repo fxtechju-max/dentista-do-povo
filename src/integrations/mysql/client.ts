@@ -54,3 +54,8 @@ export const db = {
   rpc: (_name: "has_role", data: { _user_id: string; _role: "admin" | "user" }) =>
     hasRole({ data }),
 };
+
+// Gallery bytes live in MySQL and are served by src/server.ts.
+export function galleryPhotoUrl(id: string) {
+  return `/api/gallery/${id}`;
+}

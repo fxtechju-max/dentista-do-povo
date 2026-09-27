@@ -2,8 +2,8 @@
 // public gallery stays fast: a consistent max dimension and JPEG quality
 // keep files small without visibly losing quality, and normalizes whatever
 // the visitor's camera/phone produced (including EXIF rotation). The bytes
-// themselves live in the "gallery" Supabase Storage bucket; the database
-// only stores metadata + the storage path.
+// themselves live in the gallery_photos.image_data blob (MySQL) and are
+// served by src/server.ts at /api/gallery/:id.
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { randomUUID } from "node:crypto";
@@ -13,20 +13,9 @@ const JPEG_QUALITY = 88;
 const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
 
 async function requireAdmin() {
-  const { getRequest } = await import("@tanstack/react-start/server");
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const auth = getRequest().headers.get("authorization");
-  const token = auth?.startsWith("Bearer ") ? auth.slice(7) : null;
-  if (!token) return null;
-  const { data: userData } = await supabaseAdmin.auth.getUser(token);
-  if (!userData.user) return null;
-  const { data } = await supabaseAdmin
-    .from("user_roles")
-    .select("id")
-    .eq("user_id", userData.user.id)
-    .eq("role", "admin")
-    .maybeSingle();
-  return data ? userData.user.id : null;
+  const { requestActor } = await import("@/integrations/mysql/auth.server");
+  const actor = await requestActor();
+  return actor.admin ? actor.userId : null;
 }
 
 export const uploadGalleryPhoto = createServerFn({ method: "POST" })
@@ -35,7 +24,7 @@ export const uploadGalleryPhoto = createServerFn({ method: "POST" })
     return data;
   })
   .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { getPool } = await import("@/integrations/mysql/pool.server");
     if (!(await requireAdmin())) return { data: null, error: { message: "Acesso negado." } };
 
     const file = data.get("file");
@@ -68,39 +57,26 @@ export const uploadGalleryPhoto = createServerFn({ method: "POST" })
     }
 
     const id = randomUUID();
-    const storagePath = `${id}.jpg`;
-    const { error: uploadError } = await supabaseAdmin.storage
-      .from("gallery")
-      .upload(storagePath, processed.data, { contentType: "image/jpeg", upsert: false });
-    if (uploadError) return { data: null, error: { message: uploadError.message } };
-
-    const { error } = await supabaseAdmin.from("gallery_photos").insert({
-      id,
-      title,
-      storage_path: storagePath,
-      mime_type: "image/jpeg",
-      width: processed.info.width,
-      height: processed.info.height,
-      byte_size: processed.info.size,
-    });
-    if (error) {
-      await supabaseAdmin.storage.from("gallery").remove([storagePath]);
-      return { data: null, error: { message: error.message } };
-    }
+    await getPool().execute(
+      "INSERT INTO gallery_photos (id,title,mime_type,width,height,byte_size,image_data) VALUES (?,?,?,?,?,?,?)",
+      [
+        id,
+        title,
+        "image/jpeg",
+        processed.info.width,
+        processed.info.height,
+        processed.info.size,
+        processed.data,
+      ],
+    );
     return { data: { id }, error: null };
   });
 
 export const deleteGalleryPhoto = createServerFn({ method: "POST" })
   .validator((data: unknown) => z.object({ id: z.string().uuid() }).parse(data))
   .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { getPool } = await import("@/integrations/mysql/pool.server");
     if (!(await requireAdmin())) return { error: { message: "Acesso negado." } };
-    const { data: photo } = await supabaseAdmin
-      .from("gallery_photos")
-      .select("storage_path")
-      .eq("id", data.id)
-      .maybeSingle();
-    await supabaseAdmin.from("gallery_photos").delete().eq("id", data.id);
-    if (photo) await supabaseAdmin.storage.from("gallery").remove([photo.storage_path]);
+    await getPool().execute("DELETE FROM gallery_photos WHERE id=?", [data.id]);
     return { error: null };
   });

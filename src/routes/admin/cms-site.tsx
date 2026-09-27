@@ -12,7 +12,7 @@ import {
   Images,
   Upload,
 } from "lucide-react";
-import { db, galleryPhotoUrl } from "@/integrations/supabase/client";
+import { db, galleryPhotoUrl } from "@/integrations/mysql/client";
 import { uploadGalleryPhoto, deleteGalleryPhoto } from "@/lib/gallery.functions";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { EmptyState } from "@/components/admin/EmptyState";
@@ -654,7 +654,6 @@ function BlogTab() {
 type GalleryPhoto = {
   id: string;
   title: string | null;
-  storage_path: string;
   width: number;
   height: number;
   byte_size: number;
@@ -673,7 +672,7 @@ function GaleriaTab() {
     setLoading(true);
     const { data } = await db
       .from("gallery_photos")
-      .select("id, title, storage_path, width, height, byte_size, created_at")
+      .select("id, title, width, height, byte_size, created_at")
       .order("sort_order")
       .order("created_at", { ascending: false });
     setPhotos((data ?? []) as GalleryPhoto[]);
@@ -753,7 +752,7 @@ function GaleriaTab() {
                 className="group relative aspect-square overflow-hidden rounded-2xl border border-border bg-muted"
               >
                 <img
-                  src={galleryPhotoUrl(photo.storage_path)}
+                  src={galleryPhotoUrl(photo.id)}
                   alt={photo.title ?? "Foto da clínica"}
                   className="h-full w-full object-cover"
                   loading="lazy"

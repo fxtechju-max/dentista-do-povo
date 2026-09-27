@@ -3,16 +3,23 @@
 // env vars. The api key column is never selected outside this file and
 // functions.ts's getAiGatewaySettings (which only ever returns a masked
 // preview) — never send it to the browser in full.
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import type { RowDataPacket } from "mysql2";
+import { getPool } from "@/integrations/mysql/pool.server";
 
 type GatewayConfig = { apiKey: string; baseUrl: string; model: string };
 
 export async function getAiGatewayConfig(): Promise<GatewayConfig | null> {
-  const { data } = await supabaseAdmin
-    .from("clinic_settings")
-    .select("ai_gateway_base_url, ai_gateway_model, ai_gateway_api_key")
-    .eq("id", "default")
-    .maybeSingle();
+  const [rows] = await getPool().execute<RowDataPacket[]>(
+    "SELECT ai_gateway_base_url, ai_gateway_model, ai_gateway_api_key FROM clinic_settings WHERE id=?",
+    ["default"],
+  );
+  const data = rows[0] as
+    | {
+        ai_gateway_base_url: string | null;
+        ai_gateway_model: string | null;
+        ai_gateway_api_key: string | null;
+      }
+    | undefined;
   const apiKey = data?.ai_gateway_api_key || process.env["AI_GATEWAY_API_KEY"] || "";
   const baseUrl = data?.ai_gateway_base_url || process.env["AI_GATEWAY_BASE_URL"] || "";
   const model = data?.ai_gateway_model || process.env["AI_GATEWAY_MODEL"] || "";

@@ -10,7 +10,7 @@ import {
   User,
   ArrowLeft,
 } from "lucide-react";
-import { db } from "@/integrations/supabase/client";
+import { db } from "@/integrations/mysql/client";
 import { ADMIN_MODULES, DASHBOARD_MODULE, SETTINGS_MODULE, ToothIcon } from "@/lib/modules";
 import { mountAdminTheme } from "@/lib/theme";
 import { mountAdminZoom } from "@/lib/zoom";

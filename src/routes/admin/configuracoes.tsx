@@ -23,7 +23,7 @@ import {
   Minus,
   RotateCcw,
 } from "lucide-react";
-import { db } from "@/integrations/supabase/client";
+import { db } from "@/integrations/mysql/client";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { EmptyState } from "@/components/admin/EmptyState";
 import { ADMIN_MODULES } from "@/lib/modules";
