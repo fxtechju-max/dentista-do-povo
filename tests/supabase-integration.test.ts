@@ -1,21 +1,21 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { createDataClient } from "../src/integrations/mysql/query";
-import { executeQuery } from "../src/integrations/mysql/query.server";
-import { getPool } from "../src/integrations/mysql/pool.server";
+import { createDataClient } from "../src/integrations/supabase/query";
+import { executeQuery } from "../src/integrations/supabase/query.server";
+import { getPool } from "../src/integrations/supabase/pool.server";
 
 test(
-  "MySQL: CRUD, dates, money, JSON, ownership, joins, upserts and history protection",
-  { skip: !process.env["MYSQL_TEST_URL"] },
+  "Supabase: CRUD, dates, money, JSON, ownership, joins, upserts and history protection",
+  { skip: !process.env["SUPABASE_TEST_DB_URL"] },
   async () => {
-    const url = new URL(process.env["MYSQL_TEST_URL"]!);
-    assert.match(
-      url.pathname,
-      /^\/ddp_test_[a-z0-9_]+$/i,
-      "Integration tests require a dedicated ddp_test_* database.",
+    const url = process.env["SUPABASE_TEST_DB_URL"]!;
+    assert.notEqual(
+      url,
+      process.env["SUPABASE_DB_URL"],
+      "Integration tests write and delete rows: use a separate Supabase test project.",
     );
-    process.env["MYSQL_URL"] = url.toString();
+    process.env["SUPABASE_DB_URL"] = url;
     const admin = createDataClient((q) =>
       executeQuery(q, { userId: randomUUID(), admin: true, visitorHash: null }),
     );

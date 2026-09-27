@@ -2,7 +2,7 @@
 // public gallery stays fast: a consistent max dimension and JPEG quality
 // keep files small without visibly losing quality, and normalizes whatever
 // the visitor's camera/phone produced (including EXIF rotation). The bytes
-// themselves live in the gallery_photos.image_data blob (MySQL) and are
+// themselves live in the gallery_photos.image_data bytea column (Supabase) and are
 // served by src/server.ts at /api/gallery/:id.
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";

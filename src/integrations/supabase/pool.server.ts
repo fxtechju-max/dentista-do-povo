@@ -17,6 +17,7 @@ export interface PoolConnection extends Executor {
 }
 export interface DatabasePool extends Executor {
   getConnection(): Promise<PoolConnection>;
+  end(): Promise<void>;
 }
 
 let pool: DatabasePool | undefined;
@@ -37,6 +38,10 @@ export function getPool(): DatabasePool {
   });
   // Scope the schema inside every transaction; never rely on pooled session state.
   pool = {
+    async end() {
+      pool = undefined;
+      await sql.end();
+    },
     async execute<T extends RowDataPacket[]>(
       statement: string,
       values: readonly SqlParameter[] = [],

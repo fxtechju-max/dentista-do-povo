@@ -9,7 +9,7 @@ type ServerEntry = {
 
 let serverEntryPromise: Promise<ServerEntry> | undefined;
 
-// Gallery photos are stored as blobs in MySQL (no object storage configured),
+// Gallery photos are stored as bytea in the Supabase Postgres database,
 // so they're served through a plain GET here — outside the TanStack Start
 // router/server-function RPC layer — so a normal <img src> just works.
 const GALLERY_IMAGE_PATH = /^\/api\/gallery\/([0-9a-f-]{36})$/i;

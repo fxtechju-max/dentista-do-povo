@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { authorize, querySchema, type Actor } from "../src/integrations/mysql/protocol";
-import { projection } from "../src/integrations/mysql/query.server";
-import { createDataClient } from "../src/integrations/mysql/query";
+import { authorize, querySchema, type Actor } from "../src/integrations/supabase/protocol";
+import { projection } from "../src/integrations/supabase/query.server";
+import { createDataClient } from "../src/integrations/supabase/query";
 
 const guest: Actor = { userId: null, admin: false, visitorHash: null };
 const member: Actor = { ...guest, userId: "9b214b96-6c6a-468c-9fd9-b8cf99f41566" };
