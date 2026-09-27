@@ -7,16 +7,20 @@
 import type { Sql } from "postgres";
 import { createHash } from "node:crypto";
 
-// Fora do Vite (ex.: testes com tsx) import.meta.glob não existe.
-const files = (
-  typeof import.meta.glob === "function"
-    ? import.meta.glob("/supabase/migrations/*.sql", {
-        query: "?raw",
-        import: "default",
-        eager: true,
-      })
-    : {}
-) as Record<string, string>;
+// O Vite substitui import.meta.glob pelos arquivos .sql na hora do build.
+// Fora do Vite (ex.: testes com tsx) a chamada falha e usamos lista vazia.
+function loadFiles(): Record<string, string> {
+  try {
+    return import.meta.glob("/supabase/migrations/*.sql", {
+      query: "?raw",
+      import: "default",
+      eager: true,
+    }) as Record<string, string>;
+  } catch {
+    return {};
+  }
+}
+const files = loadFiles();
 
 export const migrations = Object.entries(files)
   .map(([path, sql]) => ({ name: path.split("/").pop()!, sql }))
