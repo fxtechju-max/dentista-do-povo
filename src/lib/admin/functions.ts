@@ -2,22 +2,8 @@
 // the `.handler(...)` bodies out of the client bundle, so it's safe to read
 // server-only env vars and call the AI Gateway here.
 import { createServerFn } from "@tanstack/react-start";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import type { Database } from "@/integrations/supabase/types";
-
-type AdminContext = { supabase: SupabaseClient<Database>; userId: string };
-
-async function assertAdmin(context: AdminContext) {
-  const { data: isAdmin } = await context.supabase.rpc("has_role", {
-    _user_id: context.userId,
-    _role: "admin",
-  });
-  if (!isAdmin) {
-    throw new Error("Acesso negado: apenas administradores podem usar este recurso.");
-  }
-}
+import { requireAuth } from "@/integrations/mysql/auth-middleware";
 
 async function callAiGateway(
   systemPrompt: string,
@@ -72,10 +58,9 @@ const draftReplyInput = z.object({
 });
 
 export const draftSupportReply = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .validator((data: unknown) => draftReplyInput.parse(data))
   .handler(async ({ data, context }) => {
-    await assertAdmin(context);
 
     const transcript = data.messages
       .map((m) => `${m.sender === "visitor" ? data.visitorName : "Atendente"}: ${m.content}`)
@@ -103,10 +88,9 @@ const assistantInput = z.object({
 });
 
 export const askAssistant = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .validator((data: unknown) => assistantInput.parse(data))
   .handler(async ({ data, context }) => {
-    await assertAdmin(context);
 
     const now = new Date();
     const startOfDay = new Date(now);
@@ -120,23 +104,23 @@ export const askAssistant = createServerFn({ method: "POST" })
       { data: pendingPayments },
       { data: newLeads },
     ] = await Promise.all([
-      context.supabase
+      context.db
         .from("appointments")
         .select("treatment, scheduled_at, status, patients(name)")
         .gte("scheduled_at", startOfDay.toISOString())
         .lt("scheduled_at", new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000).toISOString())
         .order("scheduled_at"),
-      context.supabase
+      context.db
         .from("appointments")
         .select("id", { count: "exact", head: true })
         .gte("scheduled_at", now.toISOString())
         .lte("scheduled_at", weekAhead.toISOString()),
-      context.supabase
+      context.db
         .from("budgets")
         .select("treatment, value, status, patients(name)")
         .in("status", ["rascunho", "enviado"]),
-      context.supabase.from("payments").select("amount").eq("status", "pendente"),
-      context.supabase
+      context.db.from("payments").select("amount").eq("status", "pendente"),
+      context.db
         .from("leads")
         .select("name, source")
         .eq("status", "novo")
@@ -204,10 +188,9 @@ const patientRecordSchema = z.object({
 });
 
 export const summarizePatientHistory = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .validator((data: unknown) => patientRecordSchema.parse(data))
   .handler(async ({ data, context }) => {
-    await assertAdmin(context);
 
     const lines = [
       `Paciente: ${data.patientName}`,
@@ -243,10 +226,9 @@ const prescriptionDraftInput = z.object({
 });
 
 export const draftPrescription = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .validator((data: unknown) => prescriptionDraftInput.parse(data))
   .handler(async ({ data, context }) => {
-    await assertAdmin(context);
 
     const systemPrompt =
       "Você ajuda um cirurgião-dentista a rascunhar o texto de uma receita odontológica a partir de anotações " +

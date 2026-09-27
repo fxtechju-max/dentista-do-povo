@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { ClipboardList, Plus, Pencil, Trash2, Search, Sparkles } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/integrations/mysql/client";
 import { draftPrescription } from "@/lib/admin/functions";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { EmptyState } from "@/components/admin/EmptyState";
@@ -68,11 +68,11 @@ function Receitas() {
   async function load() {
     setLoading(true);
     const [{ data: itemsData }, { data: patientsData }] = await Promise.all([
-      supabase
+      db
         .from("prescriptions")
         .select("id, patient_id, medication, instructions, issued_at, patients(name)")
         .order("issued_at", { ascending: false }),
-      supabase.from("patients").select("id, name").order("name"),
+      db.from("patients").select("id, name").order("name"),
     ]);
     setItems((itemsData ?? []) as unknown as Prescription[]);
     setPatients((patientsData ?? []) as Patient[]);
@@ -118,9 +118,9 @@ function Receitas() {
       instructions: form.instructions.trim() || null,
     };
     if (editing) {
-      await supabase.from("prescriptions").update(payload).eq("id", editing.id);
+      await db.from("prescriptions").update(payload).eq("id", editing.id);
     } else {
-      await supabase.from("prescriptions").insert(payload);
+      await db.from("prescriptions").insert(payload);
     }
     setSaving(false);
     setDialogOpen(false);
@@ -129,7 +129,7 @@ function Receitas() {
 
   async function remove() {
     if (!deleteTarget) return;
-    await supabase.from("prescriptions").delete().eq("id", deleteTarget.id);
+    await db.from("prescriptions").delete().eq("id", deleteTarget.id);
     setDeleteTarget(null);
     load();
   }
@@ -140,12 +140,9 @@ function Receitas() {
     setAiLoading(true);
     setAiError(null);
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-      if (!token) throw new Error("Sessão expirada. Faça login novamente.");
       const result = await draftPrescription({
         data: { patientName, notes: aiNotes.trim() },
-        headers: { Authorization: `Bearer ${token}` },
+
       });
       setForm((f) => ({ ...f, medication: result.medication, instructions: result.instructions }));
     } catch (error) {

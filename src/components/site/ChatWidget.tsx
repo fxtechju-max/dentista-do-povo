@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { MessageCircle, X, Send } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/integrations/mysql/client";
 import { secretaryAutoReply } from "@/lib/secretary.functions";
 
 type Message = {
@@ -10,7 +10,7 @@ type Message = {
   created_at: string;
 };
 
-const STORAGE_KEY = "ddp_chat";
+const STORAGE_KEY = "ddp_mysql_chat";
 
 export function ChatWidget() {
   const [open, setOpen] = useState(false);
@@ -36,43 +36,23 @@ export function ChatWidget() {
     }
   }, []);
 
-  // Load messages + realtime subscription
+  // Short polling works on Vercel without a persistent WebSocket server.
   useEffect(() => {
     if (!conversationId) return;
-
-    supabase
-      .from("messages")
-      .select("id, sender, content, created_at")
-      .eq("conversation_id", conversationId)
-      .order("created_at")
-      .then(({ data }) => {
-        if (data) setMessages(data as Message[]);
-      });
-
-    const channel = supabase
-      .channel(`chat-${conversationId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "messages",
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        (payload) => {
-          setMessages((prev) =>
-            prev.some((m) => m.id === (payload.new as Message).id)
-              ? prev
-              : [...prev, payload.new as Message],
-          );
-        },
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [conversationId]);
+    let stopped = false;
+    let timer: ReturnType<typeof setTimeout>;
+    async function refresh() {
+      if (stopped) return;
+      if (open && document.visibilityState === "visible") {
+        const { data } = await db.from("messages").select("id, sender, content, created_at")
+          .eq("conversation_id", conversationId!).order("created_at");
+        if (!stopped && data) setMessages(data as Message[]);
+      }
+      if (!stopped) timer = setTimeout(refresh, 3000);
+    }
+    void refresh();
+    return () => { stopped = true; clearTimeout(timer); };
+  }, [conversationId, open]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -81,7 +61,7 @@ export function ChatWidget() {
   async function startConversation() {
     const trimmed = name.trim();
     if (!trimmed) return;
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from("conversations")
       .insert({ visitor_name: trimmed })
       .select("id")
@@ -96,13 +76,14 @@ export function ChatWidget() {
     const content = draft.trim();
     if (!content || !conversationId || sending) return;
     setSending(true);
-    setDraft("");
-    await supabase.from("messages").insert({
+    const { error } = await db.from("messages").insert({
       conversation_id: conversationId,
       sender: "visitor",
       content,
     });
     setSending(false);
+    if (error) return;
+    setDraft("");
     // Best-effort: lets the virtual secretary answer while no human has
     // taken over yet. Silently ignored if disabled or if the AI Gateway
     // isn't configured.

@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { DollarSign, Plus, Pencil, Trash2, Search, CheckCircle2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/integrations/mysql/client";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { EmptyState } from "@/components/admin/EmptyState";
 import {
@@ -80,11 +80,11 @@ function Financeiro() {
   async function load() {
     setLoading(true);
     const [{ data: paymentsData }, { data: patientsData }] = await Promise.all([
-      supabase
+      db
         .from("payments")
         .select("id, patient_id, amount, status, paid_at, created_at, patients(name)")
         .order("created_at", { ascending: false }),
-      supabase.from("patients").select("id, name").order("name"),
+      db.from("patients").select("id, name").order("name"),
     ]);
     setPayments((paymentsData ?? []) as unknown as Payment[]);
     setPatients((patientsData ?? []) as Patient[]);
@@ -136,9 +136,9 @@ function Financeiro() {
       paid_at: form.status === "pago" ? new Date().toISOString() : null,
     };
     if (editing) {
-      await supabase.from("payments").update(payload).eq("id", editing.id);
+      await db.from("payments").update(payload).eq("id", editing.id);
     } else {
-      await supabase.from("payments").insert(payload);
+      await db.from("payments").insert(payload);
     }
     setSaving(false);
     setDialogOpen(false);
@@ -146,7 +146,7 @@ function Financeiro() {
   }
 
   async function markPaid(p: Payment) {
-    await supabase
+    await db
       .from("payments")
       .update({ status: "pago", paid_at: new Date().toISOString() })
       .eq("id", p.id);
@@ -155,7 +155,7 @@ function Financeiro() {
 
   async function remove() {
     if (!deleteTarget) return;
-    await supabase.from("payments").delete().eq("id", deleteTarget.id);
+    await db.from("payments").delete().eq("id", deleteTarget.id);
     setDeleteTarget(null);
     load();
   }

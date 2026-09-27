@@ -13,7 +13,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/integrations/mysql/client";
 import { PageHeader } from "@/components/admin/PageHeader";
 import {
   APPOINTMENT_STATUS_LABEL,
@@ -72,13 +72,13 @@ function Relatorios() {
       since.setHours(0, 0, 0, 0);
 
       const [{ data: payments }, { data: appointments }, { data: leads }] = await Promise.all([
-        supabase
+        db
           .from("payments")
           .select("amount, status, paid_at")
           .eq("status", "pago")
           .gte("paid_at", since.toISOString()),
-        supabase.from("appointments").select("status"),
-        supabase.from("leads").select("status"),
+        db.from("appointments").select("status"),
+        db.from("leads").select("status"),
       ]);
 
       const buckets = new Map<string, number>();

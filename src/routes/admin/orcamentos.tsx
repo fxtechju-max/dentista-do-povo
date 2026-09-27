@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { Receipt, Plus, Pencil, Trash2, Search } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/integrations/mysql/client";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { EmptyState } from "@/components/admin/EmptyState";
 import {
@@ -88,11 +88,11 @@ function Orcamentos() {
   async function load() {
     setLoading(true);
     const [{ data: budgetsData }, { data: patientsData }] = await Promise.all([
-      supabase
+      db
         .from("budgets")
         .select("id, patient_id, treatment, value, status, notes, created_at, patients(name)")
         .order("created_at", { ascending: false }),
-      supabase.from("patients").select("id, name").order("name"),
+      db.from("patients").select("id, name").order("name"),
     ]);
     setBudgets((budgetsData ?? []) as unknown as Budget[]);
     setPatients((patientsData ?? []) as Patient[]);
@@ -151,9 +151,9 @@ function Orcamentos() {
       notes: form.notes.trim() || null,
     };
     if (editing) {
-      await supabase.from("budgets").update(payload).eq("id", editing.id);
+      await db.from("budgets").update(payload).eq("id", editing.id);
     } else {
-      await supabase.from("budgets").insert(payload);
+      await db.from("budgets").insert(payload);
     }
     setSaving(false);
     setDialogOpen(false);
@@ -162,7 +162,7 @@ function Orcamentos() {
 
   async function remove() {
     if (!deleteTarget) return;
-    await supabase.from("budgets").delete().eq("id", deleteTarget.id);
+    await db.from("budgets").delete().eq("id", deleteTarget.id);
     setDeleteTarget(null);
     load();
   }

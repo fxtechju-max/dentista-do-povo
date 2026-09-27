@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Smile, Sparkles, ShieldCheck, HeartPulse, Baby, Zap } from "lucide-react";
 import { SiteHeader } from "@/components/site/SiteHeader";
+import { SiteFooter } from "@/components/site/SiteFooter";
 import { ChatWidget } from "@/components/site/ChatWidget";
 
 export const Route = createFileRoute("/servicos")({
@@ -80,6 +81,7 @@ function Servicos() {
           ))}
         </div>
       </main>
+      <SiteFooter />
       <ChatWidget />
     </div>
   );

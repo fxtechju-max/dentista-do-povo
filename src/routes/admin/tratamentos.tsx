@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { Activity, Plus, Pencil, Trash2, Search, Clock } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/integrations/mysql/client";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { EmptyState } from "@/components/admin/EmptyState";
 import { Button } from "@/components/ui/button";
@@ -64,7 +64,7 @@ function Tratamentos() {
 
   async function load() {
     setLoading(true);
-    const { data } = await supabase
+    const { data } = await db
       .from("treatments")
       .select("id, name, description, price, duration_minutes, active")
       .order("name");
@@ -111,9 +111,9 @@ function Tratamentos() {
       active: form.active,
     };
     if (editing) {
-      await supabase.from("treatments").update(payload).eq("id", editing.id);
+      await db.from("treatments").update(payload).eq("id", editing.id);
     } else {
-      await supabase.from("treatments").insert(payload);
+      await db.from("treatments").insert(payload);
     }
     setSaving(false);
     setDialogOpen(false);
@@ -122,7 +122,7 @@ function Tratamentos() {
 
   async function remove() {
     if (!deleteTarget) return;
-    await supabase.from("treatments").delete().eq("id", deleteTarget.id);
+    await db.from("treatments").delete().eq("id", deleteTarget.id);
     setDeleteTarget(null);
     load();
   }

@@ -11,6 +11,7 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { Toaster } from "../components/ui/sonner";
 
 function NotFoundComponent() {
   return (
@@ -73,39 +74,51 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  head: () => ({
-    meta: [
-      { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Dentista do Povo — Clínica Odontológica" },
-      {
-        name: "description",
-        content:
-          "Clínica odontológica com atendimento humanizado, tecnologia de ponta e suporte online direto com nossa equipe.",
-      },
-      { property: "og:title", content: "Dentista do Povo — Clínica Odontológica" },
-      {
-        property: "og:description",
-        content:
-          "Clínica odontológica com atendimento humanizado, tecnologia de ponta e suporte online direto com nossa equipe.",
-      },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-    links: [
-      {
-        rel: "stylesheet",
-        href: appCss,
-      },
-      { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      {
-        rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap",
-      },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
-    ],
-  }),
+  head: () => {
+    const adsenseClientId = import.meta.env["VITE_GOOGLE_ADSENSE_CLIENT_ID"] as string | undefined;
+    return {
+      meta: [
+        { charSet: "utf-8" },
+        { name: "viewport", content: "width=device-width, initial-scale=1" },
+        { title: "Dentista do Povo — Clínica Odontológica" },
+        {
+          name: "description",
+          content:
+            "Clínica odontológica com atendimento humanizado, tecnologia de ponta e suporte online direto com nossa equipe.",
+        },
+        { property: "og:title", content: "Dentista do Povo — Clínica Odontológica" },
+        {
+          property: "og:description",
+          content:
+            "Clínica odontológica com atendimento humanizado, tecnologia de ponta e suporte online direto com nossa equipe.",
+        },
+        { property: "og:type", content: "website" },
+        { name: "twitter:card", content: "summary_large_image" },
+      ],
+      links: [
+        {
+          rel: "stylesheet",
+          href: appCss,
+        },
+        { rel: "preconnect", href: "https://fonts.googleapis.com" },
+        { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+        {
+          rel: "stylesheet",
+          href: "https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap",
+        },
+        { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      ],
+      scripts: adsenseClientId
+        ? [
+            {
+              async: true,
+              src: `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseClientId}`,
+              crossOrigin: "anonymous" as const,
+            },
+          ]
+        : [],
+    };
+  },
   shellComponent: RootShell,
   component: RootComponent,
   notFoundComponent: NotFoundComponent,
@@ -133,6 +146,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
+      <Toaster richColors />
     </QueryClientProvider>
   );
 }

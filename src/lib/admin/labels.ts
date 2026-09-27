@@ -2,6 +2,7 @@ export type AppointmentStatus = "agendado" | "confirmado" | "concluido" | "cance
 export type BudgetStatus = "rascunho" | "enviado" | "aprovado" | "recusado";
 export type PaymentStatus = "pendente" | "pago" | "cancelado";
 export type LeadStatus = "novo" | "em_contato" | "convertido" | "perdido";
+export type FinanceEntryType = "pagar" | "receber";
 
 type BadgeVariant = "default" | "secondary" | "destructive" | "outline";
 
@@ -58,6 +59,28 @@ export const LEAD_STATUS_VARIANT: Record<LeadStatus, BadgeVariant> = {
   convertido: "default",
   perdido: "destructive",
 };
+
+export const FINANCE_ENTRY_TYPE_LABEL: Record<FinanceEntryType, string> = {
+  pagar: "📤 A pagar",
+  receber: "📥 A receber",
+};
+
+export const FINANCE_ENTRY_TYPE_VARIANT: Record<FinanceEntryType, BadgeVariant> = {
+  pagar: "destructive",
+  receber: "default",
+};
+
+export const FINANCE_ENTRY_CATEGORIES = [
+  "Aluguel",
+  "Fornecedores",
+  "Salários",
+  "Equipamentos",
+  "Marketing",
+  "Impostos",
+  "Consultas",
+  "Convênios",
+  "Outros",
+];
 
 export function formatCurrency(value: number) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });

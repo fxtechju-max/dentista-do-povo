@@ -1,17 +1,26 @@
 import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
-  LayoutDashboard,
-  Sparkles,
-  Settings,
   LogOut,
-  ChevronLeft,
+  ChevronDown,
   Bell,
   BellOff,
   ExternalLink,
+  Clock,
+  User,
+  ArrowLeft,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { ADMIN_MODULES } from "@/lib/modules";
+import { db } from "@/integrations/mysql/client";
+import { ADMIN_MODULES, DASHBOARD_MODULE, SETTINGS_MODULE, ToothIcon } from "@/lib/modules";
+import { applyThemePrefs, loadThemePrefs } from "@/lib/theme";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -24,26 +33,27 @@ export const Route = createFileRoute("/admin")({
   component: AdminLayout,
 });
 
-function greeting() {
-  const hour = new Date().getHours();
-  if (hour < 12) return "☀️ Bom dia";
-  if (hour < 18) return "🌤️ Boa tarde";
-  return "🌙 Boa noite";
+function useNow(intervalMs: number) {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), intervalMs);
+    return () => clearInterval(id);
+  }, [intervalMs]);
+  return now;
 }
+
+type NotifState = NotificationPermission | "unsupported";
 
 function AdminLayout() {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [status, setStatus] = useState<"loading" | "denied" | "ok">("loading");
   const [email, setEmail] = useState<string | null>(null);
-  const [collapsed, setCollapsed] = useState(false);
   const [disabledModules, setDisabledModules] = useState<string[]>([]);
-  const [notifPermission, setNotifPermission] = useState<NotificationPermission | "unsupported">(
-    "default",
-  );
+  const [notifPermission, setNotifPermission] = useState<NotifState>("default");
 
   useEffect(() => {
-    supabase
+    db
       .from("clinic_settings")
       .select("disabled_modules")
       .eq("id", "default")
@@ -51,27 +61,23 @@ function AdminLayout() {
       .then(({ data }) => setDisabledModules(data?.disabled_modules ?? []));
   }, []);
 
-  const navItems = useMemo(() => {
-    const modules = ADMIN_MODULES.filter((m) => !disabledModules.includes(m.id)).map((m) => ({
-      to: m.to,
-      label: m.label,
-      icon: m.icon,
-    }));
-    return [
-      { to: "/admin", label: "📊 Dashboard", icon: LayoutDashboard },
-      ...modules,
-      { to: "/admin/configuracoes", label: "⚙️ Configurações", icon: Settings },
-    ];
+  useEffect(() => {
+    applyThemePrefs(loadThemePrefs());
+  }, []);
+
+  const allModules = useMemo(() => {
+    const modules = ADMIN_MODULES.filter((m) => !disabledModules.includes(m.id));
+    return [DASHBOARD_MODULE, ...modules, SETTINGS_MODULE];
   }, [disabledModules]);
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase.auth.getUser();
+      const { data } = await db.auth.getUser();
       if (!data.user) {
         navigate({ to: "/entrar" });
         return;
       }
-      const { data: isAdmin } = await supabase.rpc("has_role", {
+      const { data: isAdmin } = await db.rpc("has_role", {
         _user_id: data.user.id,
         _role: "admin",
       });
@@ -99,7 +105,7 @@ function AdminLayout() {
   }
 
   async function signOut() {
-    await supabase.auth.signOut();
+    await db.auth.signOut();
     navigate({ to: "/entrar" });
   }
 
@@ -129,128 +135,139 @@ function AdminLayout() {
   }
 
   const displayName = (email ? email.split("@")[0] : undefined) ?? "Admin";
+  const isLauncher = pathname === "/admin";
+  const currentModule = allModules.find((m) => pathname.startsWith(m.to));
 
   return (
-    <div className="flex h-screen bg-muted/30">
-      {/* Sidebar */}
-      <aside
-        className={`flex shrink-0 flex-col border-r border-border bg-card transition-all ${
-          collapsed ? "w-[72px]" : "w-64"
-        }`}
-      >
-        <div className="flex h-16 items-center justify-between border-b border-border px-4">
-          <div className="flex items-center gap-2 overflow-hidden">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-extrabold text-primary-foreground">
-              D
+    <div className="min-h-screen bg-muted/30">
+      {isLauncher ? (
+        <header className="flex flex-wrap items-center justify-between gap-4 border-b border-border bg-card px-6 py-4 sm:px-10">
+          <Link to="/admin" className="flex items-center gap-3">
+            <ToothIcon className="h-10 w-10 text-teal-500" />
+            <span className="text-xl font-extrabold tracking-tight">
+              <span className="text-foreground">DENTISTA </span>
+              <span className="text-teal-500">DO POVO</span>
             </span>
-            {!collapsed && <span className="truncate font-extrabold">DDP</span>}
-          </div>
-          <button
-            onClick={() => setCollapsed((v) => !v)}
-            aria-label={collapsed ? "Expandir menu" : "Recolher menu"}
-            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground hover:bg-accent"
-          >
-            <ChevronLeft
-              className={`h-3.5 w-3.5 transition-transform ${collapsed ? "rotate-180" : ""}`}
+          </Link>
+
+          <div className="flex items-center gap-4">
+            <LiveClock />
+            <div className="h-8 w-px bg-border" />
+            <AccountMenu
+              displayName={displayName}
+              notifPermission={notifPermission}
+              onRequestNotif={requestNotifPermission}
+              onSignOut={signOut}
             />
-          </button>
-        </div>
-
-        <nav className="flex-1 space-y-0.5 overflow-y-auto p-2">
-          {navItems.map((item) => {
-            const active =
-              item.to === "/admin" ? pathname === "/admin" : pathname.startsWith(item.to);
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.to}
-                to={item.to}
-                title={collapsed ? item.label : undefined}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
-                  active
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                }`}
-              >
-                <Icon className="h-4 w-4 shrink-0" />
-                {!collapsed && <span className="truncate">{item.label}</span>}
-              </Link>
-            );
-          })}
-        </nav>
-
-        <div className="flex items-center gap-2 border-t border-border p-3">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
-            {displayName.charAt(0).toUpperCase()}
-          </span>
-          {!collapsed && (
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-bold capitalize">{displayName}</span>
-              <span className="block text-xs text-muted-foreground">Admin</span>
-            </span>
-          )}
-          <button
-            onClick={signOut}
-            aria-label="Sair"
-            className="text-muted-foreground hover:text-destructive"
-          >
-            <LogOut className="h-4 w-4" />
-          </button>
-        </div>
-      </aside>
-
-      {/* Main area */}
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-card px-6">
-          <div>
-            <p className="text-sm text-muted-foreground">{greeting()},</p>
-            <p className="font-bold capitalize">{displayName}!</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <a
-              href="/"
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-semibold hover:bg-accent"
-            >
-              <ExternalLink className="h-4 w-4" /> Ver site
-            </a>
-            <Link
-              to="/admin/ia"
-              className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-semibold hover:bg-accent"
-            >
-              <Sparkles className="h-4 w-4" /> IA
-            </Link>
-            {notifPermission === "granted" ? (
-              <span
-                title="Notificações ativadas"
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-border text-muted-foreground"
-              >
-                <Bell className="h-4 w-4" />
-              </span>
-            ) : notifPermission === "denied" ? (
-              <span
-                title="Notificações bloqueadas nas permissões do navegador"
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-border text-muted-foreground"
-              >
-                <BellOff className="h-4 w-4" />
-              </span>
-            ) : notifPermission !== "unsupported" ? (
-              <button
-                onClick={requestNotifPermission}
-                title="Ativar notificações"
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-border text-muted-foreground hover:bg-accent hover:text-foreground"
-              >
-                <Bell className="h-4 w-4" />
-              </button>
-            ) : null}
           </div>
         </header>
+      ) : (
+        <header className="flex items-center justify-between border-b border-border bg-card px-4 py-3 sm:px-6">
+          <div className="flex items-center gap-3">
+            <Link
+              to="/admin"
+              aria-label="Voltar ao painel"
+              title="Voltar ao painel"
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+            {currentModule && (
+              <div className="flex items-center gap-2">
+                <span
+                  className={`flex h-9 w-9 items-center justify-center rounded-lg ${currentModule.iconBg} ${currentModule.iconColor}`}
+                >
+                  <currentModule.icon className="h-4 w-4" />
+                </span>
+                <span className="font-bold">{currentModule.name}</span>
+              </div>
+            )}
+          </div>
+          <AccountMenu
+            displayName={displayName}
+            notifPermission={notifPermission}
+            onRequestNotif={requestNotifPermission}
+            onSignOut={signOut}
+          />
+        </header>
+      )}
 
-        <main className="flex-1 overflow-y-auto p-6">
-          <Outlet />
-        </main>
+      <main className={isLauncher ? "p-6 sm:p-10" : "p-4 sm:p-6"}>
+        <Outlet />
+      </main>
+    </div>
+  );
+}
+
+function LiveClock() {
+  const now = useNow(30_000);
+  const dateLabel = now.toLocaleDateString("pt-BR", {
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+  const timeLabel = now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+
+  return (
+    <div className="flex items-center gap-3 rounded-2xl bg-primary/5 px-4 py-2">
+      <Clock className="h-5 w-5 text-primary" />
+      <div className="leading-tight">
+        <p className="text-xs capitalize text-muted-foreground">{dateLabel}</p>
+        <p className="text-lg font-extrabold">{timeLabel}</p>
       </div>
     </div>
+  );
+}
+
+function AccountMenu({
+  displayName,
+  notifPermission,
+  onRequestNotif,
+  onSignOut,
+}: {
+  displayName: string;
+  notifPermission: NotifState;
+  onRequestNotif: () => void;
+  onSignOut: () => void;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger className="flex items-center gap-2 rounded-lg px-2 py-1.5 outline-none hover:bg-accent">
+        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <User className="h-4 w-4" />
+        </span>
+        <span className="hidden text-sm font-bold capitalize sm:inline">{displayName}</span>
+        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuLabel className="capitalize">{displayName}</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <a href="/" target="_blank" rel="noreferrer">
+            <ExternalLink className="h-4 w-4" /> Ver site
+          </a>
+        </DropdownMenuItem>
+        {notifPermission === "default" && (
+          <DropdownMenuItem onClick={onRequestNotif}>
+            <Bell className="h-4 w-4" /> Ativar notificações
+          </DropdownMenuItem>
+        )}
+        {notifPermission === "granted" && (
+          <DropdownMenuItem disabled>
+            <Bell className="h-4 w-4" /> Notificações ativadas
+          </DropdownMenuItem>
+        )}
+        {notifPermission === "denied" && (
+          <DropdownMenuItem disabled>
+            <BellOff className="h-4 w-4" /> Notificações bloqueadas
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={onSignOut} className="text-destructive focus:text-destructive">
+          <LogOut className="h-4 w-4" /> Sair
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

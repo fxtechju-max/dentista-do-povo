@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ArrowLeft } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/integrations/mysql/client";
 
 export const Route = createFileRoute("/entrar")({
   head: () => ({
@@ -17,15 +17,13 @@ export const Route = createFileRoute("/entrar")({
 
 function Entrar() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
+    db.auth.getUser().then(({ data }) => {
       if (data.user) navigate({ to: "/admin" });
     });
   }, [navigate]);
@@ -33,29 +31,15 @@ function Entrar() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    setNotice(null);
+
     setLoading(true);
 
-    if (mode === "login") {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
-        setError("Email ou senha incorretos.");
-      } else {
-        navigate({ to: "/admin" });
-      }
-    } else {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { emailRedirectTo: window.location.origin },
-      });
-      if (error) {
-        setError(error.message);
-      } else if (!data.session) {
-        setNotice("Conta criada! Confirme seu email para entrar.");
-      } else {
-        navigate({ to: "/admin" });
-      }
+    try {
+      const { error } = await db.auth.signInWithPassword({ email, password });
+      if (error) setError(error.message);
+      else navigate({ to: "/admin" });
+    } catch {
+      setError("Não foi possível conectar. Tente novamente.");
     }
     setLoading(false);
   }
@@ -78,12 +62,10 @@ function Entrar() {
           </Link>
 
           <h1 className="mt-6 text-center text-xl font-extrabold">
-            {mode === "login" ? "Área Restrita" : "Criar conta da equipe"}
+            Área Restrita
           </h1>
           <p className="mt-1 text-center text-sm text-muted-foreground">
-            {mode === "login"
-              ? "Acesso ao painel de atendimento"
-              : "A primeira conta criada vira administradora"}
+            Acesso da equipe ao painel de atendimento
           </p>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-3">
@@ -105,26 +87,16 @@ function Entrar() {
               className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring"
             />
             {error && <p className="text-sm font-semibold text-destructive">{error}</p>}
-            {notice && <p className="text-sm font-semibold text-emerald-600">{notice}</p>}
-            <button
+                        <button
               type="submit"
               disabled={loading}
               className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground disabled:opacity-50"
             >
-              {loading ? "Aguarde..." : mode === "login" ? "Entrar" : "Criar conta"}
+              {loading ? "Aguarde..." : "Entrar"}
             </button>
           </form>
 
-          <button
-            onClick={() => {
-              setMode(mode === "login" ? "signup" : "login");
-              setError(null);
-              setNotice(null);
-            }}
-            className="mt-4 w-full text-center text-sm font-semibold text-primary hover:underline"
-          >
-            {mode === "login" ? "Ainda não tem conta? Criar agora" : "Já tem conta? Entrar"}
-          </button>
+          <p className="mt-4 text-center text-sm text-muted-foreground">Precisa de acesso? Fale com o responsável pela clínica.</p>
         </div>
       </div>
     </div>

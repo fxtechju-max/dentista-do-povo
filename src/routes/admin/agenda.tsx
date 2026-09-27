@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { addDays, format, isSameDay, isToday, startOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/integrations/mysql/client";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { EmptyState } from "@/components/admin/EmptyState";
 import {
@@ -112,11 +112,11 @@ function Agenda() {
   async function load() {
     setLoading(true);
     const [{ data: appointmentsData }, { data: patientsData }] = await Promise.all([
-      supabase
+      db
         .from("appointments")
         .select("id, patient_id, treatment, scheduled_at, status, patients(name)")
         .order("scheduled_at", { ascending: false }),
-      supabase.from("patients").select("id, name").order("name"),
+      db.from("patients").select("id, name").order("name"),
     ]);
     setAppointments((appointmentsData ?? []) as unknown as Appointment[]);
     setPatients((patientsData ?? []) as Patient[]);
@@ -195,9 +195,9 @@ function Agenda() {
       status: form.status,
     };
     if (editing) {
-      await supabase.from("appointments").update(payload).eq("id", editing.id);
+      await db.from("appointments").update(payload).eq("id", editing.id);
     } else {
-      await supabase.from("appointments").insert(payload);
+      await db.from("appointments").insert(payload);
     }
     setSaving(false);
     setDialogOpen(false);
@@ -206,7 +206,7 @@ function Agenda() {
 
   async function remove() {
     if (!deleteTarget) return;
-    await supabase.from("appointments").delete().eq("id", deleteTarget.id);
+    await db.from("appointments").delete().eq("id", deleteTarget.id);
     setDeleteTarget(null);
     load();
   }

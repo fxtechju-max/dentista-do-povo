@@ -16,7 +16,7 @@ import {
   NotebookPen,
   Trash2,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/integrations/mysql/client";
 import { summarizePatientHistory } from "@/lib/admin/functions";
 import {
   APPOINTMENT_STATUS_LABEL,
@@ -171,38 +171,38 @@ function Prontuario() {
       { data: toothData },
       { data: notesData },
     ] = await Promise.all([
-      supabase
+      db
         .from("patients")
         .select("id, name, phone, email, created_at")
         .eq("id", patientId)
         .single(),
-      supabase
+      db
         .from("appointments")
         .select("id, treatment, scheduled_at, status")
         .eq("patient_id", patientId)
         .order("scheduled_at", { ascending: false }),
-      supabase.from("budgets").select("id, treatment, value, status").eq("patient_id", patientId),
-      supabase
+      db.from("budgets").select("id, treatment, value, status").eq("patient_id", patientId),
+      db
         .from("payments")
         .select("id, amount, status, paid_at, created_at")
         .eq("patient_id", patientId)
         .order("created_at", { ascending: false }),
-      supabase
+      db
         .from("prescriptions")
         .select("id, medication, instructions, issued_at")
         .eq("patient_id", patientId)
         .order("issued_at", { ascending: false }),
-      supabase
+      db
         .from("documents")
         .select("id, title, category, url, created_at")
         .eq("patient_id", patientId)
         .order("created_at", { ascending: false }),
-      supabase.from("patient_anamnesis").select("*").eq("patient_id", patientId).maybeSingle(),
-      supabase
+      db.from("patient_anamnesis").select("*").eq("patient_id", patientId).maybeSingle(),
+      db
         .from("tooth_records")
         .select("tooth_number, condition, notes")
         .eq("patient_id", patientId),
-      supabase
+      db
         .from("clinical_notes")
         .select("id, note, created_at")
         .eq("patient_id", patientId)
@@ -230,7 +230,7 @@ function Prontuario() {
   async function saveAppointment() {
     if (!apptForm.treatment.trim() || !apptForm.scheduled_at) return;
     setSaving(true);
-    await supabase.from("appointments").insert({
+    await db.from("appointments").insert({
       patient_id: patientId,
       treatment: apptForm.treatment.trim(),
       scheduled_at: new Date(apptForm.scheduled_at).toISOString(),
@@ -245,7 +245,7 @@ function Prontuario() {
   async function saveRx() {
     if (!rxForm.medication.trim()) return;
     setSaving(true);
-    await supabase.from("prescriptions").insert({
+    await db.from("prescriptions").insert({
       patient_id: patientId,
       medication: rxForm.medication.trim(),
       instructions: rxForm.instructions.trim() || null,
@@ -258,7 +258,7 @@ function Prontuario() {
 
   async function saveAnamnesis() {
     setSavingAnamnesis(true);
-    await supabase.from("patient_anamnesis").upsert({
+    await db.from("patient_anamnesis").upsert({
       patient_id: patientId,
       allergies: anamnesis.allergies?.trim() || null,
       current_medications: anamnesis.current_medications?.trim() || null,
@@ -278,7 +278,7 @@ function Prontuario() {
   }
 
   async function saveTooth(toothNumber: number, condition: ToothCondition, notes: string) {
-    await supabase.from("tooth_records").upsert(
+    await db.from("tooth_records").upsert(
       {
         patient_id: patientId,
         tooth_number: toothNumber,
@@ -298,14 +298,14 @@ function Prontuario() {
   async function addClinicalNote() {
     if (!newNote.trim() || savingNote) return;
     setSavingNote(true);
-    await supabase.from("clinical_notes").insert({ patient_id: patientId, note: newNote.trim() });
+    await db.from("clinical_notes").insert({ patient_id: patientId, note: newNote.trim() });
     setNewNote("");
     setSavingNote(false);
     load();
   }
 
   async function removeClinicalNote(id: string) {
-    await supabase.from("clinical_notes").delete().eq("id", id);
+    await db.from("clinical_notes").delete().eq("id", id);
     setClinicalNotes((prev) => prev.filter((n) => n.id !== id));
   }
 
@@ -315,9 +315,6 @@ function Prontuario() {
     setAiError(null);
     setAiSummary(null);
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-      if (!token) throw new Error("Sessão expirada. Faça login novamente.");
       const result = await summarizePatientHistory({
         data: {
           patientName: patient.name,
@@ -337,7 +334,7 @@ function Prontuario() {
             instructions: rx.instructions,
           })),
         },
-        headers: { Authorization: `Bearer ${token}` },
+
       });
       setAiSummary(result.summary);
     } catch (error) {

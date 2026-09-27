@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { Phone, Plus, Pencil, Trash2, Search, Info } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/integrations/mysql/client";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { EmptyState } from "@/components/admin/EmptyState";
 import { Button } from "@/components/ui/button";
@@ -52,7 +52,7 @@ function WhatsApp() {
 
   async function load() {
     setLoading(true);
-    const { data } = await supabase
+    const { data } = await db
       .from("whatsapp_contacts")
       .select("id, name, phone, last_message, last_contact_at")
       .order("last_contact_at", { ascending: false });
@@ -92,9 +92,9 @@ function WhatsApp() {
       last_contact_at: new Date().toISOString(),
     };
     if (editing) {
-      await supabase.from("whatsapp_contacts").update(payload).eq("id", editing.id);
+      await db.from("whatsapp_contacts").update(payload).eq("id", editing.id);
     } else {
-      await supabase.from("whatsapp_contacts").insert(payload);
+      await db.from("whatsapp_contacts").insert(payload);
     }
     setSaving(false);
     setDialogOpen(false);
@@ -103,7 +103,7 @@ function WhatsApp() {
 
   async function remove() {
     if (!deleteTarget) return;
-    await supabase.from("whatsapp_contacts").delete().eq("id", deleteTarget.id);
+    await db.from("whatsapp_contacts").delete().eq("id", deleteTarget.id);
     setDeleteTarget(null);
     load();
   }

@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { FileText, Plus, Pencil, Trash2, Search, ExternalLink } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/integrations/mysql/client";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { EmptyState } from "@/components/admin/EmptyState";
 import { Button } from "@/components/ui/button";
@@ -74,11 +74,11 @@ function Documentos() {
   async function load() {
     setLoading(true);
     const [{ data: itemsData }, { data: patientsData }] = await Promise.all([
-      supabase
+      db
         .from("documents")
         .select("id, patient_id, title, category, url, created_at, patients(name)")
         .order("created_at", { ascending: false }),
-      supabase.from("patients").select("id, name").order("name"),
+      db.from("patients").select("id, name").order("name"),
     ]);
     setItems((itemsData ?? []) as unknown as DocumentRow[]);
     setPatients((patientsData ?? []) as Patient[]);
@@ -132,9 +132,9 @@ function Documentos() {
       url: form.url.trim() || null,
     };
     if (editing) {
-      await supabase.from("documents").update(payload).eq("id", editing.id);
+      await db.from("documents").update(payload).eq("id", editing.id);
     } else {
-      await supabase.from("documents").insert(payload);
+      await db.from("documents").insert(payload);
     }
     setSaving(false);
     setDialogOpen(false);
@@ -143,7 +143,7 @@ function Documentos() {
 
   async function remove() {
     if (!deleteTarget) return;
-    await supabase.from("documents").delete().eq("id", deleteTarget.id);
+    await db.from("documents").delete().eq("id", deleteTarget.id);
     setDeleteTarget(null);
     load();
   }

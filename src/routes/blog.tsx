@@ -2,8 +2,10 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { Newspaper, ArrowRight } from "lucide-react";
 import { SiteHeader } from "@/components/site/SiteHeader";
+import { SiteFooter } from "@/components/site/SiteFooter";
 import { ChatWidget } from "@/components/site/ChatWidget";
-import { supabase } from "@/integrations/supabase/client";
+import { AdSlot } from "@/components/site/AdSlot";
+import { db } from "@/integrations/mysql/client";
 
 export const Route = createFileRoute("/blog")({
   head: () => ({
@@ -39,8 +41,7 @@ function Blog() {
   const [categoryFilter, setCategoryFilter] = useState<string>("Todas");
 
   useEffect(() => {
-    supabase
-      .from("blog_posts")
+    db.from("blog_posts")
       .select("id, title, slug, excerpt, cover_image_url, category, published_at")
       .eq("status", "publicado")
       .order("published_at", { ascending: false })
@@ -85,6 +86,10 @@ function Blog() {
             ))}
           </div>
         )}
+
+        <div className="mt-8">
+          <AdSlot slot="0000000001" className="min-h-[100px]" />
+        </div>
 
         {loading ? (
           <p className="mt-10 text-sm text-muted-foreground">Carregando...</p>
@@ -144,6 +149,7 @@ function Blog() {
           </div>
         )}
       </main>
+      <SiteFooter />
       <ChatWidget />
     </div>
   );

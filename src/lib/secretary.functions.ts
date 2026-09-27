@@ -12,29 +12,39 @@ const input = z.object({ conversationId: z.string().uuid() });
 export const secretaryAutoReply = createServerFn({ method: "POST" })
   .validator((data: unknown) => input.parse(data))
   .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { requestActor, rateLimit } = await import("@/integrations/mysql/auth.server");
+    const { executeQuery } = await import("@/integrations/mysql/query.server");
+    const { createDataClient } = await import("@/integrations/mysql/query");
+    const actor = await requestActor();
+    if (!actor.admin && !actor.visitorHash) return { replied: false };
+    const visitorDb = createDataClient(query => executeQuery(query, actor));
+    const { data: owned } = await visitorDb.from("conversations").select("id").eq("id", data.conversationId).maybeSingle();
+    if (!owned) return { replied: false };
+    await rateLimit(`secretary:${data.conversationId}`, 1, 10);
+    const db = createDataClient(query => executeQuery(query, { ...actor, admin: true }));
 
-    const { data: settings } = await supabaseAdmin
+    const { data: settings } = await db
       .from("clinic_settings")
       .select("ai_secretary_enabled, clinic_name, phone, address")
       .eq("id", "default")
       .maybeSingle();
     if (!settings?.ai_secretary_enabled) return { replied: false };
 
-    const { data: conversation } = await supabaseAdmin
+    const { data: conversation } = await db
       .from("conversations")
       .select("visitor_name")
       .eq("id", data.conversationId)
       .maybeSingle();
     if (!conversation) return { replied: false };
 
-    const { data: messages } = await supabaseAdmin
+    const { data: messages } = await db
       .from("messages")
       .select("sender, content")
       .eq("conversation_id", data.conversationId)
-      .order("created_at", { ascending: true })
+      .order("created_at", { ascending: false })
       .limit(20);
     if (!messages || messages.length === 0) return { replied: false };
+    messages.reverse();
 
     const last = messages[messages.length - 1];
     if (last?.sender !== "visitor") return { replied: false };
@@ -49,7 +59,7 @@ export const secretaryAutoReply = createServerFn({ method: "POST" })
     const model = process.env["AI_GATEWAY_MODEL"];
     if (!apiKey || !baseUrl || !model) return { replied: false };
 
-    const { data: services } = await supabaseAdmin
+    const { data: services } = await db
       .from("services")
       .select("name, price")
       .eq("active", true)
@@ -100,7 +110,7 @@ export const secretaryAutoReply = createServerFn({ method: "POST" })
     const reply = json.choices?.[0]?.message?.content?.trim();
     if (!reply) return { replied: false };
 
-    await supabaseAdmin.from("messages").insert({
+    await db.from("messages").insert({
       conversation_id: data.conversationId,
       sender: "admin",
       content: `${BOT_PREFIX} ${reply}`,

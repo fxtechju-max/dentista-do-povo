@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { Sparkles, Send } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/integrations/mysql/client";
 import { askAssistant } from "@/lib/admin/functions";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -33,12 +33,9 @@ function Ia() {
     setDraft("");
     setLoading(true);
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-      if (!token) throw new Error("Sessão expirada. Faça login novamente.");
       const result = await askAssistant({
         data: { messages: next },
-        headers: { Authorization: `Bearer ${token}` },
+
       });
       setMessages((prev) => [...prev, { role: "assistant", content: result.reply }]);
     } catch (e) {

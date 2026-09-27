@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Sparkles, ShieldCheck, Star, ArrowRight } from "lucide-react";
 import { SiteHeader } from "@/components/site/SiteHeader";
+import { SiteFooter } from "@/components/site/SiteFooter";
 import { ChatWidget } from "@/components/site/ChatWidget";
 import heroImg from "@/assets/clinica-hero.jpg";
 
@@ -109,16 +110,7 @@ function Index() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-border">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 py-8 text-sm text-muted-foreground md:flex-row">
-          <p>© 2026 Dentista do Povo — Clínica Odontológica</p>
-          <Link to="/entrar" className="font-semibold hover:text-foreground">
-            Área Restrita
-          </Link>
-        </div>
-      </footer>
-
+      <SiteFooter />
       <ChatWidget />
     </div>
   );

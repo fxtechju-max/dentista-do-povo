@@ -1,11 +1,6 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5";
-  };
   public: {
     Tables: {
       conversations: {
@@ -429,27 +424,36 @@ export type Database = {
           ai_secretary_enabled: boolean;
           clinic_name: string | null;
           disabled_modules: string[];
+          facebook_url: string | null;
           id: string;
+          instagram_url: string | null;
           phone: string | null;
           updated_at: string;
+          whatsapp_number: string | null;
         };
         Insert: {
           address?: string | null;
           ai_secretary_enabled?: boolean;
           clinic_name?: string | null;
           disabled_modules?: string[];
+          facebook_url?: string | null;
           id?: string;
+          instagram_url?: string | null;
           phone?: string | null;
           updated_at?: string;
+          whatsapp_number?: string | null;
         };
         Update: {
           address?: string | null;
           ai_secretary_enabled?: boolean;
           clinic_name?: string | null;
           disabled_modules?: string[];
+          facebook_url?: string | null;
           id?: string;
+          instagram_url?: string | null;
           phone?: string | null;
           updated_at?: string;
+          whatsapp_number?: string | null;
         };
         Relationships: [];
       };
@@ -612,6 +616,56 @@ export type Database = {
           },
         ];
       };
+      finance_entries: {
+        Row: {
+          amount: number;
+          category: string | null;
+          created_at: string;
+          description: string;
+          due_date: string | null;
+          id: string;
+          notes: string | null;
+          paid_at: string | null;
+          patient_id: string | null;
+          status: Database["public"]["Enums"]["payment_status"];
+          type: Database["public"]["Enums"]["finance_entry_type"];
+        };
+        Insert: {
+          amount: number;
+          category?: string | null;
+          created_at?: string;
+          description: string;
+          due_date?: string | null;
+          id?: string;
+          notes?: string | null;
+          paid_at?: string | null;
+          patient_id?: string | null;
+          status?: Database["public"]["Enums"]["payment_status"];
+          type: Database["public"]["Enums"]["finance_entry_type"];
+        };
+        Update: {
+          amount?: number;
+          category?: string | null;
+          created_at?: string;
+          description?: string;
+          due_date?: string | null;
+          id?: string;
+          notes?: string | null;
+          paid_at?: string | null;
+          patient_id?: string | null;
+          status?: Database["public"]["Enums"]["payment_status"];
+          type?: Database["public"]["Enums"]["finance_entry_type"];
+        };
+        Relationships: [
+          {
+            foreignKeyName: "finance_entries_patient_id_fkey";
+            columns: ["patient_id"];
+            isOneToOne: false;
+            referencedRelation: "patients";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -630,6 +684,7 @@ export type Database = {
       appointment_status: "agendado" | "confirmado" | "concluido" | "cancelado";
       payment_status: "pendente" | "pago" | "cancelado";
       lead_status: "novo" | "em_contato" | "convertido" | "perdido";
+      finance_entry_type: "pagar" | "receber";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -637,7 +692,7 @@ export type Database = {
   };
 };
 
-type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">;
+type DatabaseWithoutInternals = Database;
 
 type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">];
 

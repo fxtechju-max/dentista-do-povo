@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { MapPin, Phone, Clock, MessageCircle } from "lucide-react";
 import { SiteHeader } from "@/components/site/SiteHeader";
+import { SiteFooter } from "@/components/site/SiteFooter";
 import { ChatWidget } from "@/components/site/ChatWidget";
 
 export const Route = createFileRoute("/contato")({
@@ -72,6 +73,7 @@ function Contato() {
           </div>
         </div>
       </main>
+      <SiteFooter />
       <ChatWidget />
     </div>
   );

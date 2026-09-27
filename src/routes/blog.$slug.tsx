@@ -2,8 +2,10 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ArrowLeft, Newspaper } from "lucide-react";
 import { SiteHeader } from "@/components/site/SiteHeader";
+import { SiteFooter } from "@/components/site/SiteFooter";
 import { ChatWidget } from "@/components/site/ChatWidget";
-import { supabase } from "@/integrations/supabase/client";
+import { AdSlot } from "@/components/site/AdSlot";
+import { db } from "@/integrations/mysql/client";
 
 export const Route = createFileRoute("/blog/$slug")({
   head: () => ({
@@ -28,8 +30,7 @@ function BlogPost() {
 
   useEffect(() => {
     setLoading(true);
-    supabase
-      .from("blog_posts")
+    db.from("blog_posts")
       .select("id, title, content, cover_image_url, category, published_at")
       .eq("slug", slug)
       .eq("status", "publicado")
@@ -89,9 +90,14 @@ function BlogPost() {
                 </p>
               ))}
             </div>
+
+            <div className="mt-8 border-t border-border pt-8">
+              <AdSlot slot="0000000002" className="min-h-[100px]" />
+            </div>
           </article>
         )}
       </main>
+      <SiteFooter />
       <ChatWidget />
     </div>
   );

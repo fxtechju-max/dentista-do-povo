@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { TrendingUp, Plus, Pencil, Trash2, Search, UserPlus } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/integrations/mysql/client";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { EmptyState } from "@/components/admin/EmptyState";
 import {
@@ -74,7 +74,7 @@ function Crm() {
 
   async function load() {
     setLoading(true);
-    const { data } = await supabase
+    const { data } = await db
       .from("leads")
       .select("id, name, phone, source, status, created_at")
       .order("created_at", { ascending: false });
@@ -118,9 +118,9 @@ function Crm() {
       status: form.status,
     };
     if (editing) {
-      await supabase.from("leads").update(payload).eq("id", editing.id);
+      await db.from("leads").update(payload).eq("id", editing.id);
     } else {
-      await supabase.from("leads").insert(payload);
+      await db.from("leads").insert(payload);
     }
     setSaving(false);
     setDialogOpen(false);
@@ -128,14 +128,14 @@ function Crm() {
   }
 
   async function convertToPatient(lead: Lead) {
-    await supabase.from("patients").insert({ name: lead.name, phone: lead.phone });
-    await supabase.from("leads").update({ status: "convertido" }).eq("id", lead.id);
+    await db.from("patients").insert({ name: lead.name, phone: lead.phone });
+    await db.from("leads").update({ status: "convertido" }).eq("id", lead.id);
     load();
   }
 
   async function remove() {
     if (!deleteTarget) return;
-    await supabase.from("leads").delete().eq("id", deleteTarget.id);
+    await db.from("leads").delete().eq("id", deleteTarget.id);
     setDeleteTarget(null);
     load();
   }

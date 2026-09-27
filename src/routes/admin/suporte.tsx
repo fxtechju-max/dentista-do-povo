@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Send, MessageCircle, Trash2, Sparkles, Link2, Check } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/integrations/mysql/client";
 import { draftSupportReply } from "@/lib/admin/functions";
 
 export const Route = createFileRoute("/admin/suporte")({
@@ -53,7 +53,7 @@ function Suporte() {
   }, [activeId]);
 
   const loadConversations = useCallback(async () => {
-    const { data } = await supabase
+    const { data } = await db
       .from("conversations")
       .select("id, visitor_name, last_message_at")
       .order("last_message_at", { ascending: false });
@@ -98,53 +98,41 @@ function Suporte() {
     }
   }
 
-  // Realtime: new conversations and messages refresh the list, update the open
-  // conversation, and notify the admin (with a direct link to open it).
+  // Poll without overlapping requests; stop when the panel unmounts.
   useEffect(() => {
-    const channel = supabase
-      .channel("admin-messages")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "messages" },
-        (payload) => {
-          const msg = payload.new as Message;
-          loadConversations();
-          setMessages((prev) =>
-            msg.conversation_id === activeIdRef.current && !prev.some((m) => m.id === msg.id)
-              ? [...prev, msg]
-              : prev,
-          );
-          if (msg.sender === "visitor") {
-            const visitorName =
-              conversationsRef.current.find((c) => c.id === msg.conversation_id)?.visitor_name ??
-              "um visitante";
-            notifyAdmin(`Nova mensagem de ${visitorName}`, msg.content, msg.conversation_id);
+    let stopped = false;
+    let timer: ReturnType<typeof setTimeout>;
+    let previous: Map<string, string> | null = null;
+    async function refresh() {
+      if (stopped) return;
+      const { data } = await db.from("conversations").select("id, visitor_name, last_message_at").order("last_message_at", { ascending: false });
+      if (!stopped && data) {
+        setConversations(data as Conversation[]);
+        for (const conversation of data) {
+          if (previous && previous.get(conversation.id) !== conversation.last_message_at) {
+            const { data: latest } = await db.from("messages").select("sender, content").eq("conversation_id", conversation.id).order("created_at", { ascending: false }).limit(1);
+            if (!stopped && latest?.[0]?.sender === "visitor") notifyAdmin(
+              'Nova mensagem de ' + conversation.visitor_name, latest[0].content, conversation.id,
+            );
           }
-        },
-      )
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "conversations" },
-        (payload) => {
-          const conversation = payload.new as Conversation;
-          loadConversations();
-          notifyAdmin(
-            "Nova conversa",
-            `${conversation.visitor_name} iniciou uma conversa no chat do site.`,
-            conversation.id,
-          );
-        },
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [loadConversations, notifyAdmin]);
+        }
+        previous = new Map(data.map(c => [c.id, c.last_message_at]));
+      }
+      const id = activeIdRef.current;
+      if (id && !stopped) {
+        const { data: messages } = await db.from("messages").select("id, conversation_id, sender, content, created_at").eq("conversation_id", id).order("created_at");
+        if (!stopped && activeIdRef.current === id && messages) setMessages(messages as Message[]);
+      }
+      if (!stopped) timer = setTimeout(refresh, 3000);
+    }
+    void refresh();
+    return () => { stopped = true; clearTimeout(timer); };
+  }, [notifyAdmin]);
 
   // Load messages when a conversation is opened
   useEffect(() => {
     if (!activeId) return;
-    supabase
+    db
       .from("messages")
       .select("id, conversation_id, sender, content, created_at")
       .eq("conversation_id", activeId)
@@ -162,7 +150,7 @@ function Suporte() {
     const content = draft.trim();
     if (!content || !activeId) return;
     setDraft("");
-    await supabase.from("messages").insert({
+    await db.from("messages").insert({
       conversation_id: activeId,
       sender: "admin",
       content,
@@ -174,15 +162,12 @@ function Suporte() {
     setAiLoading(true);
     setAiError(null);
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-      if (!token) throw new Error("Sessão expirada. Faça login novamente.");
       const result = await draftSupportReply({
         data: {
           visitorName: active.visitor_name,
           messages: messages.map((m) => ({ sender: m.sender, content: m.content })),
         },
-        headers: { Authorization: `Bearer ${token}` },
+
       });
       setDraft(result.draft);
     } catch (error) {
@@ -193,7 +178,7 @@ function Suporte() {
   }
 
   async function removeConversation(id: string) {
-    await supabase.from("conversations").delete().eq("id", id);
+    await db.from("conversations").delete().eq("id", id);
     if (activeId === id) {
       setActiveId(null);
       setMessages([]);

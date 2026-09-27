@@ -10,7 +10,7 @@ import {
   Newspaper,
   ExternalLink,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/integrations/mysql/client";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { EmptyState } from "@/components/admin/EmptyState";
 import { formatCurrency, slugify } from "@/lib/admin/labels";
@@ -95,7 +95,7 @@ function ServicosTab() {
 
   async function load() {
     setLoading(true);
-    const { data } = await supabase
+    const { data } = await db
       .from("services")
       .select("id, name, description, price, active, sort_order")
       .order("sort_order");
@@ -141,9 +141,9 @@ function ServicosTab() {
       ...(editing ? {} : { sort_order: services.length }),
     };
     if (editing) {
-      await supabase.from("services").update(payload).eq("id", editing.id);
+      await db.from("services").update(payload).eq("id", editing.id);
     } else {
-      await supabase.from("services").insert(payload);
+      await db.from("services").insert(payload);
     }
     setSaving(false);
     setDialogOpen(false);
@@ -151,13 +151,13 @@ function ServicosTab() {
   }
 
   async function toggleActive(s: Service) {
-    await supabase.from("services").update({ active: !s.active }).eq("id", s.id);
+    await db.from("services").update({ active: !s.active }).eq("id", s.id);
     load();
   }
 
   async function remove() {
     if (!deleteTarget) return;
-    await supabase.from("services").delete().eq("id", deleteTarget.id);
+    await db.from("services").delete().eq("id", deleteTarget.id);
     setDeleteTarget(null);
     load();
   }
@@ -343,7 +343,7 @@ function BlogTab() {
 
   async function load() {
     setLoading(true);
-    const { data } = await supabase
+    const { data } = await db
       .from("blog_posts")
       .select(
         "id, title, slug, excerpt, content, cover_image_url, category, status, published_at, created_at",
@@ -404,9 +404,9 @@ function BlogTab() {
         form.status === "publicado" ? (editing?.published_at ?? new Date().toISOString()) : null,
     };
     if (editing) {
-      await supabase.from("blog_posts").update(payload).eq("id", editing.id);
+      await db.from("blog_posts").update(payload).eq("id", editing.id);
     } else {
-      await supabase.from("blog_posts").insert(payload);
+      await db.from("blog_posts").insert(payload);
     }
     setSaving(false);
     setDialogOpen(false);
@@ -415,7 +415,7 @@ function BlogTab() {
 
   async function remove() {
     if (!deleteTarget) return;
-    await supabase.from("blog_posts").delete().eq("id", deleteTarget.id);
+    await db.from("blog_posts").delete().eq("id", deleteTarget.id);
     setDeleteTarget(null);
     load();
   }

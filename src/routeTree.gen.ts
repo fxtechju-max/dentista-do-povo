@@ -19,7 +19,9 @@ import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as AdminAgendaRouteImport } from './routes/admin/agenda'
 import { Route as AdminCmsSiteRouteImport } from './routes/admin/cms-site'
 import { Route as AdminConfiguracoesRouteImport } from './routes/admin/configuracoes'
+import { Route as AdminContasRouteImport } from './routes/admin/contas'
 import { Route as AdminCrmRouteImport } from './routes/admin/crm'
+import { Route as AdminDashboardRouteImport } from './routes/admin/dashboard'
 import { Route as AdminDocumentosRouteImport } from './routes/admin/documentos'
 import { Route as AdminFinanceiroRouteImport } from './routes/admin/financeiro'
 import { Route as AdminIaRouteImport } from './routes/admin/ia'
@@ -83,9 +85,19 @@ const AdminConfiguracoesRoute = AdminConfiguracoesRouteImport.update({
   path: '/configuracoes',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminContasRoute = AdminContasRouteImport.update({
+  id: '/contas',
+  path: '/contas',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminCrmRoute = AdminCrmRouteImport.update({
   id: '/crm',
   path: '/crm',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminDashboardRoute = AdminDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminDocumentosRoute = AdminDocumentosRouteImport.update({
@@ -159,7 +171,9 @@ export interface FileRoutesByFullPath {
   '/admin/agenda': typeof AdminAgendaRoute
   '/admin/cms-site': typeof AdminCmsSiteRoute
   '/admin/configuracoes': typeof AdminConfiguracoesRoute
+  '/admin/contas': typeof AdminContasRoute
   '/admin/crm': typeof AdminCrmRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/documentos': typeof AdminDocumentosRoute
   '/admin/financeiro': typeof AdminFinanceiroRoute
   '/admin/ia': typeof AdminIaRoute
@@ -183,7 +197,9 @@ export interface FileRoutesByTo {
   '/admin/agenda': typeof AdminAgendaRoute
   '/admin/cms-site': typeof AdminCmsSiteRoute
   '/admin/configuracoes': typeof AdminConfiguracoesRoute
+  '/admin/contas': typeof AdminContasRoute
   '/admin/crm': typeof AdminCrmRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/documentos': typeof AdminDocumentosRoute
   '/admin/financeiro': typeof AdminFinanceiroRoute
   '/admin/ia': typeof AdminIaRoute
@@ -209,7 +225,9 @@ export interface FileRoutesById {
   '/admin/agenda': typeof AdminAgendaRoute
   '/admin/cms-site': typeof AdminCmsSiteRoute
   '/admin/configuracoes': typeof AdminConfiguracoesRoute
+  '/admin/contas': typeof AdminContasRoute
   '/admin/crm': typeof AdminCrmRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/documentos': typeof AdminDocumentosRoute
   '/admin/financeiro': typeof AdminFinanceiroRoute
   '/admin/ia': typeof AdminIaRoute
@@ -236,7 +254,9 @@ export interface FileRouteTypes {
     | '/admin/agenda'
     | '/admin/cms-site'
     | '/admin/configuracoes'
+    | '/admin/contas'
     | '/admin/crm'
+    | '/admin/dashboard'
     | '/admin/documentos'
     | '/admin/financeiro'
     | '/admin/ia'
@@ -260,7 +280,9 @@ export interface FileRouteTypes {
     | '/admin/agenda'
     | '/admin/cms-site'
     | '/admin/configuracoes'
+    | '/admin/contas'
     | '/admin/crm'
+    | '/admin/dashboard'
     | '/admin/documentos'
     | '/admin/financeiro'
     | '/admin/ia'
@@ -285,7 +307,9 @@ export interface FileRouteTypes {
     | '/admin/agenda'
     | '/admin/cms-site'
     | '/admin/configuracoes'
+    | '/admin/contas'
     | '/admin/crm'
+    | '/admin/dashboard'
     | '/admin/documentos'
     | '/admin/financeiro'
     | '/admin/ia'
@@ -382,11 +406,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminConfiguracoesRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/contas': {
+      id: '/admin/contas'
+      path: '/contas'
+      fullPath: '/admin/contas'
+      preLoaderRoute: typeof AdminContasRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/crm': {
       id: '/admin/crm'
       path: '/crm'
       fullPath: '/admin/crm'
       preLoaderRoute: typeof AdminCrmRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/dashboard': {
+      id: '/admin/dashboard'
+      path: '/dashboard'
+      fullPath: '/admin/dashboard'
+      preLoaderRoute: typeof AdminDashboardRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/documentos': {
@@ -492,7 +530,9 @@ interface AdminRouteChildren {
   AdminAgendaRoute: typeof AdminAgendaRoute
   AdminCmsSiteRoute: typeof AdminCmsSiteRoute
   AdminConfiguracoesRoute: typeof AdminConfiguracoesRoute
+  AdminContasRoute: typeof AdminContasRoute
   AdminCrmRoute: typeof AdminCrmRoute
+  AdminDashboardRoute: typeof AdminDashboardRoute
   AdminDocumentosRoute: typeof AdminDocumentosRoute
   AdminFinanceiroRoute: typeof AdminFinanceiroRoute
   AdminIaRoute: typeof AdminIaRoute
@@ -510,7 +550,9 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminAgendaRoute: AdminAgendaRoute,
   AdminCmsSiteRoute: AdminCmsSiteRoute,
   AdminConfiguracoesRoute: AdminConfiguracoesRoute,
+  AdminContasRoute: AdminContasRoute,
   AdminCrmRoute: AdminCrmRoute,
+  AdminDashboardRoute: AdminDashboardRoute,
   AdminDocumentosRoute: AdminDocumentosRoute,
   AdminFinanceiroRoute: AdminFinanceiroRoute,
   AdminIaRoute: AdminIaRoute,
