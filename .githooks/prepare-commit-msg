@@ -1,0 +1,12 @@
+#!/bin/sh
+# Commits sem mensagem nao falham: se a mensagem estiver vazia (so
+# comentarios/espacos), preenche uma mensagem automatica com data e arquivos.
+MSG_FILE="$1"
+SOURCE="$2"
+[ "$SOURCE" = "merge" ] || [ "$SOURCE" = "squash" ] && exit 0
+if [ -z "$(grep -v '^#' "$MSG_FILE" | tr -d '[:space:]')" ]; then
+  FILES=$(git diff --cached --name-only | wc -l | tr -d ' ')
+  { printf 'Atualizacao %s (%s arquivos)\n' "$(date '+%d/%m/%Y %H:%M')" "$FILES"; cat "$MSG_FILE"; } > "$MSG_FILE.tmp"
+  mv "$MSG_FILE.tmp" "$MSG_FILE"
+fi
+exit 0
