@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { PoolConnection, RowDataPacket } from "mysql2/promise";
+import type { PoolConnection, Row as RowDataPacket } from "./pool.server";
 import { getPool } from "./pool.server";
 import { tableColumns } from "./tables";
 import {
@@ -204,17 +204,17 @@ export async function executeQuery(
         const protectedKeys = new Set([pk, "created_at", ...expected.split(",")]);
         const mutable = keys.filter((k) => !protectedKeys.has(k));
         suffix =
-          " ON DUPLICATE KEY UPDATE " +
+          ` ON CONFLICT (${expected}) ` +
           (mutable.length
-            ? mutable.map((k) => `\`${k}\`=VALUES(\`${k}\`)`).join(",")
-            : `\`${pk}\`=\`${pk}\``);
+            ? "DO UPDATE SET " + mutable.map((k) => `"${k}"=EXCLUDED."${k}"`).join(",")
+            : "DO NOTHING");
       }
       await conn.execute(
         `INSERT INTO \`${q.table}\` (${keys.map((k) => `\`${k}\``).join(",")}) VALUES (${keys.map(() => "?").join(",")})${suffix}`,
         keys.map((k) => sqlValue(k, values[k])),
       );
       if (q.table === "messages")
-        await conn.execute("UPDATE conversations SET last_message_at=UTC_TIMESTAMP(3) WHERE id=?", [
+        await conn.execute("UPDATE conversations SET last_message_at=now() WHERE id=?", [
           sqlValue("conversation_id", values["conversation_id"]),
         ]);
       q.filters =
@@ -228,7 +228,7 @@ export async function executeQuery(
     } else {
       const where = predicates(q, actor);
       if (q.action === "delete")
-        await conn.execute(`DELETE t FROM \`${q.table}\` t${where.sql}`, where.values);
+        await conn.execute(`DELETE FROM \`${q.table}\` t${where.sql}`, where.values);
       else {
         const keys = Object.keys(values);
         await conn.execute(

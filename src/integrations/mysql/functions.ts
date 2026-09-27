@@ -21,7 +21,7 @@ export const runQuery = createServerFn({ method: "POST" })
     } catch (error) {
       const code = (error as { code?: string }).code;
       const message =
-        code === "ER_ROW_IS_REFERENCED_2"
+        code === "23503"
           ? "Este cadastro possui histórico vinculado e não pode ser excluído."
           : code
             ? "Não foi possível salvar ou consultar os dados. Verifique os campos e a conexão."
@@ -56,7 +56,7 @@ export const signIn = createServerFn({ method: "POST" })
         50,
         900,
       );
-      const [rows] = await getPool().execute<import("mysql2").RowDataPacket[]>(
+      const [rows] = await getPool().execute<import("@/integrations/mysql/pool.server").Row[]>(
         "SELECT id,password_hash FROM users WHERE email=?",
         [email],
       );
@@ -97,14 +97,14 @@ export const updateEmail = createServerFn({ method: "POST" })
     if (!user) return { error: { message: "Sessão expirada. Entre novamente." } };
     await rateLimit(`account-update:${user.id}`, 10, 900);
     const pool = getPool();
-    const [rows] = await pool.execute<import("mysql2").RowDataPacket[]>(
+    const [rows] = await pool.execute<import("@/integrations/mysql/pool.server").Row[]>(
       "SELECT password_hash FROM users WHERE id=?",
       [user.id],
     );
     const valid = await compare(data.password, String(rows[0]?.["password_hash"] ?? ""));
     if (!valid) return { error: { message: "Senha atual incorreta." } };
     const newEmail = data.newEmail.trim().toLowerCase();
-    const [existing] = await pool.execute<import("mysql2").RowDataPacket[]>(
+    const [existing] = await pool.execute<import("@/integrations/mysql/pool.server").Row[]>(
       "SELECT id FROM users WHERE email=? AND id<>?",
       [newEmail, user.id],
     );
@@ -132,7 +132,7 @@ export const updatePassword = createServerFn({ method: "POST" })
       return { error: { message: "Senha muito longa." } };
     await rateLimit(`account-update:${user.id}`, 10, 900);
     const pool = getPool();
-    const [rows] = await pool.execute<import("mysql2").RowDataPacket[]>(
+    const [rows] = await pool.execute<import("@/integrations/mysql/pool.server").Row[]>(
       "SELECT password_hash FROM users WHERE id=?",
       [user.id],
     );
@@ -149,7 +149,7 @@ export const listAdmins = createServerFn({ method: "POST" }).handler(async () =>
   const { requestActor } = await import("./auth.server");
   const actor = await requestActor();
   if (!actor.admin) return { data: null, error: { message: "Acesso negado." } };
-  const [rows] = await getPool().execute<import("mysql2").RowDataPacket[]>(
+  const [rows] = await getPool().execute<import("@/integrations/mysql/pool.server").Row[]>(
     "SELECT u.id, u.email, u.created_at, p.display_name FROM users u JOIN user_roles r ON r.user_id=u.id AND r.role='admin' LEFT JOIN profiles p ON p.id=u.id ORDER BY u.created_at",
   );
   return {
@@ -179,7 +179,7 @@ export const createAdmin = createServerFn({ method: "POST" })
     if (Buffer.byteLength(data.password) > 72) return { error: { message: "Senha muito longa." } };
     const pool = getPool();
     const email = data.email.trim().toLowerCase();
-    const [existing] = await pool.execute<import("mysql2").RowDataPacket[]>(
+    const [existing] = await pool.execute<import("@/integrations/mysql/pool.server").Row[]>(
       "SELECT id FROM users WHERE email=?",
       [email],
     );
@@ -208,7 +208,7 @@ export const removeAdmin = createServerFn({ method: "POST" })
     if (actor.userId === data.userId)
       return { error: { message: "Você não pode remover seu próprio acesso." } };
     const pool = getPool();
-    const [countRows] = await pool.execute<import("mysql2").RowDataPacket[]>(
+    const [countRows] = await pool.execute<import("@/integrations/mysql/pool.server").Row[]>(
       "SELECT COUNT(*) AS n FROM user_roles WHERE role='admin'",
     );
     if (Number(countRows[0]?.["n"]) <= 1)
@@ -222,7 +222,7 @@ export const getAiGatewaySettings = createServerFn({ method: "POST" }).handler(a
   const { requestActor } = await import("./auth.server");
   const actor = await requestActor();
   if (!actor.admin) return { data: null, error: { message: "Acesso negado." } };
-  const [rows] = await getPool().execute<import("mysql2").RowDataPacket[]>(
+  const [rows] = await getPool().execute<import("@/integrations/mysql/pool.server").Row[]>(
     "SELECT ai_gateway_provider, ai_gateway_base_url, ai_gateway_model, ai_gateway_api_key FROM clinic_settings WHERE id='default'",
   );
   const row = rows[0];
@@ -268,16 +268,16 @@ export const saveAiGatewaySettings = createServerFn({ method: "POST" })
       await pool.execute(
         `INSERT INTO clinic_settings (id, ai_gateway_provider, ai_gateway_base_url, ai_gateway_model, ai_gateway_api_key)
          VALUES ('default',?,?,?,?)
-         ON DUPLICATE KEY UPDATE ai_gateway_provider=VALUES(ai_gateway_provider), ai_gateway_base_url=VALUES(ai_gateway_base_url),
-           ai_gateway_model=VALUES(ai_gateway_model), ai_gateway_api_key=VALUES(ai_gateway_api_key)`,
+         ON CONFLICT (id) DO UPDATE SET ai_gateway_provider=EXCLUDED.ai_gateway_provider, ai_gateway_base_url=EXCLUDED.ai_gateway_base_url,
+           ai_gateway_model=EXCLUDED.ai_gateway_model, ai_gateway_api_key=EXCLUDED.ai_gateway_api_key`,
         [provider, baseUrl, model, data.apiKey.trim()],
       );
     } else {
       await pool.execute(
         `INSERT INTO clinic_settings (id, ai_gateway_provider, ai_gateway_base_url, ai_gateway_model)
          VALUES ('default',?,?,?)
-         ON DUPLICATE KEY UPDATE ai_gateway_provider=VALUES(ai_gateway_provider), ai_gateway_base_url=VALUES(ai_gateway_base_url),
-           ai_gateway_model=VALUES(ai_gateway_model)`,
+         ON CONFLICT (id) DO UPDATE SET ai_gateway_provider=EXCLUDED.ai_gateway_provider, ai_gateway_base_url=EXCLUDED.ai_gateway_base_url,
+           ai_gateway_model=EXCLUDED.ai_gateway_model`,
         [provider, baseUrl, model],
       );
     }
@@ -302,7 +302,7 @@ export const getAuditLog = createServerFn({ method: "POST" })
     const { requestActor } = await import("./auth.server");
     const actor = await requestActor();
     if (!actor.admin) return { data: null, error: { message: "Acesso negado." } };
-    const [rows] = await getPool().execute<import("mysql2").RowDataPacket[]>(
+    const [rows] = await getPool().execute<import("@/integrations/mysql/pool.server").Row[]>(
       `SELECT a.id, a.action, a.table_name, a.record_id, a.record_label, a.created_at, u.email, p.display_name
        FROM audit_log a
        LEFT JOIN users u ON u.id = a.user_id
@@ -343,4 +343,83 @@ export const hasRole = createServerFn({ method: "POST" })
       error: null,
       count: null,
     };
+  });
+
+// Primeiro acesso: enquanto não existir nenhum administrador, a tela /entrar
+// permite criar o primeiro. Depois disso, essa opção some para sempre.
+export const needsFirstAdmin = createServerFn({ method: "POST" }).handler(async () => {
+  const { getPool } = await import("./pool.server");
+  try {
+    const [rows] = await getPool().execute<import("@/integrations/mysql/pool.server").Row[]>(
+      "SELECT 1 FROM user_roles WHERE role='admin' LIMIT 1",
+    );
+    return { data: rows.length === 0, error: null };
+  } catch (error) {
+    return {
+      data: false,
+      error: { message: error instanceof Error ? error.message : "Banco indisponível." },
+    };
+  }
+});
+
+export const createFirstAdmin = createServerFn({ method: "POST" })
+  .validator((data: unknown) =>
+    z
+      .object({ email: z.string().email().max(254), password: z.string().min(12).max(72) })
+      .parse(data),
+  )
+  .handler(async ({ data }) => {
+    const { getPool } = await import("./pool.server");
+    const { createSession, rateLimit, digest } = await import("./auth.server");
+    const { getRequest } = await import("@tanstack/react-start/server");
+    const { randomUUID } = await import("node:crypto");
+    const { hash } = await import("bcryptjs");
+    if (Buffer.byteLength(data.password) > 72) return { error: { message: "Senha muito longa." } };
+    await rateLimit(
+      `first-admin:${digest(getRequest().headers.get("x-vercel-forwarded-for") ?? "local")}`,
+      10,
+      900,
+    );
+    const email = data.email.trim().toLowerCase();
+    const passwordHash = await hash(data.password, 12);
+    const conn = await getPool().getConnection();
+    let id = "";
+    try {
+      await conn.beginTransaction();
+      await conn.execute("SELECT pg_advisory_xact_lock(7426032)");
+      const [admins] = await conn.execute<import("@/integrations/mysql/pool.server").Row[]>(
+        "SELECT 1 FROM user_roles WHERE role='admin' LIMIT 1",
+      );
+      if (admins.length) {
+        await conn.rollback();
+        return { error: { message: "O administrador já foi criado. Faça login." } };
+      }
+      const [existing] = await conn.execute<import("@/integrations/mysql/pool.server").Row[]>(
+        "SELECT id FROM users WHERE email=?",
+        [email],
+      );
+      id = existing[0] ? String(existing[0]["id"]) : randomUUID();
+      if (existing[0])
+        await conn.execute("UPDATE users SET password_hash=? WHERE id=?", [passwordHash, id]);
+      else
+        await conn.execute("INSERT INTO users (id,email,password_hash) VALUES (?,?,?)", [
+          id,
+          email,
+          passwordHash,
+        ]);
+      await conn.execute(
+        "INSERT INTO user_roles (id,user_id,role) VALUES (?,?,'admin') ON CONFLICT (user_id, role) DO NOTHING",
+        [randomUUID(), id],
+      );
+      await conn.commit();
+    } catch (error) {
+      await conn.rollback();
+      return {
+        error: { message: error instanceof Error ? error.message : "Falha ao criar o acesso." },
+      };
+    } finally {
+      conn.release();
+    }
+    await createSession(id);
+    return { error: null };
   });

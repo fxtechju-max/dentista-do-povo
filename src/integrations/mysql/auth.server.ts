@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { getCookie, setCookie, deleteCookie } from "@tanstack/react-start/server";
-import type { RowDataPacket } from "mysql2";
+import type { Row as RowDataPacket } from "./pool.server";
 import { getPool } from "./pool.server";
 import type { Actor } from "./protocol";
 
@@ -18,7 +18,7 @@ export async function currentUser() {
   const token = getCookie(SESSION);
   if (!token || !/^[a-f0-9]{64}$/.test(token)) return null;
   const [rows] = await getPool().execute<RowDataPacket[]>(
-    "SELECT u.id, u.email FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>UTC_TIMESTAMP(3)",
+    "SELECT u.id, u.email FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>now()",
     [digest(token)],
   );
   const row = rows[0];
@@ -56,7 +56,7 @@ export async function createSession(userId: string) {
   await destroySession();
   const token = randomBytes(32).toString("hex");
   await getPool().execute(
-    "INSERT INTO sessions (token_hash,user_id,expires_at) VALUES (?,?,DATE_ADD(UTC_TIMESTAMP(3), INTERVAL 7 DAY))",
+    "INSERT INTO sessions (token_hash,user_id,expires_at) VALUES (?,?,now() + interval '7 days')",
     [digest(token), userId],
   );
   setCookie(SESSION, token, { ...cookieOptions, maxAge: 60 * 60 * 24 * 7 });
@@ -80,8 +80,10 @@ export async function destroyOtherSessions(userId: string) {
 export async function rateLimit(bucket: string, maximum: number, seconds: number) {
   const key = digest(bucket);
   await getPool().execute(
-    `INSERT INTO rate_limits (bucket,hits,expires_at) VALUES (?,1,DATE_ADD(UTC_TIMESTAMP(3), INTERVAL ? SECOND))
-    ON DUPLICATE KEY UPDATE hits=IF(expires_at<=UTC_TIMESTAMP(3),1,hits+1), expires_at=IF(expires_at<=UTC_TIMESTAMP(3),VALUES(expires_at),expires_at)`,
+    `INSERT INTO rate_limits (bucket,hits,expires_at) VALUES (?,1,now() + make_interval(secs => ?::int))
+    ON CONFLICT (bucket) DO UPDATE SET
+      hits = CASE WHEN rate_limits.expires_at<=now() THEN 1 ELSE rate_limits.hits+1 END,
+      expires_at = CASE WHEN rate_limits.expires_at<=now() THEN EXCLUDED.expires_at ELSE rate_limits.expires_at END`,
     [key, seconds],
   );
   const [rows] = await getPool().execute<RowDataPacket[]>(

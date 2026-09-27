@@ -15,6 +15,8 @@ import {
   saveAiGatewaySettings,
   clearAiGatewayApiKey,
   getAuditLog,
+  needsFirstAdmin,
+  createFirstAdmin,
 } from "./functions";
 
 export const db = {
@@ -36,6 +38,8 @@ export const db = {
     updateEmail: (data: { password: string; newEmail: string }) => updateEmail({ data }),
     updatePassword: (data: { currentPassword: string; newPassword: string }) =>
       updatePassword({ data }),
+    needsFirstAdmin: () => needsFirstAdmin(),
+    createFirstAdmin: (data: { email: string; password: string }) => createFirstAdmin({ data }),
   },
   admins: {
     list: () => listAdmins(),
@@ -55,7 +59,7 @@ export const db = {
     hasRole({ data }),
 };
 
-// Gallery bytes live in MySQL and are served by src/server.ts.
+// Gallery bytes live in the database (Supabase) and are served by src/server.ts.
 export function galleryPhotoUrl(id: string) {
   return `/api/gallery/${id}`;
 }
