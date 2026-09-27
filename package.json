@@ -6,14 +6,15 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test tests/*.test.ts",
-    "db:migrate": "node --env-file-if-exists=.env scripts/mysql-migrate.mjs",
-    "db:admin": "node --env-file-if-exists=.env scripts/mysql-admin.mjs",
-    "db:import": "node --env-file-if-exists=.env scripts/mysql-import-postgres.mjs",
+    "db:migrate": "node --env-file-if-exists=.env scripts/supabase-migrate.mjs",
+    "db:admin": "node --env-file-if-exists=.env scripts/supabase-admin.mjs",
+    "db:import": "node --env-file-if-exists=.env scripts/supabase-import-mysql.mjs",
     "dev": "vite dev",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
+    "check": "tsc --noEmit && eslint . && prettier --check . && node --import tsx --test tests/*.test.ts",
     "format": "prettier --write ."
   },
   "overrides": {
@@ -74,7 +75,8 @@
     "tw-animate-css": "^1.3.4",
     "vaul": "^1.1.2",
     "vite-tsconfig-paths": "^6.0.2",
-    "zod": "^3.25.76"
+    "zod": "^3.25.76",
+    "postgres": "^3.4.9"
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
@@ -90,7 +92,6 @@
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^15.15.0",
     "nitro": "3.0.260603-beta",
-    "postgres": "^3.4.9",
     "prettier": "^3.7.3",
     "tsx": "^4.23.15",
     "typescript": "^5.8.3",

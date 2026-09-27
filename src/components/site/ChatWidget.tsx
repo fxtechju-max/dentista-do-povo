@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { MessageCircle, X, Send } from "lucide-react";
-import { db } from "@/integrations/mysql/client";
+import { db } from "@/integrations/supabase/client";
 import { secretaryAutoReply } from "@/lib/secretary.functions";
 
 type Message = {
@@ -9,8 +9,6 @@ type Message = {
   content: string;
   created_at: string;
 };
-
-const STORAGE_KEY = "ddp_mysql_chat";
 
 export function ChatWidget() {
   const [open, setOpen] = useState(false);
@@ -22,18 +20,21 @@ export function ChatWidget() {
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  // Restore existing conversation from this browser
+  // Resolve ownership on the server using the opaque visitor cookie.
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const saved = JSON.parse(raw) as { id: string; name: string };
-        setConversationId(saved.id);
-        setVisitorName(saved.name);
-      }
-    } catch {
-      // ignore corrupted storage
-    }
+    let cancelled = false;
+    db.chat
+      .resume()
+      .then(({ data }) => {
+        if (!cancelled && data) {
+          setConversationId(data.id);
+          setVisitorName(data.visitor_name);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Short polling works on Vercel without a persistent WebSocket server.
@@ -73,7 +74,6 @@ export function ChatWidget() {
       .select("id")
       .single();
     if (error || !data) return;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ id: data.id, name: trimmed }));
     setConversationId(data.id);
     setVisitorName(trimmed);
   }

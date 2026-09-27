@@ -12,7 +12,7 @@ import {
   Images,
   Upload,
 } from "lucide-react";
-import { db, galleryPhotoUrl } from "@/integrations/mysql/client";
+import { db, galleryPhotoUrl } from "@/integrations/supabase/client";
 import { uploadGalleryPhoto, deleteGalleryPhoto } from "@/lib/gallery.functions";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { EmptyState } from "@/components/admin/EmptyState";

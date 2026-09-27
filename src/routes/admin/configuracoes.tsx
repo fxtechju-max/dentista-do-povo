@@ -1,3 +1,4 @@
+import { subscribePreferences, refreshPreferences } from "@/lib/preferences";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
@@ -23,7 +24,7 @@ import {
   Minus,
   RotateCcw,
 } from "lucide-react";
-import { db } from "@/integrations/mysql/client";
+import { db } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { EmptyState } from "@/components/admin/EmptyState";
 import { ADMIN_MODULES } from "@/lib/modules";
@@ -147,6 +148,16 @@ function Configuracoes() {
 
   const [adminZoom, setAdminZoom] = useState(() => loadZoom("admin"));
   const [publicZoom, setPublicZoom] = useState(() => loadZoom("public"));
+  useEffect(() => {
+    const refresh = () => {
+      setThemePrefs(loadThemePrefs());
+      setAdminZoom(loadZoom("admin"));
+      setPublicZoom(loadZoom("public"));
+    };
+    const unsubscribe = subscribePreferences(refresh);
+    void refreshPreferences().then(refresh);
+    return unsubscribe;
+  }, []);
 
   useEffect(() => {
     (async () => {

@@ -12,38 +12,8 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "../components/ui/sonner";
-import { THEME_COLORS } from "../lib/theme";
-
-// Runs before hydration so the admin panel paints with the saved mode/color
-// immediately — without this, SSR always renders the light/default-blue
-// theme first and the real theme only appears after React mounts, which
-// looks like "the color/dark mode doesn't work" on every hard refresh.
-const THEME_INIT_SCRIPT = `(function(){
-  try {
-    if (!location.pathname.startsWith('/admin')) return;
-    var raw = localStorage.getItem('ddp-admin-theme');
-    var prefs = raw ? JSON.parse(raw) : {};
-    var colors = ${JSON.stringify(Object.fromEntries(THEME_COLORS.map((c) => [c.id, c.primary])))};
-    var primary = colors[prefs.color] || colors['azul'];
-    var isDark = prefs.mode === 'dark' || (prefs.mode !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
-    document.documentElement.classList.toggle('dark', isDark);
-    var m = /oklch\\(\\s*[\\d.]+\\s+[\\d.]+\\s+([\\d.]+)/.exec(primary);
-    var hue = m ? m[1] : '262.9';
-    var root = document.documentElement.style;
-    root.setProperty('--primary', primary);
-    root.setProperty('--primary-foreground', 'oklch(0.984 0.003 247.858)');
-    root.setProperty('--ring', primary);
-    root.setProperty('--sidebar-primary', primary);
-    root.setProperty('--sidebar-ring', primary);
-    root.setProperty('--chart-1', primary);
-    var accent = isDark ? 'oklch(0.32 0.07 ' + hue + ')' : 'oklch(0.955 0.03 ' + hue + ')';
-    var accentFg = isDark ? 'oklch(0.93 0.02 ' + hue + ')' : 'oklch(0.32 0.09 ' + hue + ')';
-    root.setProperty('--accent', accent);
-    root.setProperty('--accent-foreground', accentFg);
-    root.setProperty('--sidebar-accent', accent);
-    root.setProperty('--sidebar-accent-foreground', accentFg);
-  } catch (e) {}
-})();`;
+import { refreshPreferences } from "../lib/preferences";
+import { clearLegacyStorage } from "../lib/clear-legacy-storage";
 
 function NotFoundComponent() {
   return (
@@ -162,7 +132,6 @@ function RootShell({ children }: { children: ReactNode }) {
     <html lang="pt-BR">
       <head>
         <HeadContent />
-        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body>
         {children}
@@ -173,6 +142,10 @@ function RootShell({ children }: { children: ReactNode }) {
 }
 
 function RootComponent() {
+  useEffect(() => {
+    clearLegacyStorage();
+    void refreshPreferences();
+  }, []);
   const { queryClient } = Route.useRouteContext();
 
   return (

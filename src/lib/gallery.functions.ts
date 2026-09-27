@@ -13,7 +13,7 @@ const JPEG_QUALITY = 88;
 const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
 
 async function requireAdmin() {
-  const { requestActor } = await import("@/integrations/mysql/auth.server");
+  const { requestActor } = await import("@/integrations/supabase/auth.server");
   const actor = await requestActor();
   return actor.admin ? actor.userId : null;
 }
@@ -24,7 +24,7 @@ export const uploadGalleryPhoto = createServerFn({ method: "POST" })
     return data;
   })
   .handler(async ({ data }) => {
-    const { getPool } = await import("@/integrations/mysql/pool.server");
+    const { getPool } = await import("@/integrations/supabase/pool.server");
     if (!(await requireAdmin())) return { data: null, error: { message: "Acesso negado." } };
 
     const file = data.get("file");
@@ -75,7 +75,7 @@ export const uploadGalleryPhoto = createServerFn({ method: "POST" })
 export const deleteGalleryPhoto = createServerFn({ method: "POST" })
   .validator((data: unknown) => z.object({ id: z.string().uuid() }).parse(data))
   .handler(async ({ data }) => {
-    const { getPool } = await import("@/integrations/mysql/pool.server");
+    const { getPool } = await import("@/integrations/supabase/pool.server");
     if (!(await requireAdmin())) return { error: { message: "Acesso negado." } };
     await getPool().execute("DELETE FROM gallery_photos WHERE id=?", [data.id]);
     return { error: null };

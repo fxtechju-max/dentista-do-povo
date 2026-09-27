@@ -1,3 +1,9 @@
+import {
+  readPreference,
+  savePreference,
+  subscribePreferences,
+  refreshPreferences,
+} from "./preferences";
 export const ZOOM_MIN = 80;
 export const ZOOM_MAX = 150;
 export const ZOOM_STEP = 10;
@@ -5,31 +11,17 @@ export const ZOOM_DEFAULT = 100;
 
 export type ZoomScope = "admin" | "public";
 
-const KEYS: Record<ZoomScope, string> = {
-  admin: "ddp-admin-zoom",
-  public: "ddp-public-zoom",
-};
+const KEYS = { admin: "adminZoom", public: "publicZoom" } as const;
 
 function clamp(value: number) {
   return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, value));
 }
 
 export function loadZoom(scope: ZoomScope): number {
-  if (typeof localStorage === "undefined") return ZOOM_DEFAULT;
-  try {
-    const raw = Number(localStorage.getItem(KEYS[scope]));
-    return Number.isFinite(raw) && raw > 0 ? clamp(raw) : ZOOM_DEFAULT;
-  } catch {
-    return ZOOM_DEFAULT;
-  }
+  return readPreference(KEYS[scope]) ?? ZOOM_DEFAULT;
 }
-
 export function saveZoom(scope: ZoomScope, value: number) {
-  try {
-    localStorage.setItem(KEYS[scope], String(clamp(value)));
-  } catch {
-    // Storage unavailable (private mode, etc.) — the choice just won't persist.
-  }
+  return savePreference({ key: KEYS[scope], value: clamp(value) });
 }
 
 function applyZoomValue(value: number) {
@@ -43,12 +35,10 @@ function mountZoom(scope: ZoomScope) {
   const previous = document.documentElement.style.getPropertyValue("zoom");
   const refresh = () => applyZoomValue(loadZoom(scope));
   refresh();
-  const onStorage = (event: StorageEvent) => {
-    if (event.key === KEYS[scope] || event.key === null) refresh();
-  };
-  window.addEventListener("storage", onStorage);
+  const unsubscribe = subscribePreferences(refresh);
+  void refreshPreferences();
   return () => {
-    window.removeEventListener("storage", onStorage);
+    unsubscribe();
     if (previous) document.documentElement.style.setProperty("zoom", previous);
     else document.documentElement.style.removeProperty("zoom");
   };

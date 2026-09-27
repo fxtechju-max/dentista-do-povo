@@ -1,3 +1,9 @@
+import {
+  readPreference,
+  savePreference,
+  subscribePreferences,
+  refreshPreferences,
+} from "./preferences";
 export type ThemeMode = "light" | "dark" | "system";
 export type ThemeColorId =
   | "azul"
@@ -52,32 +58,15 @@ const PRIMARY_FOREGROUND = "oklch(0.984 0.003 247.858)";
 export type ThemePrefs = { mode: ThemeMode; color: ThemeColorId };
 
 const DEFAULT_PREFS: ThemePrefs = { mode: "system", color: "azul" };
-const STORAGE_KEY = "ddp-admin-theme";
 
 export function loadThemePrefs(): ThemePrefs {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return DEFAULT_PREFS;
-    const parsed = JSON.parse(raw) as Partial<ThemePrefs>;
-    return {
-      mode: ["light", "dark", "system"].includes(parsed.mode ?? "")
-        ? parsed.mode!
-        : DEFAULT_PREFS.mode,
-      color: THEME_COLORS.some((color) => color.id === parsed.color)
-        ? parsed.color!
-        : DEFAULT_PREFS.color,
-    };
-  } catch {
-    return DEFAULT_PREFS;
-  }
+  const saved = readPreference("theme");
+  return saved && THEME_COLORS.some((c) => c.id === saved.color)
+    ? { mode: saved.mode, color: saved.color as ThemeColorId }
+    : DEFAULT_PREFS;
 }
-
 export function saveThemePrefs(prefs: ThemePrefs) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
-  } catch {
-    // Storage unavailable (private mode, etc.) — the choice just won't persist.
-  }
+  return savePreference({ key: "theme", value: prefs });
 }
 
 function hueOf(oklchValue: string): number {
@@ -145,15 +134,14 @@ export function mountAdminTheme() {
   root.setAttribute("data-admin-theme", "");
   const refresh = () => applyThemePrefs(loadThemePrefs());
   const media = window.matchMedia("(prefers-color-scheme: dark)");
-  const onStorage = (event: StorageEvent) => {
-    if (event.key === STORAGE_KEY || event.key === null) refresh();
-  };
+  const unsubscribe = subscribePreferences(refresh);
+  void refreshPreferences();
   refresh();
   media.addEventListener("change", refresh);
-  window.addEventListener("storage", onStorage);
+
   return () => {
     media.removeEventListener("change", refresh);
-    window.removeEventListener("storage", onStorage);
+    unsubscribe();
     root.removeAttribute("data-admin-theme");
     root.classList.remove("dark");
     for (const name of THEME_PROPERTIES) root.style.removeProperty(name);

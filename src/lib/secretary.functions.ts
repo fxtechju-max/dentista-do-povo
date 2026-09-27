@@ -12,9 +12,9 @@ const input = z.object({ conversationId: z.string().uuid() });
 export const secretaryAutoReply = createServerFn({ method: "POST" })
   .validator((data: unknown) => input.parse(data))
   .handler(async ({ data }) => {
-    const { requestActor, rateLimit } = await import("@/integrations/mysql/auth.server");
-    const { executeQuery } = await import("@/integrations/mysql/query.server");
-    const { createDataClient } = await import("@/integrations/mysql/query");
+    const { requestActor, rateLimit } = await import("@/integrations/supabase/auth.server");
+    const { executeQuery } = await import("@/integrations/supabase/query.server");
+    const { createDataClient } = await import("@/integrations/supabase/query");
     const actor = await requestActor();
     if (!actor.admin && !actor.visitorHash) return { replied: false };
     const visitorDb = createDataClient((query) => executeQuery(query, actor));

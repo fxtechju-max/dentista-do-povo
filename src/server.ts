@@ -15,11 +15,10 @@ let serverEntryPromise: Promise<ServerEntry> | undefined;
 const GALLERY_IMAGE_PATH = /^\/api\/gallery\/([0-9a-f-]{36})$/i;
 
 async function serveGalleryImage(id: string): Promise<Response | null> {
-  const { getPool } = await import("./integrations/mysql/pool.server");
-  const [rows] = await getPool().execute<import("mysql2").RowDataPacket[]>(
-    "SELECT image_data, mime_type FROM gallery_photos WHERE id=?",
-    [id],
-  );
+  const { getPool } = await import("./integrations/supabase/pool.server");
+  const [rows] = await getPool().execute<
+    import("@/integrations/supabase/pool.server").RowDataPacket[]
+  >("SELECT image_data, mime_type FROM gallery_photos WHERE id=?", [id]);
   const row = rows[0];
   if (!row) return null;
   return new Response(new Uint8Array(row["image_data"] as Buffer), {

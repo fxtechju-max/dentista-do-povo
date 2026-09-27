@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ArrowLeft, Printer } from "lucide-react";
-import { db } from "@/integrations/mysql/client";
+import { db } from "@/integrations/supabase/client";
 import { calculateAge, formatCurrency } from "@/lib/admin/labels";
 import { ToothIcon } from "@/lib/modules";
 import { Button } from "@/components/ui/button";

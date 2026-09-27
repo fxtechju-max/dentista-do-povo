@@ -1,3 +1,9 @@
+import {
+  readPreference,
+  savePreference,
+  subscribePreferences,
+  refreshPreferences,
+} from "@/lib/preferences";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -13,7 +19,7 @@ import {
   Grid3x3,
   Table2,
 } from "lucide-react";
-import { db } from "@/integrations/mysql/client";
+import { db } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { EmptyState } from "@/components/admin/EmptyState";
 import { Button } from "@/components/ui/button";
@@ -72,7 +78,7 @@ type Treatment = {
 const emptyForm = { name: "", description: "", price: "", duration_minutes: "", active: true };
 
 type ViewMode = "lista" | "grande" | "medio" | "pequeno" | "completo";
-const VIEW_STORAGE_KEY = "ddp-tratamentos-view";
+
 const VIEW_OPTIONS: { id: ViewMode; label: string; icon: typeof List }[] = [
   { id: "lista", label: "Lista", icon: List },
   { id: "grande", label: "Grande", icon: Square },
@@ -82,9 +88,7 @@ const VIEW_OPTIONS: { id: ViewMode; label: string; icon: typeof List }[] = [
 ];
 
 function loadViewMode(): ViewMode {
-  if (typeof localStorage === "undefined") return "medio";
-  const saved = localStorage.getItem(VIEW_STORAGE_KEY);
-  return VIEW_OPTIONS.some((o) => o.id === saved) ? (saved as ViewMode) : "medio";
+  return readPreference("treatmentView") ?? "medio";
 }
 
 function Tratamentos() {
@@ -92,6 +96,12 @@ function Tratamentos() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>(() => loadViewMode());
+  useEffect(() => {
+    const refresh = () => setViewMode(loadViewMode());
+    const unsubscribe = subscribePreferences(refresh);
+    void refreshPreferences().then(refresh);
+    return unsubscribe;
+  }, []);
   const [statusFilter, setStatusFilter] = useState<"todos" | "ativo" | "inativo">("todos");
   const [priceMin, setPriceMin] = useState("");
   const [priceMax, setPriceMax] = useState("");
@@ -134,11 +144,7 @@ function Tratamentos() {
 
   function changeView(mode: ViewMode) {
     setViewMode(mode);
-    try {
-      localStorage.setItem(VIEW_STORAGE_KEY, mode);
-    } catch {
-      // Storage unavailable — the choice just won't persist.
-    }
+    void savePreference({ key: "treatmentView", value: mode });
   }
 
   function openCreate() {

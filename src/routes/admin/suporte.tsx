@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Send, MessageCircle, Trash2, Sparkles, Link2, Check } from "lucide-react";
-import { db } from "@/integrations/mysql/client";
+import { db } from "@/integrations/supabase/client";
 import { draftSupportReply } from "@/lib/admin/functions";
 
 export const Route = createFileRoute("/admin/suporte")({

@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Users, Calendar, DollarSign, TrendingUp } from "lucide-react";
-import { db } from "@/integrations/mysql/client";
+import { db } from "@/integrations/supabase/client";
 import {
   APPOINTMENT_STATUS_LABEL as STATUS_LABEL,
   formatCurrency,

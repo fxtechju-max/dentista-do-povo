@@ -1,0 +1,9 @@
+# Keep LF line endings in the repo and working tree on every OS, so Prettier
+# (endOfLine: lf) never flags whole files after a checkout on Windows.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary
+*.zip binary

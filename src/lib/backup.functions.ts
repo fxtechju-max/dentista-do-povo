@@ -5,9 +5,9 @@
 // backup can never lock the admin out of their own system.
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import type { RowDataPacket } from "mysql2";
-import { tableColumns, type TableName } from "@/integrations/mysql/tables";
-import type { Json } from "@/integrations/mysql/types";
+import type { RowDataPacket } from "@/integrations/supabase/pool.server";
+import { tableColumns, type TableName } from "@/integrations/supabase/tables";
+import type { Json } from "@/integrations/supabase/types";
 
 // Parent-first order (for export/restore); reversed gives a safe delete order.
 const OPERATIONAL_TABLES = [
@@ -45,7 +45,7 @@ const BOOLEAN_COLUMNS = new Set([
 ]);
 
 export const listBackupTables = createServerFn({ method: "POST" }).handler(async () => {
-  const { requestActor } = await import("@/integrations/mysql/auth.server");
+  const { requestActor } = await import("@/integrations/supabase/auth.server");
   const actor = await requestActor();
   if (!actor.admin) return { data: null, error: { message: "Acesso negado." } };
   return { data: OPERATIONAL_TABLES, error: null };
@@ -56,8 +56,8 @@ export const exportBackup = createServerFn({ method: "POST" })
     z.object({ tables: z.array(z.enum(OPERATIONAL_TABLES)).min(1) }).parse(data),
   )
   .handler(async ({ data }) => {
-    const { getPool } = await import("@/integrations/mysql/pool.server");
-    const { requestActor } = await import("@/integrations/mysql/auth.server");
+    const { getPool } = await import("@/integrations/supabase/pool.server");
+    const { requestActor } = await import("@/integrations/supabase/auth.server");
     const actor = await requestActor();
     if (!actor.admin) return { data: null, error: { message: "Acesso negado." } };
     const pool = getPool();
@@ -65,7 +65,7 @@ export const exportBackup = createServerFn({ method: "POST" })
     for (const table of data.tables) {
       const columns = tableColumns[table];
       const [rows] = await pool.execute<RowDataPacket[]>(
-        `SELECT ${columns.map((c) => `\`${c}\``).join(",")} FROM \`${table}\``,
+        `SELECT ${columns.map((c) => `"${c}"`).join(",")} FROM "${table}"`,
       );
       tables[table] = rows.map(
         (row) =>
@@ -100,8 +100,8 @@ const restoreInput = z.object({
 export const restoreBackup = createServerFn({ method: "POST" })
   .validator((data: unknown) => restoreInput.parse(data))
   .handler(async ({ data }) => {
-    const { getPool } = await import("@/integrations/mysql/pool.server");
-    const { requestActor } = await import("@/integrations/mysql/auth.server");
+    const { getPool } = await import("@/integrations/supabase/pool.server");
+    const { requestActor } = await import("@/integrations/supabase/auth.server");
     const actor = await requestActor();
     if (!actor.admin) return { error: { message: "Acesso negado." }, restored: 0 };
 
@@ -129,15 +129,15 @@ export const restoreBackup = createServerFn({ method: "POST" })
           const values = keys.map((k) => {
             const v = row[k];
             if (v == null) return null;
-            if (BOOLEAN_COLUMNS.has(k)) return v ? 1 : 0;
+            if (BOOLEAN_COLUMNS.has(k)) return Boolean(v);
             if (k.endsWith("_at") && typeof v === "string") return new Date(v);
             if (Array.isArray(v)) return JSON.stringify(v);
             return v as string | number;
           });
           const mutable = keys.filter((k) => k !== pk);
           await conn.execute(
-            `INSERT INTO \`${table}\` (${keys.map((k) => `\`${k}\``).join(",")}) VALUES (${keys.map(() => "?").join(",")})
-             ON DUPLICATE KEY UPDATE ${mutable.length ? mutable.map((k) => `\`${k}\`=VALUES(\`${k}\`)`).join(",") : `\`${pk}\`=\`${pk}\``}`,
+            `INSERT INTO "${table}" (${keys.map((k) => `"${k}"`).join(",")}) VALUES (${keys.map(() => "?").join(",")})
+             ON CONFLICT ("${pk}") DO UPDATE SET ${mutable.length ? mutable.map((k) => `"${k}"=EXCLUDED."${k}"`).join(",") : `"${pk}"=EXCLUDED."${pk}"`}`,
             values,
           );
           restored++;
@@ -159,15 +159,15 @@ export const restoreBackup = createServerFn({ method: "POST" })
 export const wipeOperationalData = createServerFn({ method: "POST" })
   .validator((data: unknown) => z.object({ confirm: z.literal("APAGAR") }).parse(data))
   .handler(async () => {
-    const { getPool } = await import("@/integrations/mysql/pool.server");
-    const { requestActor } = await import("@/integrations/mysql/auth.server");
+    const { getPool } = await import("@/integrations/supabase/pool.server");
+    const { requestActor } = await import("@/integrations/supabase/auth.server");
     const actor = await requestActor();
     if (!actor.admin) return { error: { message: "Acesso negado." } };
     const conn = await getPool().getConnection();
     try {
       await conn.beginTransaction();
       for (const table of [...OPERATIONAL_TABLES].reverse()) {
-        await conn.execute(`DELETE FROM \`${table}\``);
+        await conn.execute(`DELETE FROM "${table}"`);
       }
       await conn.commit();
       return { error: null };
