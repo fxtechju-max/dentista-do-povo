@@ -9,16 +9,17 @@ type ServerEntry = {
 
 let serverEntryPromise: Promise<ServerEntry> | undefined;
 
-// Gallery photos are stored as bytea in the Supabase Postgres database,
+// Gallery photos are stored as blobs in MySQL (no object storage configured),
 // so they're served through a plain GET here — outside the TanStack Start
 // router/server-function RPC layer — so a normal <img src> just works.
 const GALLERY_IMAGE_PATH = /^\/api\/gallery\/([0-9a-f-]{36})$/i;
 
 async function serveGalleryImage(id: string): Promise<Response | null> {
-  const { getPool } = await import("./integrations/supabase/pool.server");
-  const [rows] = await getPool().execute<
-    import("@/integrations/supabase/pool.server").RowDataPacket[]
-  >("SELECT image_data, mime_type FROM gallery_photos WHERE id=?", [id]);
+  const { getPool } = await import("./integrations/mysql/pool.server");
+  const [rows] = await getPool().execute<import("@/integrations/mysql/pool.server").Row[]>(
+    "SELECT image_data, mime_type FROM gallery_photos WHERE id=?",
+    [id],
+  );
   const row = rows[0];
   if (!row) return null;
   return new Response(new Uint8Array(row["image_data"] as Buffer), {

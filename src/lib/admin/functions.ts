@@ -3,7 +3,7 @@
 // server-only env vars and call the AI Gateway here.
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireAuth } from "@/integrations/supabase/auth-middleware";
+import { requireAuth } from "@/integrations/mysql/auth-middleware";
 import { callAiGateway } from "@/lib/ai-gateway.server";
 
 const messageSchema = z.object({

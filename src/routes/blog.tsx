@@ -5,7 +5,7 @@ import { SiteHeader } from "@/components/site/SiteHeader";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { ChatWidget } from "@/components/site/ChatWidget";
 import { AdSlot } from "@/components/site/AdSlot";
-import { db } from "@/integrations/supabase/client";
+import { db } from "@/integrations/mysql/client";
 
 export const Route = createFileRoute("/blog")({
   head: () => ({

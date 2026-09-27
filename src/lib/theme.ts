@@ -112,6 +112,13 @@ export function applyThemePrefs(prefs: ThemePrefs) {
   root.style.setProperty("--accent-foreground", accentForeground);
   root.style.setProperty("--sidebar-accent", accent);
   root.style.setProperty("--sidebar-accent-foreground", accentForeground);
+
+  // Painel claro: fundo = 50% branco + 50% da cor escolhida (cartões seguem
+  // brancos por cima). No escuro, um toque discreto da cor sobre o fundo.
+  const surface = isDark
+    ? `color-mix(in oklch, ${color.primary} 12%, var(--background))`
+    : `color-mix(in oklch, white 50%, ${color.primary})`;
+  root.style.setProperty("--admin-surface", surface);
 }
 
 const THEME_PROPERTIES = [
@@ -126,6 +133,7 @@ const THEME_PROPERTIES = [
   "--accent-foreground",
   "--sidebar-accent",
   "--sidebar-accent-foreground",
+  "--admin-surface",
 ] as const;
 
 /** Scope the theme to the admin route lifetime, including dialogs portaled to body. */

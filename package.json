@@ -6,9 +6,6 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test tests/*.test.ts",
-    "db:migrate": "node --env-file-if-exists=.env scripts/supabase-migrate.mjs",
-    "db:admin": "node --env-file-if-exists=.env scripts/supabase-admin.mjs",
-    "db:import": "node --env-file-if-exists=.env scripts/supabase-import-mysql.mjs",
     "dev": "vite dev",
     "build": "vite build",
     "build:dev": "vite build --mode development",

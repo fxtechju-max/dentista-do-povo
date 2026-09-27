@@ -19,7 +19,7 @@ import {
   Grid3x3,
   Table2,
 } from "lucide-react";
-import { db } from "@/integrations/supabase/client";
+import { db } from "@/integrations/mysql/client";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { EmptyState } from "@/components/admin/EmptyState";
 import { Button } from "@/components/ui/button";

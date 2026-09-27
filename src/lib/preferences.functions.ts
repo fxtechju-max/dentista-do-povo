@@ -16,13 +16,13 @@ const preference = z.discriminatedUnion("key", [
 export type Preference = z.infer<typeof preference>;
 
 async function owner() {
-  const { currentUser, ensureVisitor } = await import("@/integrations/supabase/auth.server");
+  const { currentUser, ensureVisitor } = await import("@/integrations/mysql/auth.server");
   const user = await currentUser();
   return user ? `user:${user.id}` : `visitor:${ensureVisitor()}`;
 }
 
 export const getPreferences = createServerFn({ method: "POST" }).handler(async () => {
-  const { getPool } = await import("@/integrations/supabase/pool.server");
+  const { getPool } = await import("@/integrations/mysql/pool.server");
   const [rows] = await getPool().execute("SELECT key,value FROM preferences WHERE owner=?", [
     await owner(),
   ]);
@@ -35,7 +35,7 @@ export const getPreferences = createServerFn({ method: "POST" }).handler(async (
 export const setPreference = createServerFn({ method: "POST" })
   .validator((data: unknown) => preference.parse(data))
   .handler(async ({ data }) => {
-    const { getPool } = await import("@/integrations/supabase/pool.server");
+    const { getPool } = await import("@/integrations/mysql/pool.server");
     await getPool().execute(
       `INSERT INTO preferences (owner,key,value) VALUES (?,?,?::jsonb)
        ON CONFLICT (owner,key) DO UPDATE SET value=EXCLUDED.value,updated_at=CURRENT_TIMESTAMP`,

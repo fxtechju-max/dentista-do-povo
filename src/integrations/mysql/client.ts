@@ -1,9 +1,7 @@
-import { resetPreferences, refreshPreferences } from "@/lib/preferences";
 import { toast } from "sonner";
 import { createDataClient } from "./query";
 import {
   runQuery,
-  resumeConversation,
   getUser,
   signIn,
   signOut,
@@ -17,10 +15,12 @@ import {
   saveAiGatewaySettings,
   clearAiGatewayApiKey,
   getAuditLog,
+  needsFirstAdmin,
+  createFirstAdmin,
+  resumeConversation,
 } from "./functions";
 
 export const db = {
-  chat: { resume: () => resumeConversation() },
   ...createDataClient(async (query) => {
     try {
       const result = await runQuery({ data: query });
@@ -32,24 +32,16 @@ export const db = {
       return { data: null, error, count: null };
     }
   }),
+  chat: { resume: () => resumeConversation() },
   auth: {
     getUser: () => getUser(),
-    signInWithPassword: async (data: { email: string; password: string }) => {
-      const result = await signIn({ data });
-      if (!result.error) {
-        resetPreferences();
-        await refreshPreferences();
-      }
-      return result;
-    },
-    signOut: async () => {
-      const result = await signOut();
-      resetPreferences();
-      return result;
-    },
+    signInWithPassword: (data: { email: string; password: string }) => signIn({ data }),
+    signOut: () => signOut(),
     updateEmail: (data: { password: string; newEmail: string }) => updateEmail({ data }),
     updatePassword: (data: { currentPassword: string; newPassword: string }) =>
       updatePassword({ data }),
+    needsFirstAdmin: () => needsFirstAdmin(),
+    createFirstAdmin: (data: { email: string; password: string }) => createFirstAdmin({ data }),
   },
   admins: {
     list: () => listAdmins(),
@@ -69,7 +61,7 @@ export const db = {
     hasRole({ data }),
 };
 
-// Gallery bytes live in Supabase PostgreSQL and are served by src/server.ts.
+// Gallery bytes live in the database (Supabase) and are served by src/server.ts.
 export function galleryPhotoUrl(id: string) {
   return `/api/gallery/${id}`;
 }

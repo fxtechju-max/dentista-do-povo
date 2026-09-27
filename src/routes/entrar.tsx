@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ArrowLeft } from "lucide-react";
-import { db } from "@/integrations/supabase/client";
+import { db } from "@/integrations/mysql/client";
 
 export const Route = createFileRoute("/entrar")({
   head: () => ({
@@ -21,11 +21,19 @@ function Entrar() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [firstAdmin, setFirstAdmin] = useState(false);
 
   useEffect(() => {
     db.auth.getUser().then(({ data }) => {
       if (data.user) navigate({ to: "/admin" });
     });
+    db.auth
+      .needsFirstAdmin()
+      .then(({ data, error }) => {
+        setFirstAdmin(Boolean(data));
+        if (error) setError("Não foi possível conectar ao banco de dados.");
+      })
+      .catch(() => {});
   }, [navigate]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -35,7 +43,9 @@ function Entrar() {
     setLoading(true);
 
     try {
-      const { error } = await db.auth.signInWithPassword({ email, password });
+      const { error } = firstAdmin
+        ? await db.auth.createFirstAdmin({ email, password })
+        : await db.auth.signInWithPassword({ email, password });
       if (error) setError(error.message);
       else navigate({ to: "/admin" });
     } catch {
@@ -61,9 +71,13 @@ function Entrar() {
             <span className="font-extrabold">Dentista do Povo</span>
           </Link>
 
-          <h1 className="mt-6 text-center text-xl font-extrabold">Área Restrita</h1>
+          <h1 className="mt-6 text-center text-xl font-extrabold">
+            {firstAdmin ? "Primeiro acesso" : "Área Restrita"}
+          </h1>
           <p className="mt-1 text-center text-sm text-muted-foreground">
-            Acesso da equipe ao painel de atendimento
+            {firstAdmin
+              ? "Crie o email e a senha do administrador (mínimo 12 caracteres)"
+              : "Acesso da equipe ao painel de atendimento"}
           </p>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-3">
@@ -78,7 +92,7 @@ function Entrar() {
             <input
               type="password"
               required
-              minLength={6}
+              minLength={firstAdmin ? 12 : 6}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Senha"
@@ -90,7 +104,7 @@ function Entrar() {
               disabled={loading}
               className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground disabled:opacity-50"
             >
-              {loading ? "Aguarde..." : "Entrar"}
+              {loading ? "Aguarde..." : firstAdmin ? "Criar administrador" : "Entrar"}
             </button>
           </form>
 

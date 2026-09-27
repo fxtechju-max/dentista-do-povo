@@ -4,7 +4,7 @@ import { Images, X } from "lucide-react";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { ChatWidget } from "@/components/site/ChatWidget";
-import { db, galleryPhotoUrl } from "@/integrations/supabase/client";
+import { db, galleryPhotoUrl } from "@/integrations/mysql/client";
 
 export const Route = createFileRoute("/galeria")({
   head: () => ({

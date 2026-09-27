@@ -10,7 +10,7 @@ import {
   User,
   ArrowLeft,
 } from "lucide-react";
-import { db } from "@/integrations/supabase/client";
+import { db } from "@/integrations/mysql/client";
 import { ADMIN_MODULES, DASHBOARD_MODULE, SETTINGS_MODULE, ToothIcon } from "@/lib/modules";
 import { mountAdminTheme } from "@/lib/theme";
 import { mountAdminZoom } from "@/lib/zoom";
@@ -138,7 +138,7 @@ function AdminLayout() {
   const currentModule = allModules.find((m) => pathname.startsWith(m.to));
 
   return (
-    <div className="min-h-screen bg-muted/30 print:bg-white">
+    <div className="min-h-screen bg-[var(--admin-surface,var(--muted))] print:bg-white">
       {isLauncher ? (
         <header className="flex flex-wrap items-center justify-between gap-4 border-b border-border bg-card px-6 py-4 sm:px-10 print:hidden">
           <Link to="/admin" className="flex items-center gap-3">

@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { db } from "@/integrations/supabase/client";
+import { db } from "@/integrations/mysql/client";
 import { ADMIN_MODULES, DASHBOARD_MODULE, SETTINGS_MODULE } from "@/lib/modules";
 
 export const Route = createFileRoute("/admin/")({

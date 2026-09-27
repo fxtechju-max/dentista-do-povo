@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { MessageCircle, X, Send } from "lucide-react";
-import { db } from "@/integrations/supabase/client";
+import { db } from "@/integrations/mysql/client";
 import { secretaryAutoReply } from "@/lib/secretary.functions";
 
 type Message = {

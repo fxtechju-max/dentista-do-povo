@@ -1,23 +1,28 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { createDataClient } from "../src/integrations/supabase/query";
-import { executeQuery } from "../src/integrations/supabase/query.server";
-import { getPool } from "../src/integrations/supabase/pool.server";
+import { createDataClient } from "../src/integrations/mysql/query";
+import { executeQuery } from "../src/integrations/mysql/query.server";
+import { getPool } from "../src/integrations/mysql/pool.server";
 
 test(
-  "Supabase: CRUD, dates, money, JSON, ownership, joins, upserts and history protection",
-  { skip: !process.env["SUPABASE_TEST_DB_URL"] },
+  "PostgreSQL: CRUD, dates, money, JSON, ownership, joins, upserts and history protection",
+  { skip: !process.env["DATABASE_TEST_URL"] },
   async () => {
-    const url = process.env["SUPABASE_TEST_DB_URL"]!;
-    assert.notEqual(
-      url,
-      process.env["SUPABASE_DB_URL"],
-      "Integration tests write and delete rows: use a separate Supabase test project.",
+    const url = new URL(process.env["DATABASE_TEST_URL"]!);
+    assert.match(
+      url.pathname,
+      /^\/ddp_test_[a-z0-9_]+$/i,
+      "Integration tests require a dedicated ddp_test_* database.",
     );
-    process.env["SUPABASE_DB_URL"] = url;
+    process.env["SUPABASE_DB_URL"] = url.toString();
+    const adminId = randomUUID();
+    await getPool().execute("INSERT INTO users (id,email) VALUES (?,?)", [
+      adminId,
+      `${adminId}@example.invalid`,
+    ]);
     const admin = createDataClient((q) =>
-      executeQuery(q, { userId: randomUUID(), admin: true, visitorHash: null }),
+      executeQuery(q, { userId: adminId, admin: true, visitorHash: null }),
     );
     const visitor = createDataClient((q) =>
       executeQuery(q, { userId: null, admin: false, visitorHash: "a".repeat(64) }),
@@ -68,18 +73,18 @@ test(
       await admin
         .from("tooth_records")
         .upsert(
-          { patient_id: patient.id, tooth_number: 11, condition: "carie" },
+          { patient_id: patient.id, tooth_number: 11, conditions: ["carie"] },
           { onConflict: "patient_id,tooth_number" },
         );
       await admin
         .from("tooth_records")
         .upsert(
-          { patient_id: patient.id, tooth_number: 11, condition: "restaurado" },
+          { patient_id: patient.id, tooth_number: 11, conditions: ["restaurado"] },
           { onConflict: "patient_id,tooth_number" },
         );
       const teeth = await admin.from("tooth_records").select().eq("patient_id", patient.id);
       assert.equal(teeth.data?.length, 1);
-      assert.equal(teeth.data?.[0]?.condition, "restaurado");
+      assert.deepEqual(teeth.data?.[0]?.conditions, ["restaurado"]);
       await admin.from("clinic_settings").upsert({ id: "test", disabled_modules: ["crm", "blog"] });
       assert.deepEqual(
         (await admin.from("clinic_settings").select().eq("id", "test").single()).data

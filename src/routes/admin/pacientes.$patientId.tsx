@@ -20,7 +20,7 @@ import {
   UserRound,
   Pencil,
 } from "lucide-react";
-import { db } from "@/integrations/supabase/client";
+import { db } from "@/integrations/mysql/client";
 import { summarizePatientHistory } from "@/lib/admin/functions";
 import {
   APPOINTMENT_STATUS_LABEL,

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { DatabasePool, PoolConnection, RowDataPacket } from "./pool.server";
+import type { PoolConnection, Row as RowDataPacket } from "./pool.server";
 import { getPool } from "./pool.server";
 import { tableColumns } from "./tables";
 import {
@@ -117,7 +117,7 @@ async function selectRows(
   let count: number | null = null;
   if (q.count) {
     const [rows] = await conn.execute<RowDataPacket[]>(
-      `SELECT COUNT(*) AS n FROM "${q.table}" t${where.sql}`,
+      `SELECT COUNT(*) AS n FROM \`${q.table}\` t${where.sql}`,
       where.values,
     );
     count = Number(rows[0]?.["n"]);
@@ -134,7 +134,7 @@ async function selectRows(
     : "";
   const limit = q.single ? 2 : q.limit;
   const [raw] = await conn.execute<RowDataPacket[]>(
-    `SELECT ${fields.join(",")} FROM "${q.table}" t${join}${where.sql}${order}${limit ? ` LIMIT ${limit}` : ""}`,
+    `SELECT ${fields.join(",")} FROM \`${q.table}\` t${join}${where.sql}${order}${limit ? ` LIMIT ${limit}` : ""}`,
     where.values,
   );
   const rows = raw.map((row) => {
@@ -154,18 +154,13 @@ async function selectRows(
 export async function executeQuery(
   input: Query,
   actor: Actor,
-  pool: DatabasePool = getPool(),
 ): Promise<Result<DataRow[] | DataRow>> {
   const q = authorize(input, actor);
   projection(q); // Validate even when no rows are returned.
-  const conn = await pool.getConnection();
+  const conn = await getPool().getConnection();
   try {
+    if (q.action === "select") return await selectRows(conn, q, actor);
     await conn.beginTransaction();
-    if (q.action === "select") {
-      const result = await selectRows(conn, q, actor);
-      await conn.commit();
-      return result;
-    }
     const values: Record<string, unknown> = { ...q.values };
     if (q.action !== "delete" && !Object.keys(values).length) throw new Error("Dados vazios.");
     if (["insert", "upsert"].includes(q.action)) {
@@ -209,23 +204,19 @@ export async function executeQuery(
         const protectedKeys = new Set([pk, "created_at", ...expected.split(",")]);
         const mutable = keys.filter((k) => !protectedKeys.has(k));
         suffix =
-          ` ON CONFLICT (${expected
-            .split(",")
-            .map((k) => `"${k}"`)
-            .join(",")}) DO UPDATE SET ` +
+          ` ON CONFLICT (${expected}) ` +
           (mutable.length
-            ? mutable.map((k) => `"${k}"=EXCLUDED."${k}"`).join(",")
-            : `"${pk}"=EXCLUDED."${pk}"`);
+            ? "DO UPDATE SET " + mutable.map((k) => `"${k}"=EXCLUDED."${k}"`).join(",")
+            : "DO NOTHING");
       }
       await conn.execute(
-        `INSERT INTO "${q.table}" (${keys.map((k) => `"${k}"`).join(",")}) VALUES (${keys.map(() => "?").join(",")})${suffix}`,
+        `INSERT INTO \`${q.table}\` (${keys.map((k) => `\`${k}\``).join(",")}) VALUES (${keys.map(() => "?").join(",")})${suffix}`,
         keys.map((k) => sqlValue(k, values[k])),
       );
       if (q.table === "messages")
-        await conn.execute(
-          "UPDATE conversations SET last_message_at=CURRENT_TIMESTAMP WHERE id=?",
-          [sqlValue("conversation_id", values["conversation_id"])],
-        );
+        await conn.execute("UPDATE conversations SET last_message_at=now() WHERE id=?", [
+          sqlValue("conversation_id", values["conversation_id"]),
+        ]);
       q.filters =
         q.table === "tooth_records" && q.action === "upsert"
           ? ["patient_id", "tooth_number"].map((column) => ({
@@ -237,11 +228,11 @@ export async function executeQuery(
     } else {
       const where = predicates(q, actor);
       if (q.action === "delete")
-        await conn.execute(`DELETE FROM "${q.table}" t${where.sql}`, where.values);
+        await conn.execute(`DELETE FROM \`${q.table}\` t${where.sql}`, where.values);
       else {
         const keys = Object.keys(values);
         await conn.execute(
-          `UPDATE "${q.table}" t SET ${keys.map((k) => `${columnName(q.table, k)}=?`).join(",")}${where.sql}`,
+          `UPDATE \`${q.table}\` t SET ${keys.map((k) => `${columnName(q.table, k)}=?`).join(",")}${where.sql}`,
           [...keys.map((k) => sqlValue(k, values[k])), ...where.values],
         );
       }

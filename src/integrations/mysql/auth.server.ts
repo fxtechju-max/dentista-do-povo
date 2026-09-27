@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { getCookie, setCookie, deleteCookie } from "@tanstack/react-start/server";
-import type { RowDataPacket } from "@/integrations/supabase/pool.server";
+import type { Row as RowDataPacket } from "./pool.server";
 import { getPool } from "./pool.server";
 import type { Actor } from "./protocol";
 
@@ -18,7 +18,7 @@ export async function currentUser() {
   const token = getCookie(SESSION);
   if (!token || !/^[a-f0-9]{64}$/.test(token)) return null;
   const [rows] = await getPool().execute<RowDataPacket[]>(
-    "SELECT u.id, u.email FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>CURRENT_TIMESTAMP",
+    "SELECT u.id, u.email FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>now()",
     [digest(token)],
   );
   const row = rows[0];
@@ -56,7 +56,7 @@ export async function createSession(userId: string) {
   await destroySession();
   const token = randomBytes(32).toString("hex");
   await getPool().execute(
-    "INSERT INTO sessions (token_hash,user_id,expires_at) VALUES (?,?,CURRENT_TIMESTAMP + INTERVAL '7 days')",
+    "INSERT INTO sessions (token_hash,user_id,expires_at) VALUES (?,?,now() + interval '7 days')",
     [digest(token), userId],
   );
   setCookie(SESSION, token, { ...cookieOptions, maxAge: 60 * 60 * 24 * 7 });
@@ -79,13 +79,16 @@ export async function destroyOtherSessions(userId: string) {
 // Shared across serverless instances, unlike an in-memory counter.
 export async function rateLimit(bucket: string, maximum: number, seconds: number) {
   const key = digest(bucket);
-  const [rows] = await getPool().execute<RowDataPacket[]>(
-    `INSERT INTO rate_limits (bucket,hits,expires_at) VALUES (?,1,CURRENT_TIMESTAMP + (? * INTERVAL '1 second'))
-     ON CONFLICT (bucket) DO UPDATE SET
-       hits=CASE WHEN rate_limits.expires_at<=CURRENT_TIMESTAMP THEN 1 ELSE rate_limits.hits+1 END,
-       expires_at=CASE WHEN rate_limits.expires_at<=CURRENT_TIMESTAMP THEN EXCLUDED.expires_at ELSE rate_limits.expires_at END
-     RETURNING hits`,
+  await getPool().execute(
+    `INSERT INTO rate_limits (bucket,hits,expires_at) VALUES (?,1,now() + make_interval(secs => ?::int))
+    ON CONFLICT (bucket) DO UPDATE SET
+      hits = CASE WHEN rate_limits.expires_at<=now() THEN 1 ELSE rate_limits.hits+1 END,
+      expires_at = CASE WHEN rate_limits.expires_at<=now() THEN EXCLUDED.expires_at ELSE rate_limits.expires_at END`,
     [key, seconds],
+  );
+  const [rows] = await getPool().execute<RowDataPacket[]>(
+    "SELECT hits FROM rate_limits WHERE bucket=?",
+    [key],
   );
   if (Number(rows[0]?.["hits"]) > maximum)
     throw new Error("Muitas tentativas. Aguarde alguns minutos.");

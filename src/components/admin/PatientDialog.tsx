@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { db } from "@/integrations/supabase/client";
+import { db } from "@/integrations/mysql/client";
 import { formatCPF, calculateAge } from "@/lib/admin/labels";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

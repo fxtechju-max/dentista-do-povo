@@ -40,7 +40,7 @@ export type Actor = { userId: string | null; admin: boolean; visitorHash: string
 export function columnName(table: TableName, column: string) {
   if (!(tableColumns[table] as readonly string[]).includes(column))
     throw new Error("Coluna inválida.");
-  return `"${column}"`;
+  return `\`${column}\``;
 }
 
 /** Fail closed: no SQL or identifiers from the browser are executed verbatim. */
