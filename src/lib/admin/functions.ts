@@ -3,49 +3,8 @@
 // server-only env vars and call the AI Gateway here.
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireAuth } from "@/integrations/mysql/auth-middleware";
-
-async function callAiGateway(
-  systemPrompt: string,
-  messages: Array<{ role: "user" | "assistant"; content: string }>,
-) {
-  const apiKey = process.env["AI_GATEWAY_API_KEY"];
-  const baseUrl = process.env["AI_GATEWAY_BASE_URL"];
-  const model = process.env["AI_GATEWAY_MODEL"];
-
-  if (!apiKey || !baseUrl || !model) {
-    throw new Error(
-      "AI Gateway não configurado. Defina AI_GATEWAY_API_KEY, AI_GATEWAY_BASE_URL e AI_GATEWAY_MODEL nas variáveis de ambiente.",
-    );
-  }
-
-  const response = await fetch(`${baseUrl.replace(/\/$/, "")}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      temperature: 0.4,
-      messages: [{ role: "system", content: systemPrompt }, ...messages],
-    }),
-  });
-
-  if (!response.ok) {
-    const errText = await response.text().catch(() => "");
-    throw new Error(`Falha ao chamar o AI Gateway (${response.status}): ${errText.slice(0, 300)}`);
-  }
-
-  const json = (await response.json()) as {
-    choices?: Array<{ message?: { content?: string } }>;
-  };
-  const text = json.choices?.[0]?.message?.content?.trim();
-  if (!text) {
-    throw new Error("O AI Gateway não retornou nenhum texto.");
-  }
-  return text;
-}
+import { requireAuth } from "@/integrations/supabase/auth-middleware";
+import { callAiGateway } from "@/lib/ai-gateway.server";
 
 const messageSchema = z.object({
   sender: z.enum(["visitor", "admin"]),
@@ -61,7 +20,6 @@ export const draftSupportReply = createServerFn({ method: "POST" })
   .middleware([requireAuth])
   .validator((data: unknown) => draftReplyInput.parse(data))
   .handler(async ({ data, context }) => {
-
     const transcript = data.messages
       .map((m) => `${m.sender === "visitor" ? data.visitorName : "Atendente"}: ${m.content}`)
       .join("\n");
@@ -91,7 +49,6 @@ export const askAssistant = createServerFn({ method: "POST" })
   .middleware([requireAuth])
   .validator((data: unknown) => assistantInput.parse(data))
   .handler(async ({ data, context }) => {
-
     const now = new Date();
     const startOfDay = new Date(now);
     startOfDay.setHours(0, 0, 0, 0);
@@ -191,7 +148,6 @@ export const summarizePatientHistory = createServerFn({ method: "POST" })
   .middleware([requireAuth])
   .validator((data: unknown) => patientRecordSchema.parse(data))
   .handler(async ({ data, context }) => {
-
     const lines = [
       `Paciente: ${data.patientName}`,
       "",
@@ -229,7 +185,6 @@ export const draftPrescription = createServerFn({ method: "POST" })
   .middleware([requireAuth])
   .validator((data: unknown) => prescriptionDraftInput.parse(data))
   .handler(async ({ data, context }) => {
-
     const systemPrompt =
       "Você ajuda um cirurgião-dentista a rascunhar o texto de uma receita odontológica a partir de anotações " +
       "curtas dele. Gere um rascunho em português do Brasil com: nome do medicamento (ou classe, se não " +

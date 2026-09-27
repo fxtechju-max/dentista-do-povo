@@ -76,22 +76,40 @@ export type Database = {
       };
       patients: {
         Row: {
+          address: string | null;
+          birth_date: string | null;
+          cpf: string | null;
           created_at: string;
           email: string | null;
+          guardian_cpf: string | null;
+          guardian_name: string | null;
+          guardian_phone: string | null;
           id: string;
           name: string;
           phone: string | null;
         };
         Insert: {
+          address?: string | null;
+          birth_date?: string | null;
+          cpf?: string | null;
           created_at?: string;
           email?: string | null;
+          guardian_cpf?: string | null;
+          guardian_name?: string | null;
+          guardian_phone?: string | null;
           id?: string;
           name: string;
           phone?: string | null;
         };
         Update: {
+          address?: string | null;
+          birth_date?: string | null;
+          cpf?: string | null;
           created_at?: string;
           email?: string | null;
+          guardian_cpf?: string | null;
+          guardian_name?: string | null;
+          guardian_phone?: string | null;
           id?: string;
           name?: string;
           phone?: string | null;
@@ -314,6 +332,7 @@ export type Database = {
           created_at: string;
           id: string;
           patient_id: string | null;
+          prescription_id: string | null;
           title: string;
           url: string | null;
         };
@@ -322,6 +341,7 @@ export type Database = {
           created_at?: string;
           id?: string;
           patient_id?: string | null;
+          prescription_id?: string | null;
           title: string;
           url?: string | null;
         };
@@ -330,6 +350,7 @@ export type Database = {
           created_at?: string;
           id?: string;
           patient_id?: string | null;
+          prescription_id?: string | null;
           title?: string;
           url?: string | null;
         };
@@ -339,6 +360,13 @@ export type Database = {
             columns: ["patient_id"];
             isOneToOne: false;
             referencedRelation: "patients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "documents_prescription_id_fkey";
+            columns: ["prescription_id"];
+            isOneToOne: false;
+            referencedRelation: "prescriptions";
             referencedColumns: ["id"];
           },
         ];
@@ -503,44 +531,74 @@ export type Database = {
         Row: {
           additional_notes: string | null;
           allergies: string | null;
+          anesthesia_allergy: boolean;
+          bleeding_gums: boolean;
+          brushing_frequency: string | null;
+          bruxism: boolean;
+          chief_complaint: string | null;
           current_medications: string | null;
+          flosses_regularly: boolean;
           has_diabetes: boolean;
           has_heart_condition: boolean;
           has_hypertension: boolean;
           is_pregnant: boolean;
           is_smoker: boolean;
+          last_dental_visit_at: string | null;
           patient_id: string;
           previous_surgeries: string | null;
           systemic_conditions: string | null;
+          tooth_sensitivity: boolean;
           updated_at: string;
+          uses_dental_prosthesis: boolean;
+          uses_orthodontic_appliance: boolean;
         };
         Insert: {
           additional_notes?: string | null;
           allergies?: string | null;
+          anesthesia_allergy?: boolean;
+          bleeding_gums?: boolean;
+          brushing_frequency?: string | null;
+          bruxism?: boolean;
+          chief_complaint?: string | null;
           current_medications?: string | null;
+          flosses_regularly?: boolean;
           has_diabetes?: boolean;
           has_heart_condition?: boolean;
           has_hypertension?: boolean;
           is_pregnant?: boolean;
           is_smoker?: boolean;
+          last_dental_visit_at?: string | null;
           patient_id: string;
           previous_surgeries?: string | null;
           systemic_conditions?: string | null;
+          tooth_sensitivity?: boolean;
           updated_at?: string;
+          uses_dental_prosthesis?: boolean;
+          uses_orthodontic_appliance?: boolean;
         };
         Update: {
           additional_notes?: string | null;
           allergies?: string | null;
+          anesthesia_allergy?: boolean;
+          bleeding_gums?: boolean;
+          brushing_frequency?: string | null;
+          bruxism?: boolean;
+          chief_complaint?: string | null;
           current_medications?: string | null;
+          flosses_regularly?: boolean;
           has_diabetes?: boolean;
           has_heart_condition?: boolean;
           has_hypertension?: boolean;
           is_pregnant?: boolean;
           is_smoker?: boolean;
+          last_dental_visit_at?: string | null;
           patient_id?: string;
           previous_surgeries?: string | null;
           systemic_conditions?: string | null;
+          tooth_sensitivity?: boolean;
           updated_at?: string;
+          uses_dental_prosthesis?: boolean;
+          uses_orthodontic_appliance?: boolean;
         };
         Relationships: [
           {
@@ -554,7 +612,7 @@ export type Database = {
       };
       tooth_records: {
         Row: {
-          condition: string;
+          conditions: string[];
           id: string;
           notes: string | null;
           patient_id: string;
@@ -562,7 +620,7 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
-          condition?: string;
+          conditions?: string[];
           id?: string;
           notes?: string | null;
           patient_id: string;
@@ -570,7 +628,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
-          condition?: string;
+          conditions?: string[];
           id?: string;
           notes?: string | null;
           patient_id?: string;
@@ -615,6 +673,45 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      ai_search_history: {
+        Row: { answer: string; created_at: string; id: string; question: string };
+        Insert: { answer: string; created_at?: string; id?: string; question: string };
+        Update: { answer?: string; created_at?: string; id?: string; question?: string };
+        Relationships: [];
+      };
+      gallery_photos: {
+        Row: {
+          byte_size: number;
+          created_at: string;
+          height: number;
+          id: string;
+          mime_type: string;
+          sort_order: number;
+          title: string | null;
+          width: number;
+        };
+        Insert: {
+          byte_size: number;
+          created_at?: string;
+          height: number;
+          id?: string;
+          mime_type: string;
+          sort_order?: number;
+          title?: string | null;
+          width: number;
+        };
+        Update: {
+          byte_size?: number;
+          created_at?: string;
+          height?: number;
+          id?: string;
+          mime_type?: string;
+          sort_order?: number;
+          title?: string | null;
+          width?: number;
+        };
+        Relationships: [];
       };
       finance_entries: {
         Row: {

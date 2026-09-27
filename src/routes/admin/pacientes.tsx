@@ -1,12 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { Users, Plus, Pencil, Trash2, Search, Mail, Phone, FileText } from "lucide-react";
-import { db } from "@/integrations/mysql/client";
+import { db } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { EmptyState } from "@/components/admin/EmptyState";
+import {
+  PatientDialog,
+  emptyPatientForm,
+  type PatientFormValues,
+} from "@/components/admin/PatientDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -15,13 +19,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,10 +39,14 @@ type Patient = {
   name: string;
   phone: string | null;
   email: string | null;
+  cpf: string | null;
+  birth_date: string | null;
+  address: string | null;
+  guardian_name: string | null;
+  guardian_phone: string | null;
+  guardian_cpf: string | null;
   created_at: string;
 };
-
-const emptyForm = { name: "", phone: "", email: "" };
 
 function Pacientes() {
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -53,15 +54,15 @@ function Pacientes() {
   const [query, setQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Patient | null>(null);
-  const [form, setForm] = useState(emptyForm);
-  const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Patient | null>(null);
 
   async function load() {
     setLoading(true);
     const { data } = await db
       .from("patients")
-      .select("id, name, phone, email, created_at")
+      .select(
+        "id, name, phone, email, cpf, birth_date, address, guardian_name, guardian_phone, guardian_cpf, created_at",
+      )
       .order("created_at", { ascending: false });
     setPatients((data ?? []) as Patient[]);
     setLoading(false);
@@ -78,38 +79,19 @@ function Pacientes() {
       (p) =>
         p.name.toLowerCase().includes(q) ||
         p.phone?.toLowerCase().includes(q) ||
-        p.email?.toLowerCase().includes(q),
+        p.email?.toLowerCase().includes(q) ||
+        p.cpf?.toLowerCase().includes(q),
     );
   }, [patients, query]);
 
   function openCreate() {
     setEditing(null);
-    setForm(emptyForm);
     setDialogOpen(true);
   }
 
   function openEdit(patient: Patient) {
     setEditing(patient);
-    setForm({ name: patient.name, phone: patient.phone ?? "", email: patient.email ?? "" });
     setDialogOpen(true);
-  }
-
-  async function save() {
-    if (!form.name.trim()) return;
-    setSaving(true);
-    const payload = {
-      name: form.name.trim(),
-      phone: form.phone.trim() || null,
-      email: form.email.trim() || null,
-    };
-    if (editing) {
-      await db.from("patients").update(payload).eq("id", editing.id);
-    } else {
-      await db.from("patients").insert(payload);
-    }
-    setSaving(false);
-    setDialogOpen(false);
-    load();
   }
 
   async function remove() {
@@ -118,6 +100,20 @@ function Pacientes() {
     setDeleteTarget(null);
     load();
   }
+
+  const initialForm: PatientFormValues = editing
+    ? {
+        name: editing.name,
+        phone: editing.phone ?? "",
+        email: editing.email ?? "",
+        cpf: editing.cpf ?? "",
+        birth_date: editing.birth_date ? editing.birth_date.slice(0, 10) : "",
+        address: editing.address ?? "",
+        guardian_name: editing.guardian_name ?? "",
+        guardian_phone: editing.guardian_phone ?? "",
+        guardian_cpf: editing.guardian_cpf ?? "",
+      }
+    : emptyPatientForm;
 
   return (
     <div className="animate-in fade-in duration-300">
@@ -137,7 +133,7 @@ function Pacientes() {
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar por nome, telefone ou email..."
+            placeholder="Buscar por nome, telefone, email ou CPF..."
             className="pl-9"
           />
         </div>
@@ -157,6 +153,7 @@ function Pacientes() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nome</TableHead>
+                <TableHead>CPF</TableHead>
                 <TableHead>Contato</TableHead>
                 <TableHead>Cadastrado em</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
@@ -174,6 +171,7 @@ function Pacientes() {
                       {p.name}
                     </Link>
                   </TableCell>
+                  <TableCell className="text-muted-foreground">{p.cpf || "—"}</TableCell>
                   <TableCell className="text-muted-foreground">
                     <div className="flex flex-col gap-0.5 text-xs">
                       {p.phone && (
@@ -193,8 +191,17 @@ function Pacientes() {
                     {new Date(p.created_at).toLocaleDateString("pt-BR")}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" asChild aria-label="Ver prontuário">
-                      <Link to="/admin/pacientes/$patientId" params={{ patientId: p.id }}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      asChild
+                      aria-label="Ver documentos do paciente"
+                    >
+                      <Link
+                        to="/admin/pacientes/$patientId"
+                        params={{ patientId: p.id }}
+                        search={{ tab: "documentos" }}
+                      >
                         <FileText className="h-4 w-4" />
                       </Link>
                     </Button>
@@ -223,51 +230,13 @@ function Pacientes() {
         )}
       </div>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editing ? "Editar paciente" : "Novo paciente"}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="name">Nome</Label>
-              <Input
-                id="name"
-                value={form.name}
-                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                placeholder="Nome completo"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="phone">Telefone</Label>
-              <Input
-                id="phone"
-                value={form.phone}
-                onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-                placeholder="(00) 00000-0000"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={form.email}
-                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                placeholder="paciente@email.com"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={save} disabled={!form.name.trim() || saving}>
-              {saving ? "Salvando..." : "Salvar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <PatientDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        patientId={editing?.id ?? null}
+        initial={initialForm}
+        onSaved={load}
+      />
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>

@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { ClipboardList, Plus, Pencil, Trash2, Search, Sparkles } from "lucide-react";
-import { db } from "@/integrations/mysql/client";
+import { db } from "@/integrations/supabase/client";
 import { draftPrescription } from "@/lib/admin/functions";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { EmptyState } from "@/components/admin/EmptyState";
@@ -56,6 +56,9 @@ function Receitas() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
+  const [patientFilter, setPatientFilter] = useState("todos");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Prescription | null>(null);
   const [form, setForm] = useState(emptyForm);
@@ -85,11 +88,24 @@ function Receitas() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return items;
-    return items.filter(
-      (i) => i.patients?.name.toLowerCase().includes(q) || i.medication.toLowerCase().includes(q),
-    );
-  }, [items, query]);
+    const from = dateFrom ? new Date(dateFrom).getTime() : null;
+    const to = dateTo ? new Date(dateTo).setHours(23, 59, 59, 999) : null;
+    return items.filter((i) => {
+      if (patientFilter !== "todos" && i.patient_id !== patientFilter) return false;
+      const reference = new Date(i.issued_at).getTime();
+      if (from != null && reference < from) return false;
+      if (to != null && reference > to) return false;
+      if (
+        q &&
+        !(i.patients?.name.toLowerCase().includes(q) || i.medication.toLowerCase().includes(q))
+      ) {
+        return false;
+      }
+      return true;
+    });
+  }, [items, query, patientFilter, dateFrom, dateTo]);
+
+  const hasActiveFilters = !!query.trim() || patientFilter !== "todos" || !!dateFrom || !!dateTo;
 
   function openCreate() {
     setEditing(null);
@@ -119,8 +135,20 @@ function Receitas() {
     };
     if (editing) {
       await db.from("prescriptions").update(payload).eq("id", editing.id);
+      await db
+        .from("documents")
+        .update({ title: `Receita: ${form.medication.trim()}` })
+        .eq("prescription_id", editing.id);
     } else {
-      await db.from("prescriptions").insert(payload);
+      const { data: rx } = await db.from("prescriptions").insert(payload).select("id").single();
+      if (rx) {
+        await db.from("documents").insert({
+          patient_id: form.patient_id,
+          prescription_id: rx.id,
+          title: `Receita: ${form.medication.trim()}`,
+          category: "Receita",
+        });
+      }
     }
     setSaving(false);
     setDialogOpen(false);
@@ -142,7 +170,6 @@ function Receitas() {
     try {
       const result = await draftPrescription({
         data: { patientName, notes: aiNotes.trim() },
-
       });
       setForm((f) => ({ ...f, medication: result.medication, instructions: result.instructions }));
     } catch (error) {
@@ -164,7 +191,7 @@ function Receitas() {
         }
       />
 
-      <div className="mt-4 flex items-center gap-2">
+      <div className="mt-4 flex flex-wrap items-center gap-2">
         <div className="relative w-full max-w-xs">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -174,6 +201,47 @@ function Receitas() {
             className="pl-9"
           />
         </div>
+        <Select value={patientFilter} onValueChange={setPatientFilter}>
+          <SelectTrigger className="w-44">
+            <SelectValue placeholder="Todos os pacientes" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todos os pacientes</SelectItem>
+            {patients.map((p) => (
+              <SelectItem key={p.id} value={p.id}>
+                {p.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Input
+          type="date"
+          value={dateFrom}
+          onChange={(e) => setDateFrom(e.target.value)}
+          className="w-40"
+          aria-label="Data inicial"
+        />
+        <Input
+          type="date"
+          value={dateTo}
+          onChange={(e) => setDateTo(e.target.value)}
+          className="w-40"
+          aria-label="Data final"
+        />
+        {hasActiveFilters && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setQuery("");
+              setPatientFilter("todos");
+              setDateFrom("");
+              setDateTo("");
+            }}
+          >
+            Limpar filtros
+          </Button>
+        )}
         <span className="text-sm text-muted-foreground">{filtered.length} receita(s)</span>
       </div>
 

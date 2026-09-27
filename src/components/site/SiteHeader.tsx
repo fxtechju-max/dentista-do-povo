@@ -1,6 +1,10 @@
 import { Link } from "@tanstack/react-router";
+import { useLayoutEffect } from "react";
+import { mountPublicZoom } from "@/lib/zoom";
 
 export function SiteHeader() {
+  useLayoutEffect(() => mountPublicZoom(), []);
+
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
@@ -22,6 +26,9 @@ export function SiteHeader() {
           </Link>
           <Link to="/servicos" className="transition-colors hover:text-foreground">
             Serviços
+          </Link>
+          <Link to="/galeria" className="transition-colors hover:text-foreground">
+            Galeria
           </Link>
           <Link to="/blog" className="transition-colors hover:text-foreground">
             Blog

@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Calendar as CalendarIcon,
   CalendarDays,
@@ -12,9 +12,22 @@ import {
   ChevronRight,
   Clock,
 } from "lucide-react";
-import { addDays, format, isSameDay, isToday, startOfWeek } from "date-fns";
+import {
+  addDays,
+  addMonths,
+  eachDayOfInterval,
+  endOfMonth,
+  endOfWeek,
+  format,
+  isSameDay,
+  isSameMonth,
+  isToday,
+  startOfMonth,
+  startOfWeek,
+  subMonths,
+} from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { db } from "@/integrations/mysql/client";
+import { db } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { EmptyState } from "@/components/admin/EmptyState";
 import {
@@ -101,8 +114,9 @@ function Agenda() {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<AppointmentStatus | "todos">("todos");
   const [periodFilter, setPeriodFilter] = useState<"todos" | "hoje" | "semana">("todos");
-  const [weekAnchor, setWeekAnchor] = useState(new Date());
-  const [weekDirection, setWeekDirection] = useState<1 | -1>(1);
+  const [calendarView, setCalendarView] = useState<"mes" | "semana" | "dia">("mes");
+  const [anchor, setAnchor] = useState(new Date());
+  const [navDirection, setNavDirection] = useState<1 | -1>(1);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Appointment | null>(null);
   const [form, setForm] = useState(emptyForm);
@@ -151,22 +165,53 @@ function Agenda() {
     });
   }, [appointments, query, statusFilter, periodFilter]);
 
-  const weekStart = useMemo(() => startOfWeek(weekAnchor, { weekStartsOn: 1 }), [weekAnchor]);
+  const weekStart = useMemo(() => startOfWeek(anchor, { weekStartsOn: 1 }), [anchor]);
   const weekDays = useMemo(
     () => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
     [weekStart],
   );
-  const appointmentsByDay = useMemo(() => {
-    return weekDays.map((day) =>
+  const appointmentsForDay = useCallback(
+    (day: Date) =>
       appointments
         .filter((a) => isSameDay(new Date(a.scheduled_at), day))
         .sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at)),
-    );
-  }, [weekDays, appointments]);
+    [appointments],
+  );
+  const appointmentsByDay = useMemo(
+    () => weekDays.map((day) => appointmentsForDay(day)),
+    [weekDays, appointmentsForDay],
+  );
   const weekAppointmentCount = useMemo(
     () => appointmentsByDay.reduce((sum, d) => sum + d.length, 0),
     [appointmentsByDay],
   );
+
+  const monthStart = useMemo(() => startOfMonth(anchor), [anchor]);
+  const monthEnd = useMemo(() => endOfMonth(anchor), [anchor]);
+  const monthGridDays = useMemo(() => {
+    const gridStart = startOfWeek(monthStart, { weekStartsOn: 1 });
+    const gridEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
+    return eachDayOfInterval({ start: gridStart, end: gridEnd });
+  }, [monthStart, monthEnd]);
+  const monthAppointmentCount = useMemo(
+    () =>
+      appointments.filter((a) => {
+        const d = new Date(a.scheduled_at);
+        return d >= monthStart && d <= monthEnd;
+      }).length,
+    [appointments, monthStart, monthEnd],
+  );
+
+  const dayAppointments = useMemo(() => appointmentsForDay(anchor), [anchor, appointmentsForDay]);
+
+  function navigate(direction: 1 | -1) {
+    setNavDirection(direction);
+    setAnchor((d) => {
+      if (calendarView === "mes") return addMonths(d, direction);
+      if (calendarView === "dia") return addDays(d, direction);
+      return addDays(d, direction * 7);
+    });
+  }
 
   function openCreate(prefillIso?: string) {
     setEditing(null);
@@ -241,50 +286,94 @@ function Agenda() {
 
         <TabsContent value="calendario" className="mt-4">
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-gradient-to-r from-primary/5 via-card to-card p-4 shadow-sm">
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                  setWeekDirection(-1);
-                  setWeekAnchor((d) => addDays(d, -7));
-                }}
-                aria-label="Semana anterior"
-                className="transition-transform hover:-translate-x-0.5"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                  setWeekDirection(1);
-                  setWeekAnchor((d) => addDays(d, 7));
-                }}
-                aria-label="Próxima semana"
-                className="transition-transform hover:translate-x-0.5"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setWeekDirection(1);
-                  setWeekAnchor(new Date());
-                }}
-              >
-                Hoje
-              </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigate(-1)}
+                  aria-label="Anterior"
+                  className="transition-transform hover:-translate-x-0.5"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigate(1)}
+                  aria-label="Próximo"
+                  className="transition-transform hover:translate-x-0.5"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setNavDirection(1);
+                    setAnchor(new Date());
+                  }}
+                >
+                  Hoje
+                </Button>
+              </div>
+              <div className="flex items-center gap-1 rounded-lg border border-border bg-background p-0.5">
+                {(
+                  [
+                    { id: "mes", label: "Mês" },
+                    { id: "semana", label: "Semana" },
+                    { id: "dia", label: "Dia" },
+                  ] as const
+                ).map((opt) => (
+                  <button
+                    key={opt.id}
+                    onClick={() => setCalendarView(opt.id)}
+                    className={`rounded-md px-3 py-1 text-xs font-bold transition-colors ${
+                      calendarView === opt.id
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
             </div>
             <div className="text-right">
-              <p className="text-sm font-bold capitalize">
-                {format(weekStart, "d 'de' MMMM", { locale: ptBR })} —{" "}
-                {format(addDays(weekStart, 6), "d 'de' MMMM", { locale: ptBR })}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {weekAppointmentCount} consulta{weekAppointmentCount === 1 ? "" : "s"} nesta semana
-              </p>
+              {calendarView === "mes" && (
+                <>
+                  <p className="text-sm font-bold capitalize">
+                    {format(anchor, "MMMM 'de' yyyy", { locale: ptBR })}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {monthAppointmentCount} consulta{monthAppointmentCount === 1 ? "" : "s"} neste
+                    mês
+                  </p>
+                </>
+              )}
+              {calendarView === "semana" && (
+                <>
+                  <p className="text-sm font-bold capitalize">
+                    {format(weekStart, "d 'de' MMMM", { locale: ptBR })} —{" "}
+                    {format(addDays(weekStart, 6), "d 'de' MMMM", { locale: ptBR })}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {weekAppointmentCount} consulta{weekAppointmentCount === 1 ? "" : "s"} nesta
+                    semana
+                  </p>
+                </>
+              )}
+              {calendarView === "dia" && (
+                <>
+                  <p className="text-sm font-bold capitalize">
+                    {format(anchor, "EEEE, d 'de' MMMM", { locale: ptBR })}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {dayAppointments.length} consulta{dayAppointments.length === 1 ? "" : "s"} neste
+                    dia
+                  </p>
+                </>
+              )}
             </div>
           </div>
 
@@ -298,15 +387,79 @@ function Agenda() {
                 />
               ))}
             </div>
-          ) : (
+          ) : calendarView === "mes" ? (
+            <div
+              key={monthStart.toISOString()}
+              className={`animate-in fade-in mt-3 duration-300 ${
+                navDirection === 1 ? "slide-in-from-right-4" : "slide-in-from-left-4"
+              }`}
+            >
+              <div className="grid grid-cols-7 gap-px overflow-hidden rounded-t-2xl border border-border bg-border text-center text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                {["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"].map((d) => (
+                  <div key={d} className="bg-card py-2">
+                    {d}
+                  </div>
+                ))}
+              </div>
+              <div className="grid grid-cols-7 gap-px overflow-hidden rounded-b-2xl border border-t-0 border-border bg-border">
+                {monthGridDays.map((day, i) => {
+                  const items = appointmentsForDay(day);
+                  const today = isToday(day);
+                  const inMonth = isSameMonth(day, anchor);
+                  const visible = items.slice(0, 3);
+                  const overflow = items.length - visible.length;
+                  return (
+                    <button
+                      key={day.toISOString()}
+                      onClick={() => {
+                        setAnchor(day);
+                        setCalendarView("dia");
+                      }}
+                      style={{ animationDelay: `${i * 8}ms` }}
+                      className={`animate-in fade-in flex min-h-24 flex-col items-stretch gap-1 p-1.5 text-left transition-colors fill-mode-both sm:min-h-28 ${
+                        inMonth ? "bg-card hover:bg-accent" : "bg-muted/30 text-muted-foreground/60"
+                      }`}
+                    >
+                      <span
+                        className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
+                          today ? "bg-primary text-primary-foreground" : ""
+                        }`}
+                      >
+                        {format(day, "d")}
+                      </span>
+                      <div className="flex-1 space-y-0.5 overflow-hidden">
+                        {visible.map((a) => (
+                          <span
+                            key={a.id}
+                            className={`block truncate rounded px-1 py-0.5 text-[10px] font-semibold ${
+                              STATUS_VARIANT[a.status] === "destructive"
+                                ? "bg-destructive/10 text-destructive"
+                                : "bg-primary/10 text-primary"
+                            }`}
+                          >
+                            {format(new Date(a.scheduled_at), "HH:mm")} {a.patients?.name ?? "—"}
+                          </span>
+                        ))}
+                        {overflow > 0 && (
+                          <span className="block px-1 text-[10px] font-bold text-muted-foreground">
+                            +{overflow} mais
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : calendarView === "semana" ? (
             <div
               key={weekStart.toISOString()}
               className={`animate-in fade-in mt-3 grid grid-cols-1 gap-3 overflow-x-auto duration-300 sm:grid-cols-2 lg:grid-cols-7 ${
-                weekDirection === 1 ? "slide-in-from-right-4" : "slide-in-from-left-4"
+                navDirection === 1 ? "slide-in-from-right-4" : "slide-in-from-left-4"
               }`}
             >
               {weekDays.map((day, i) => {
-                const dayAppointments = appointmentsByDay[i] ?? [];
+                const items = appointmentsByDay[i] ?? [];
                 const today = isToday(day);
                 return (
                   <div
@@ -321,7 +474,13 @@ function Agenda() {
                         today ? "border-primary/20 bg-primary/5" : "border-border"
                       }`}
                     >
-                      <div>
+                      <button
+                        onClick={() => {
+                          setAnchor(day);
+                          setCalendarView("dia");
+                        }}
+                        className="text-left"
+                      >
                         <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-muted-foreground">
                           {format(day, "EEE", { locale: ptBR })}
                           {today && (
@@ -334,7 +493,7 @@ function Agenda() {
                         <p className={`text-lg font-extrabold ${today ? "text-primary" : ""}`}>
                           {format(day, "dd")}
                         </p>
-                      </div>
+                      </button>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -347,12 +506,12 @@ function Agenda() {
                       </Button>
                     </div>
                     <div className="flex-1 space-y-1.5 p-2">
-                      {dayAppointments.length === 0 ? (
+                      {items.length === 0 ? (
                         <p className="py-4 text-center text-xs text-muted-foreground">
                           Sem consultas
                         </p>
                       ) : (
-                        dayAppointments.map((a, ai) => (
+                        items.map((a, ai) => (
                           <button
                             key={a.id}
                             onClick={() => openEdit(a)}
@@ -379,6 +538,70 @@ function Agenda() {
                   </div>
                 );
               })}
+            </div>
+          ) : (
+            <div
+              key={anchor.toDateString()}
+              className={`animate-in fade-in mt-3 space-y-2 duration-300 ${
+                navDirection === 1 ? "slide-in-from-right-4" : "slide-in-from-left-4"
+              }`}
+            >
+              {dayAppointments.length === 0 ? (
+                <div className="rounded-2xl border border-border bg-card">
+                  <EmptyState icon={CalendarIcon} title="Nenhuma consulta neste dia." />
+                </div>
+              ) : (
+                dayAppointments.map((a, ai) => (
+                  <div
+                    key={a.id}
+                    style={{ animationDelay: `${ai * 50}ms` }}
+                    className="animate-in fade-in slide-in-from-bottom-2 flex items-center gap-4 rounded-2xl border border-border bg-card p-4 fill-mode-both transition-shadow hover:shadow-md"
+                  >
+                    <div className="flex w-16 shrink-0 flex-col items-center justify-center rounded-xl bg-primary/10 py-2 text-primary">
+                      <Clock className="h-4 w-4" />
+                      <span className="text-sm font-extrabold">
+                        {format(new Date(a.scheduled_at), "HH:mm")}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => openEdit(a)}
+                      className="min-w-0 flex-1 text-left"
+                      aria-label="Editar consulta"
+                    >
+                      <p className="truncate font-bold">{a.patients?.name ?? "—"}</p>
+                      <p className="truncate text-sm text-muted-foreground">{a.treatment}</p>
+                    </button>
+                    <Badge variant={STATUS_VARIANT[a.status]}>{STATUS_LABEL[a.status]}</Badge>
+                    <div className="flex shrink-0 gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => openEdit(a)}
+                        aria-label="Editar"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setDeleteTarget(a)}
+                        aria-label="Excluir"
+                        className="text-muted-foreground hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => openCreate(anchor.toISOString())}
+                disabled={patients.length === 0}
+              >
+                <Plus /> Nova consulta neste dia
+              </Button>
             </div>
           )}
         </TabsContent>

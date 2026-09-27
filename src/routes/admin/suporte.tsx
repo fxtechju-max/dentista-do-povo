@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Send, MessageCircle, Trash2, Sparkles, Link2, Check } from "lucide-react";
-import { db } from "@/integrations/mysql/client";
+import { db } from "@/integrations/supabase/client";
 import { draftSupportReply } from "@/lib/admin/functions";
 
 export const Route = createFileRoute("/admin/suporte")({
@@ -105,35 +105,52 @@ function Suporte() {
     let previous: Map<string, string> | null = null;
     async function refresh() {
       if (stopped) return;
-      const { data } = await db.from("conversations").select("id, visitor_name, last_message_at").order("last_message_at", { ascending: false });
+      const { data } = await db
+        .from("conversations")
+        .select("id, visitor_name, last_message_at")
+        .order("last_message_at", { ascending: false });
       if (!stopped && data) {
         setConversations(data as Conversation[]);
         for (const conversation of data) {
           if (previous && previous.get(conversation.id) !== conversation.last_message_at) {
-            const { data: latest } = await db.from("messages").select("sender, content").eq("conversation_id", conversation.id).order("created_at", { ascending: false }).limit(1);
-            if (!stopped && latest?.[0]?.sender === "visitor") notifyAdmin(
-              'Nova mensagem de ' + conversation.visitor_name, latest[0].content, conversation.id,
-            );
+            const { data: latest } = await db
+              .from("messages")
+              .select("sender, content")
+              .eq("conversation_id", conversation.id)
+              .order("created_at", { ascending: false })
+              .limit(1);
+            if (!stopped && latest?.[0]?.sender === "visitor")
+              notifyAdmin(
+                "Nova mensagem de " + conversation.visitor_name,
+                latest[0].content,
+                conversation.id,
+              );
           }
         }
-        previous = new Map(data.map(c => [c.id, c.last_message_at]));
+        previous = new Map(data.map((c) => [c.id, c.last_message_at]));
       }
       const id = activeIdRef.current;
       if (id && !stopped) {
-        const { data: messages } = await db.from("messages").select("id, conversation_id, sender, content, created_at").eq("conversation_id", id).order("created_at");
+        const { data: messages } = await db
+          .from("messages")
+          .select("id, conversation_id, sender, content, created_at")
+          .eq("conversation_id", id)
+          .order("created_at");
         if (!stopped && activeIdRef.current === id && messages) setMessages(messages as Message[]);
       }
       if (!stopped) timer = setTimeout(refresh, 3000);
     }
     void refresh();
-    return () => { stopped = true; clearTimeout(timer); };
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+    };
   }, [notifyAdmin]);
 
   // Load messages when a conversation is opened
   useEffect(() => {
     if (!activeId) return;
-    db
-      .from("messages")
+    db.from("messages")
       .select("id, conversation_id, sender, content, created_at")
       .eq("conversation_id", activeId)
       .order("created_at")
@@ -167,7 +184,6 @@ function Suporte() {
           visitorName: active.visitor_name,
           messages: messages.map((m) => ({ sender: m.sender, content: m.content })),
         },
-
       });
       setDraft(result.draft);
     } catch (error) {

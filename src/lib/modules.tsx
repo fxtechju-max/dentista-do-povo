@@ -14,6 +14,7 @@ import {
   Globe,
   Settings,
   ArrowLeftRight,
+  DatabaseBackup,
   type LucideIcon,
 } from "lucide-react";
 
@@ -52,8 +53,8 @@ export const DASHBOARD_MODULE: AdminModule = {
   to: "/admin/dashboard",
   icon: Grid2x2,
   description: "Visão geral e indicadores",
-  iconColor: "text-blue-600",
-  iconBg: "bg-blue-100",
+  iconColor: "text-primary",
+  iconBg: "bg-primary/10",
 };
 
 export const SETTINGS_MODULE: AdminModule = {
@@ -63,8 +64,8 @@ export const SETTINGS_MODULE: AdminModule = {
   to: "/admin/configuracoes",
   icon: Settings,
   description: "Perfil, clínica e módulos",
-  iconColor: "text-slate-600",
-  iconBg: "bg-slate-100",
+  iconColor: "text-primary",
+  iconBg: "bg-primary/10",
 };
 
 // Every module here can be turned on/off from Configurações. Dashboard and
@@ -77,8 +78,8 @@ export const ADMIN_MODULES: AdminModule[] = [
     to: "/admin/agenda",
     icon: Calendar,
     description: "Consultas e calendário",
-    iconColor: "text-indigo-600",
-    iconBg: "bg-indigo-100",
+    iconColor: "text-primary",
+    iconBg: "bg-primary/10",
   },
   {
     id: "pacientes",
@@ -87,8 +88,8 @@ export const ADMIN_MODULES: AdminModule[] = [
     to: "/admin/pacientes",
     icon: Users,
     description: "Cadastro e prontuário",
-    iconColor: "text-purple-600",
-    iconBg: "bg-purple-100",
+    iconColor: "text-primary",
+    iconBg: "bg-primary/10",
   },
   {
     id: "tratamentos",
@@ -97,8 +98,8 @@ export const ADMIN_MODULES: AdminModule[] = [
     to: "/admin/tratamentos",
     icon: ToothIcon,
     description: "Catálogo de procedimentos",
-    iconColor: "text-teal-600",
-    iconBg: "bg-teal-100",
+    iconColor: "text-primary",
+    iconBg: "bg-primary/10",
   },
   {
     id: "orcamentos",
@@ -107,8 +108,8 @@ export const ADMIN_MODULES: AdminModule[] = [
     to: "/admin/orcamentos",
     icon: Receipt,
     description: "Propostas de tratamento",
-    iconColor: "text-cyan-600",
-    iconBg: "bg-cyan-100",
+    iconColor: "text-primary",
+    iconBg: "bg-primary/10",
   },
   {
     id: "financeiro",
@@ -117,8 +118,8 @@ export const ADMIN_MODULES: AdminModule[] = [
     to: "/admin/financeiro",
     icon: Wallet,
     description: "Pagamentos e recebimentos",
-    iconColor: "text-orange-600",
-    iconBg: "bg-orange-100",
+    iconColor: "text-primary",
+    iconBg: "bg-primary/10",
   },
   {
     id: "contas",
@@ -127,8 +128,8 @@ export const ADMIN_MODULES: AdminModule[] = [
     to: "/admin/contas",
     icon: ArrowLeftRight,
     description: "Despesas e receitas da clínica",
-    iconColor: "text-rose-600",
-    iconBg: "bg-rose-100",
+    iconColor: "text-primary",
+    iconBg: "bg-primary/10",
   },
   {
     id: "crm",
@@ -137,8 +138,8 @@ export const ADMIN_MODULES: AdminModule[] = [
     to: "/admin/crm",
     icon: Handshake,
     description: "Leads e oportunidades",
-    iconColor: "text-yellow-600",
-    iconBg: "bg-yellow-100",
+    iconColor: "text-primary",
+    iconBg: "bg-primary/10",
   },
   {
     id: "suporte",
@@ -147,8 +148,8 @@ export const ADMIN_MODULES: AdminModule[] = [
     to: "/admin/suporte",
     icon: MessageCircle,
     description: "Chat com visitantes do site",
-    iconColor: "text-violet-600",
-    iconBg: "bg-violet-100",
+    iconColor: "text-primary",
+    iconBg: "bg-primary/10",
   },
   {
     id: "whatsapp",
@@ -157,8 +158,8 @@ export const ADMIN_MODULES: AdminModule[] = [
     to: "/admin/whatsapp",
     icon: Phone,
     description: "Contatos via WhatsApp",
-    iconColor: "text-green-600",
-    iconBg: "bg-green-100",
+    iconColor: "text-primary",
+    iconBg: "bg-primary/10",
   },
   {
     id: "documentos",
@@ -167,8 +168,8 @@ export const ADMIN_MODULES: AdminModule[] = [
     to: "/admin/documentos",
     icon: FileText,
     description: "Exames e arquivos",
-    iconColor: "text-indigo-600",
-    iconBg: "bg-indigo-100",
+    iconColor: "text-primary",
+    iconBg: "bg-primary/10",
   },
   {
     id: "receitas",
@@ -177,8 +178,8 @@ export const ADMIN_MODULES: AdminModule[] = [
     to: "/admin/receitas",
     icon: Pill,
     description: "Prescrições",
-    iconColor: "text-pink-600",
-    iconBg: "bg-pink-100",
+    iconColor: "text-primary",
+    iconBg: "bg-primary/10",
   },
   {
     id: "relatorios",
@@ -187,8 +188,8 @@ export const ADMIN_MODULES: AdminModule[] = [
     to: "/admin/relatorios",
     icon: BarChart3,
     description: "Gráficos e métricas",
-    iconColor: "text-blue-600",
-    iconBg: "bg-blue-100",
+    iconColor: "text-primary",
+    iconBg: "bg-primary/10",
   },
   {
     id: "ia",
@@ -197,8 +198,8 @@ export const ADMIN_MODULES: AdminModule[] = [
     to: "/admin/ia",
     icon: Bot,
     description: "Secretária virtual",
-    iconColor: "text-violet-600",
-    iconBg: "bg-violet-100",
+    iconColor: "text-primary",
+    iconBg: "bg-primary/10",
   },
   {
     id: "cms-site",
@@ -207,7 +208,17 @@ export const ADMIN_MODULES: AdminModule[] = [
     to: "/admin/cms-site",
     icon: Globe,
     description: "Serviços e blog do site",
-    iconColor: "text-sky-600",
-    iconBg: "bg-sky-100",
+    iconColor: "text-primary",
+    iconBg: "bg-primary/10",
+  },
+  {
+    id: "backup",
+    name: "Backup",
+    label: "💾 Backup",
+    to: "/admin/backup",
+    icon: DatabaseBackup,
+    description: "Exportar, restaurar e apagar dados",
+    iconColor: "text-primary",
+    iconBg: "bg-primary/10",
   },
 ];

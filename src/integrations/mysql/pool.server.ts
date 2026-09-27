@@ -17,9 +17,20 @@ export function getPool() {
       timezone: "Z",
       charset: "utf8mb4",
       decimalNumbers: true,
-      ...(ssl ? { ssl: { rejectUnauthorized: true, ...(process.env["MYSQL_SSL_CA"] ? { ca: process.env["MYSQL_SSL_CA"].replace(/\\n/g, "\n") } : {}) } } : {}),
+      ...(ssl
+        ? {
+            ssl: {
+              rejectUnauthorized: true,
+              ...(process.env["MYSQL_SSL_CA"]
+                ? { ca: process.env["MYSQL_SSL_CA"].replace(/\\n/g, "\n") }
+                : {}),
+            },
+          }
+        : {}),
     });
-    pool.on("connection", connection => { connection.query("SET time_zone = '+00:00'"); });
+    pool.on("connection", (connection) => {
+      connection.query("SET time_zone = '+00:00'");
+    });
   }
   return pool;
 }

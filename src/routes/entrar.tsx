@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ArrowLeft } from "lucide-react";
-import { db } from "@/integrations/mysql/client";
+import { db } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/entrar")({
   head: () => ({
@@ -61,9 +61,7 @@ function Entrar() {
             <span className="font-extrabold">Dentista do Povo</span>
           </Link>
 
-          <h1 className="mt-6 text-center text-xl font-extrabold">
-            Área Restrita
-          </h1>
+          <h1 className="mt-6 text-center text-xl font-extrabold">Área Restrita</h1>
           <p className="mt-1 text-center text-sm text-muted-foreground">
             Acesso da equipe ao painel de atendimento
           </p>
@@ -87,7 +85,7 @@ function Entrar() {
               className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring"
             />
             {error && <p className="text-sm font-semibold text-destructive">{error}</p>}
-                        <button
+            <button
               type="submit"
               disabled={loading}
               className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground disabled:opacity-50"
@@ -96,7 +94,9 @@ function Entrar() {
             </button>
           </form>
 
-          <p className="mt-4 text-center text-sm text-muted-foreground">Precisa de acesso? Fale com o responsável pela clínica.</p>
+          <p className="mt-4 text-center text-sm text-muted-foreground">
+            Precisa de acesso? Fale com o responsável pela clínica.
+          </p>
         </div>
       </div>
     </div>

@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Instagram, Facebook, MessageCircle } from "lucide-react";
-import { db } from "@/integrations/mysql/client";
+import { db } from "@/integrations/supabase/client";
 
 type SocialLinks = {
   instagram_url: string | null;

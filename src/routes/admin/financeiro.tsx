@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { DollarSign, Plus, Pencil, Trash2, Search, CheckCircle2 } from "lucide-react";
-import { db } from "@/integrations/mysql/client";
+import { db } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { EmptyState } from "@/components/admin/EmptyState";
 import {
@@ -71,6 +71,9 @@ function Financeiro() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<PaymentStatus | "todos">("todos");
+  const [patientFilter, setPatientFilter] = useState("todos");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Payment | null>(null);
   const [form, setForm] = useState(emptyForm);
@@ -97,12 +100,25 @@ function Financeiro() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
+    const from = dateFrom ? new Date(dateFrom).getTime() : null;
+    const to = dateTo ? new Date(dateTo).setHours(23, 59, 59, 999) : null;
     return payments.filter((p) => {
       if (statusFilter !== "todos" && p.status !== statusFilter) return false;
+      if (patientFilter !== "todos" && p.patient_id !== patientFilter) return false;
+      const reference = new Date(p.paid_at ?? p.created_at).getTime();
+      if (from != null && reference < from) return false;
+      if (to != null && reference > to) return false;
       if (q && !p.patients?.name.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [payments, query, statusFilter]);
+  }, [payments, query, statusFilter, patientFilter, dateFrom, dateTo]);
+
+  const hasActiveFilters =
+    !!query.trim() ||
+    statusFilter !== "todos" ||
+    patientFilter !== "todos" ||
+    !!dateFrom ||
+    !!dateTo;
 
   const totals = useMemo(() => {
     const pago = payments
@@ -216,6 +232,48 @@ function Financeiro() {
             ))}
           </SelectContent>
         </Select>
+        <Select value={patientFilter} onValueChange={setPatientFilter}>
+          <SelectTrigger className="w-44">
+            <SelectValue placeholder="Todos os pacientes" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todos os pacientes</SelectItem>
+            {patients.map((p) => (
+              <SelectItem key={p.id} value={p.id}>
+                {p.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Input
+          type="date"
+          value={dateFrom}
+          onChange={(e) => setDateFrom(e.target.value)}
+          className="w-40"
+          aria-label="Data inicial"
+        />
+        <Input
+          type="date"
+          value={dateTo}
+          onChange={(e) => setDateTo(e.target.value)}
+          className="w-40"
+          aria-label="Data final"
+        />
+        {hasActiveFilters && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setQuery("");
+              setStatusFilter("todos");
+              setPatientFilter("todos");
+              setDateFrom("");
+              setDateTo("");
+            }}
+          >
+            Limpar filtros
+          </Button>
+        )}
         <span className="text-sm text-muted-foreground">{filtered.length} lançamento(s)</span>
       </div>
 

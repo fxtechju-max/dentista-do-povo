@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { FileText, Plus, Pencil, Trash2, Search, ExternalLink } from "lucide-react";
-import { db } from "@/integrations/mysql/client";
+import { db } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { EmptyState } from "@/components/admin/EmptyState";
 import { Button } from "@/components/ui/button";
@@ -65,6 +65,9 @@ function Documentos() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("todas");
+  const [patientFilter, setPatientFilter] = useState("todos");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<DocumentRow | null>(null);
   const [form, setForm] = useState(emptyForm);
@@ -96,14 +99,27 @@ function Documentos() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
+    const from = dateFrom ? new Date(dateFrom).getTime() : null;
+    const to = dateTo ? new Date(dateTo).setHours(23, 59, 59, 999) : null;
     return items.filter((i) => {
       if (categoryFilter !== "todas" && i.category !== categoryFilter) return false;
+      if (patientFilter !== "todos" && i.patient_id !== patientFilter) return false;
+      const reference = new Date(i.created_at).getTime();
+      if (from != null && reference < from) return false;
+      if (to != null && reference > to) return false;
       if (q && !(i.title.toLowerCase().includes(q) || i.patients?.name.toLowerCase().includes(q))) {
         return false;
       }
       return true;
     });
-  }, [items, query, categoryFilter]);
+  }, [items, query, categoryFilter, patientFilter, dateFrom, dateTo]);
+
+  const hasActiveFilters =
+    !!query.trim() ||
+    categoryFilter !== "todas" ||
+    patientFilter !== "todos" ||
+    !!dateFrom ||
+    !!dateTo;
 
   function openCreate() {
     setEditing(null);
@@ -183,6 +199,48 @@ function Documentos() {
             ))}
           </SelectContent>
         </Select>
+        <Select value={patientFilter} onValueChange={setPatientFilter}>
+          <SelectTrigger className="w-44">
+            <SelectValue placeholder="Todos os pacientes" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todos os pacientes</SelectItem>
+            {patients.map((p) => (
+              <SelectItem key={p.id} value={p.id}>
+                {p.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Input
+          type="date"
+          value={dateFrom}
+          onChange={(e) => setDateFrom(e.target.value)}
+          className="w-40"
+          aria-label="Data inicial"
+        />
+        <Input
+          type="date"
+          value={dateTo}
+          onChange={(e) => setDateTo(e.target.value)}
+          className="w-40"
+          aria-label="Data final"
+        />
+        {hasActiveFilters && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setQuery("");
+              setCategoryFilter("todas");
+              setPatientFilter("todos");
+              setDateFrom("");
+              setDateTo("");
+            }}
+          >
+            Limpar filtros
+          </Button>
+        )}
         <span className="text-sm text-muted-foreground">{filtered.length} documento(s)</span>
       </div>
 

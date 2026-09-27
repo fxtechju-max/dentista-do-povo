@@ -1,7 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Activity, Plus, Pencil, Trash2, Search, Clock } from "lucide-react";
-import { db } from "@/integrations/mysql/client";
+import {
+  Activity,
+  Plus,
+  Pencil,
+  Trash2,
+  Search,
+  Clock,
+  List,
+  Square,
+  Grid2x2,
+  Grid3x3,
+  Table2,
+} from "lucide-react";
+import { db } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { EmptyState } from "@/components/admin/EmptyState";
 import { Button } from "@/components/ui/button";
@@ -11,6 +23,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/admin/labels";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -52,10 +71,30 @@ type Treatment = {
 
 const emptyForm = { name: "", description: "", price: "", duration_minutes: "", active: true };
 
+type ViewMode = "lista" | "grande" | "medio" | "pequeno" | "completo";
+const VIEW_STORAGE_KEY = "ddp-tratamentos-view";
+const VIEW_OPTIONS: { id: ViewMode; label: string; icon: typeof List }[] = [
+  { id: "lista", label: "Lista", icon: List },
+  { id: "grande", label: "Grande", icon: Square },
+  { id: "medio", label: "Médio", icon: Grid2x2 },
+  { id: "pequeno", label: "Pequeno", icon: Grid3x3 },
+  { id: "completo", label: "Completo", icon: Table2 },
+];
+
+function loadViewMode(): ViewMode {
+  if (typeof localStorage === "undefined") return "medio";
+  const saved = localStorage.getItem(VIEW_STORAGE_KEY);
+  return VIEW_OPTIONS.some((o) => o.id === saved) ? (saved as ViewMode) : "medio";
+}
+
 function Tratamentos() {
   const [items, setItems] = useState<Treatment[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
+  const [viewMode, setViewMode] = useState<ViewMode>(() => loadViewMode());
+  const [statusFilter, setStatusFilter] = useState<"todos" | "ativo" | "inativo">("todos");
+  const [priceMin, setPriceMin] = useState("");
+  const [priceMax, setPriceMax] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Treatment | null>(null);
   const [form, setForm] = useState(emptyForm);
@@ -78,9 +117,29 @@ function Tratamentos() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return items;
-    return items.filter((t) => t.name.toLowerCase().includes(q));
-  }, [items, query]);
+    const min = priceMin.trim() ? Number(priceMin.replace(",", ".")) : null;
+    const max = priceMax.trim() ? Number(priceMax.replace(",", ".")) : null;
+    return items.filter((t) => {
+      if (statusFilter === "ativo" && !t.active) return false;
+      if (statusFilter === "inativo" && t.active) return false;
+      if (min != null && (t.price == null || t.price < min)) return false;
+      if (max != null && (t.price == null || t.price > max)) return false;
+      if (q && !t.name.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [items, query, statusFilter, priceMin, priceMax]);
+
+  const hasActiveFilters =
+    !!query.trim() || statusFilter !== "todos" || !!priceMin.trim() || !!priceMax.trim();
+
+  function changeView(mode: ViewMode) {
+    setViewMode(mode);
+    try {
+      localStorage.setItem(VIEW_STORAGE_KEY, mode);
+    } catch {
+      // Storage unavailable — the choice just won't persist.
+    }
+  }
 
   function openCreate() {
     setEditing(null);
@@ -139,7 +198,7 @@ function Tratamentos() {
         }
       />
 
-      <div className="mt-4 flex items-center gap-2">
+      <div className="mt-4 flex flex-wrap items-center gap-2">
         <div className="relative w-full max-w-xs">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -149,40 +208,223 @@ function Tratamentos() {
             className="pl-9"
           />
         </div>
+        <Select
+          value={statusFilter}
+          onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}
+        >
+          <SelectTrigger className="w-36">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todos os status</SelectItem>
+            <SelectItem value="ativo">Ativos</SelectItem>
+            <SelectItem value="inativo">Inativos</SelectItem>
+          </SelectContent>
+        </Select>
+        <Input
+          value={priceMin}
+          onChange={(e) => setPriceMin(e.target.value)}
+          placeholder="Preço mín."
+          inputMode="decimal"
+          className="w-28"
+        />
+        <Input
+          value={priceMax}
+          onChange={(e) => setPriceMax(e.target.value)}
+          placeholder="Preço máx."
+          inputMode="decimal"
+          className="w-28"
+        />
+        {hasActiveFilters && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setQuery("");
+              setStatusFilter("todos");
+              setPriceMin("");
+              setPriceMax("");
+            }}
+          >
+            Limpar filtros
+          </Button>
+        )}
         <span className="text-sm text-muted-foreground">{filtered.length} tratamento(s)</span>
+        <div className="ml-auto flex items-center gap-1 rounded-lg border border-border bg-background p-0.5">
+          {VIEW_OPTIONS.map((opt) => (
+            <button
+              key={opt.id}
+              onClick={() => changeView(opt.id)}
+              title={opt.label}
+              aria-label={`Visualização ${opt.label}`}
+              className={`flex h-7 w-7 items-center justify-center rounded-md transition-colors ${
+                viewMode === opt.id
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <opt.icon className="h-3.5 w-3.5" />
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {loading ? (
-          <p className="col-span-full p-8 text-center text-sm text-muted-foreground">
-            Carregando...
-          </p>
-        ) : filtered.length === 0 ? (
-          <div className="col-span-full rounded-2xl border border-border bg-card">
-            <EmptyState
-              icon={Activity}
-              title={
-                query ? "Nenhum tratamento encontrado." : "Nenhum tratamento cadastrado ainda."
-              }
-            />
-          </div>
-        ) : (
-          filtered.map((t) => (
+      {loading ? (
+        <p className="col-span-full mt-4 rounded-2xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
+          Carregando...
+        </p>
+      ) : filtered.length === 0 ? (
+        <div className="mt-4 rounded-2xl border border-border bg-card">
+          <EmptyState
+            icon={Activity}
+            title={
+              hasActiveFilters
+                ? "Nenhum tratamento encontrado."
+                : "Nenhum tratamento cadastrado ainda."
+            }
+          />
+        </div>
+      ) : viewMode === "completo" ? (
+        <div className="mt-4 rounded-2xl border border-border bg-card">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nome</TableHead>
+                <TableHead>Descrição</TableHead>
+                <TableHead>Preço</TableHead>
+                <TableHead>Duração</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.map((t) => (
+                <TableRow key={t.id} className="animate-in fade-in">
+                  <TableCell className="font-semibold">{t.name}</TableCell>
+                  <TableCell className="max-w-xs truncate text-muted-foreground">
+                    {t.description || "—"}
+                  </TableCell>
+                  <TableCell>
+                    {t.price != null ? formatCurrency(t.price) : "Sob consulta"}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {t.duration_minutes != null ? `${t.duration_minutes} min` : "—"}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={t.active ? "default" : "secondary"}>
+                      {t.active ? "Ativo" : "Inativo"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => openEdit(t)}
+                      aria-label="Editar"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setDeleteTarget(t)}
+                      aria-label="Excluir"
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      ) : viewMode === "lista" ? (
+        <div className="mt-4 space-y-2">
+          {filtered.map((t) => (
             <div
               key={t.id}
-              className="animate-in fade-in flex flex-col gap-2 rounded-2xl border border-border bg-card p-5"
+              className="animate-in fade-in flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3"
+            >
+              <Badge variant={t.active ? "default" : "secondary"} className="shrink-0">
+                {t.active ? "Ativo" : "Inativo"}
+              </Badge>
+              <p className="min-w-0 flex-1 truncate font-semibold">{t.name}</p>
+              {t.duration_minutes != null && (
+                <span className="hidden shrink-0 items-center gap-1 text-sm text-muted-foreground sm:flex">
+                  <Clock className="h-3.5 w-3.5" /> {t.duration_minutes} min
+                </span>
+              )}
+              <span className="shrink-0 font-semibold text-primary">
+                {t.price != null ? formatCurrency(t.price) : "Sob consulta"}
+              </span>
+              <div className="flex shrink-0 gap-1">
+                <Button variant="ghost" size="icon" onClick={() => openEdit(t)} aria-label="Editar">
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setDeleteTarget(t)}
+                  aria-label="Excluir"
+                  className="text-muted-foreground hover:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : viewMode === "pequeno" ? (
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+          {filtered.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => openEdit(t)}
+              className="animate-in fade-in flex flex-col items-start gap-1 rounded-xl border border-border bg-card p-3 text-left transition-shadow hover:shadow-md"
+            >
+              <span
+                className={`h-1.5 w-1.5 shrink-0 rounded-full ${t.active ? "bg-emerald-500" : "bg-muted-foreground"}`}
+              />
+              <p className="line-clamp-2 w-full text-xs font-bold">{t.name}</p>
+              <p className="text-xs font-semibold text-primary">
+                {t.price != null ? formatCurrency(t.price) : "Consultar"}
+              </p>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div
+          className={`mt-4 grid grid-cols-1 gap-4 ${
+            viewMode === "grande" ? "sm:grid-cols-2" : "sm:grid-cols-2 lg:grid-cols-3"
+          }`}
+        >
+          {filtered.map((t) => (
+            <div
+              key={t.id}
+              className={`animate-in fade-in flex flex-col gap-2 rounded-2xl border border-border bg-card ${
+                viewMode === "grande" ? "p-7" : "p-5"
+              }`}
             >
               <div className="flex items-start justify-between gap-2">
-                <p className="font-bold">{t.name}</p>
+                <p className={viewMode === "grande" ? "text-lg font-bold" : "font-bold"}>
+                  {t.name}
+                </p>
                 <Badge variant={t.active ? "default" : "secondary"}>
                   {t.active ? "Ativo" : "Inativo"}
                 </Badge>
               </div>
               {t.description && (
-                <p className="line-clamp-2 text-sm text-muted-foreground">{t.description}</p>
+                <p
+                  className={`text-sm text-muted-foreground ${viewMode === "grande" ? "" : "line-clamp-2"}`}
+                >
+                  {t.description}
+                </p>
               )}
               <div className="mt-1 flex items-center justify-between text-sm">
-                <span className="font-semibold text-primary">
+                <span
+                  className={`font-semibold text-primary ${viewMode === "grande" ? "text-lg" : ""}`}
+                >
                   {t.price != null ? formatCurrency(t.price) : "Sob consulta"}
                 </span>
                 {t.duration_minutes != null && (
@@ -206,9 +448,9 @@ function Tratamentos() {
                 </Button>
               </div>
             </div>
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>

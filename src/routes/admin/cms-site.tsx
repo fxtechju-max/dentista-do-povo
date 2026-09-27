@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Globe,
   Plus,
@@ -9,8 +9,11 @@ import {
   GripVertical,
   Newspaper,
   ExternalLink,
+  Images,
+  Upload,
 } from "lucide-react";
-import { db } from "@/integrations/mysql/client";
+import { db, galleryPhotoUrl } from "@/integrations/supabase/client";
+import { uploadGalleryPhoto, deleteGalleryPhoto } from "@/lib/gallery.functions";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { EmptyState } from "@/components/admin/EmptyState";
 import { formatCurrency, slugify } from "@/lib/admin/labels";
@@ -60,12 +63,16 @@ function CmsSite() {
         <TabsList>
           <TabsTrigger value="servicos">🦷 Serviços</TabsTrigger>
           <TabsTrigger value="blog">📰 Blog</TabsTrigger>
+          <TabsTrigger value="galeria">🖼️ Galeria</TabsTrigger>
         </TabsList>
         <TabsContent value="servicos" className="mt-4">
           <ServicosTab />
         </TabsContent>
         <TabsContent value="blog" className="mt-4">
           <BlogTab />
+        </TabsContent>
+        <TabsContent value="galeria" className="mt-4">
+          <GaleriaTab />
         </TabsContent>
       </Tabs>
     </div>
@@ -633,6 +640,147 @@ function BlogTab() {
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir post?</AlertDialogTitle>
             <AlertDialogDescription>Essa ação não pode ser desfeita.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={remove}>Excluir</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
+
+type GalleryPhoto = {
+  id: string;
+  title: string | null;
+  storage_path: string;
+  width: number;
+  height: number;
+  byte_size: number;
+  created_at: string;
+};
+
+function GaleriaTab() {
+  const [photos, setPhotos] = useState<GalleryPhoto[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<GalleryPhoto | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  async function load() {
+    setLoading(true);
+    const { data } = await db
+      .from("gallery_photos")
+      .select("id, title, storage_path, width, height, byte_size, created_at")
+      .order("sort_order")
+      .order("created_at", { ascending: false });
+    setPhotos((data ?? []) as GalleryPhoto[]);
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  async function handleFiles(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    setUploadError(null);
+    setUploading(true);
+    for (const file of Array.from(files)) {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("title", file.name.replace(/\.[^.]+$/, ""));
+      const result = await uploadGalleryPhoto({ data: formData });
+      if (result.error) {
+        setUploadError(result.error.message);
+        break;
+      }
+    }
+    setUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    load();
+  }
+
+  async function remove() {
+    if (!deleteTarget) return;
+    await deleteGalleryPhoto({ data: { id: deleteTarget.id } });
+    setDeleteTarget(null);
+    load();
+  }
+
+  return (
+    <div>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-dashed border-border bg-muted/30 p-5">
+        <div>
+          <p className="font-bold">Fotos da clínica</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Aparecem na galeria pública do site. Ajustamos automaticamente para até 1920px no lado
+            maior, em alta qualidade — qualquer formato de imagem serve.
+          </p>
+        </div>
+        <div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={(e) => handleFiles(e.target.files)}
+          />
+          <Button onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+            <Upload className="h-4 w-4" /> {uploading ? "Enviando..." : "Enviar fotos"}
+          </Button>
+        </div>
+      </div>
+      {uploadError && <p className="mt-2 text-sm font-semibold text-destructive">{uploadError}</p>}
+
+      <div className="mt-4">
+        {loading ? (
+          <p className="rounded-2xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
+            Carregando...
+          </p>
+        ) : photos.length === 0 ? (
+          <div className="rounded-2xl border border-border bg-card">
+            <EmptyState icon={Images} title="Nenhuma foto na galeria ainda." />
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            {photos.map((photo) => (
+              <div
+                key={photo.id}
+                className="group relative aspect-square overflow-hidden rounded-2xl border border-border bg-muted"
+              >
+                <img
+                  src={galleryPhotoUrl(photo.storage_path)}
+                  alt={photo.title ?? "Foto da clínica"}
+                  className="h-full w-full object-cover"
+                  loading="lazy"
+                />
+                <div className="absolute inset-0 flex items-end justify-end bg-gradient-to-t from-black/50 via-transparent to-transparent p-2 opacity-0 transition-opacity group-hover:opacity-100">
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    onClick={() => setDeleteTarget(photo)}
+                    aria-label="Excluir foto"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir foto?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Ela deixará de aparecer na galeria do site. Essa ação não pode ser desfeita.
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>

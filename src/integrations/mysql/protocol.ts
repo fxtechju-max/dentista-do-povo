@@ -80,6 +80,7 @@ export function authorize(query: Query, actor: Actor): Query {
     filter("active", true);
     return q;
   }
+  if (q.action === "select" && q.table === "gallery_photos") return q;
   if (q.action === "select" && q.table === "clinic_settings") {
     // Operational settings are private; public callers only receive contact information.
     q.columns = "id, clinic_name, phone, address, instagram_url, facebook_url, whatsapp_number";

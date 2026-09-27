@@ -143,3 +143,9 @@
     font-family: "Manrope", ui-sans-serif, system-ui, sans-serif;
   }
 }
+
+/* The active section shares the chosen accent only inside the restricted area. */
+[data-admin-theme] [role="tab"][data-state="active"] {
+  color: var(--primary);
+  background-color: var(--accent);
+}

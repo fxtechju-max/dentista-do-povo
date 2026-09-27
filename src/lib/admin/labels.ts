@@ -82,6 +82,55 @@ export const FINANCE_ENTRY_CATEGORIES = [
   "Outros",
 ];
 
+export const AUDIT_TABLE_LABEL: Record<string, string> = {
+  patients: "Paciente",
+  appointments: "Consulta",
+  treatments: "Tratamento",
+  budgets: "Orçamento",
+  payments: "Financeiro",
+  finance_entries: "Contas a pagar/receber",
+  leads: "CRM (lead)",
+  prescriptions: "Receita",
+  documents: "Documento",
+  services: "Serviço",
+  blog_posts: "Post do blog",
+  gallery_photos: "Foto da galeria",
+  whatsapp_contacts: "Contato WhatsApp",
+  patient_anamnesis: "Anamnese",
+  tooth_records: "Odontograma",
+  clinical_notes: "Evolução clínica",
+  clinic_settings: "Configurações da clínica",
+  profiles: "Perfil",
+  conversations: "Conversa (suporte)",
+  messages: "Mensagem",
+  ai_search_history: "Histórico de IA",
+};
+
+export const AUDIT_ACTION_LABEL: Record<"insert" | "update" | "delete", string> = {
+  insert: "criou",
+  update: "atualizou",
+  delete: "excluiu",
+};
+
+export function formatCPF(value: string) {
+  const digits = value.replace(/\D/g, "").slice(0, 11);
+  return digits
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+}
+
+export function calculateAge(birthDate: string): number | null {
+  if (!birthDate) return null;
+  const dob = new Date(birthDate);
+  if (Number.isNaN(dob.getTime())) return null;
+  const today = new Date();
+  let age = today.getFullYear() - dob.getFullYear();
+  const monthDiff = today.getMonth() - dob.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) age--;
+  return age;
+}
+
 export function formatCurrency(value: number) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }

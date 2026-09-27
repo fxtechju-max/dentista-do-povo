@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { MessageCircle, X, Send } from "lucide-react";
-import { db } from "@/integrations/mysql/client";
+import { db } from "@/integrations/supabase/client";
 import { secretaryAutoReply } from "@/lib/secretary.functions";
 
 type Message = {
@@ -44,14 +44,20 @@ export function ChatWidget() {
     async function refresh() {
       if (stopped) return;
       if (open && document.visibilityState === "visible") {
-        const { data } = await db.from("messages").select("id, sender, content, created_at")
-          .eq("conversation_id", conversationId!).order("created_at");
+        const { data } = await db
+          .from("messages")
+          .select("id, sender, content, created_at")
+          .eq("conversation_id", conversationId!)
+          .order("created_at");
         if (!stopped && data) setMessages(data as Message[]);
       }
       if (!stopped) timer = setTimeout(refresh, 3000);
     }
     void refresh();
-    return () => { stopped = true; clearTimeout(timer); };
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+    };
   }, [conversationId, open]);
 
   useEffect(() => {

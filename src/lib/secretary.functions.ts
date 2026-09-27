@@ -17,11 +17,15 @@ export const secretaryAutoReply = createServerFn({ method: "POST" })
     const { createDataClient } = await import("@/integrations/mysql/query");
     const actor = await requestActor();
     if (!actor.admin && !actor.visitorHash) return { replied: false };
-    const visitorDb = createDataClient(query => executeQuery(query, actor));
-    const { data: owned } = await visitorDb.from("conversations").select("id").eq("id", data.conversationId).maybeSingle();
+    const visitorDb = createDataClient((query) => executeQuery(query, actor));
+    const { data: owned } = await visitorDb
+      .from("conversations")
+      .select("id")
+      .eq("id", data.conversationId)
+      .maybeSingle();
     if (!owned) return { replied: false };
     await rateLimit(`secretary:${data.conversationId}`, 1, 10);
-    const db = createDataClient(query => executeQuery(query, { ...actor, admin: true }));
+    const db = createDataClient((query) => executeQuery(query, { ...actor, admin: true }));
 
     const { data: settings } = await db
       .from("clinic_settings")
@@ -54,10 +58,8 @@ export const secretaryAutoReply = createServerFn({ method: "POST" })
     );
     if (humanAlreadyReplied) return { replied: false };
 
-    const apiKey = process.env["AI_GATEWAY_API_KEY"];
-    const baseUrl = process.env["AI_GATEWAY_BASE_URL"];
-    const model = process.env["AI_GATEWAY_MODEL"];
-    if (!apiKey || !baseUrl || !model) return { replied: false };
+    const { getAiGatewayConfig } = await import("@/lib/ai-gateway.server");
+    if (!(await getAiGatewayConfig())) return { replied: false };
 
     const { data: services } = await db
       .from("services")
@@ -84,31 +86,19 @@ export const secretaryAutoReply = createServerFn({ method: "POST" })
       .filter(Boolean)
       .join("\n");
 
-    const response = await fetch(`${baseUrl.replace(/\/$/, "")}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        temperature: 0.4,
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...messages.map((m) => ({
-            role: m.sender === "visitor" ? ("user" as const) : ("assistant" as const),
-            content: m.content,
-          })),
-        ],
-      }),
-    });
-    if (!response.ok) return { replied: false };
-
-    const json = (await response.json()) as {
-      choices?: Array<{ message?: { content?: string } }>;
-    };
-    const reply = json.choices?.[0]?.message?.content?.trim();
-    if (!reply) return { replied: false };
+    const { callAiGateway } = await import("@/lib/ai-gateway.server");
+    let reply: string;
+    try {
+      reply = await callAiGateway(
+        systemPrompt,
+        messages.map((m) => ({
+          role: m.sender === "visitor" ? ("user" as const) : ("assistant" as const),
+          content: m.content,
+        })),
+      );
+    } catch {
+      return { replied: false };
+    }
 
     await db.from("messages").insert({
       conversation_id: data.conversationId,

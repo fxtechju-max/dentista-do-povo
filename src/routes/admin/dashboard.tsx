@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Users, Calendar, DollarSign, TrendingUp } from "lucide-react";
-import { db } from "@/integrations/mysql/client";
+import { db } from "@/integrations/supabase/client";
 import {
   APPOINTMENT_STATUS_LABEL as STATUS_LABEL,
   formatCurrency,
@@ -109,19 +109,19 @@ function Dashboard() {
       label: "📅 Consultas hoje",
       value: stats?.appointmentsToday ?? 0,
       icon: Calendar,
-      color: "text-blue-600 bg-blue-100",
+      color: "text-primary bg-primary/10",
     },
     {
       label: "💰 Receita paga",
       value: formatCurrency(stats?.revenuePaid ?? 0),
       icon: DollarSign,
-      color: "text-emerald-600 bg-emerald-100",
+      color: "text-primary bg-primary/10",
     },
     {
       label: "🚀 Leads",
       value: stats?.leads ?? 0,
       icon: TrendingUp,
-      color: "text-amber-600 bg-amber-100",
+      color: "text-primary bg-primary/10",
     },
   ];
 

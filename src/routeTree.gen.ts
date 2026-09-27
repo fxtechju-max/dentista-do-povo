@@ -14,9 +14,11 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as BlogRouteImport } from './routes/blog'
 import { Route as ContatoRouteImport } from './routes/contato'
 import { Route as EntrarRouteImport } from './routes/entrar'
+import { Route as GaleriaRouteImport } from './routes/galeria'
 import { Route as ServicosRouteImport } from './routes/servicos'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as AdminAgendaRouteImport } from './routes/admin/agenda'
+import { Route as AdminBackupRouteImport } from './routes/admin/backup'
 import { Route as AdminCmsSiteRouteImport } from './routes/admin/cms-site'
 import { Route as AdminConfiguracoesRouteImport } from './routes/admin/configuracoes'
 import { Route as AdminContasRouteImport } from './routes/admin/contas'
@@ -34,6 +36,7 @@ import { Route as AdminTratamentosRouteImport } from './routes/admin/tratamentos
 import { Route as AdminWhatsappRouteImport } from './routes/admin/whatsapp'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 import { Route as AdminPacientesPatientIdRouteImport } from './routes/admin/pacientes.$patientId'
+import { Route as AdminPacientesPatientIdPropostaRouteImport } from './routes/admin/pacientes.$patientId.proposta'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -60,6 +63,11 @@ const EntrarRoute = EntrarRouteImport.update({
   path: '/entrar',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GaleriaRoute = GaleriaRouteImport.update({
+  id: '/galeria',
+  path: '/galeria',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ServicosRoute = ServicosRouteImport.update({
   id: '/servicos',
   path: '/servicos',
@@ -73,6 +81,11 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
 const AdminAgendaRoute = AdminAgendaRouteImport.update({
   id: '/agenda',
   path: '/agenda',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminBackupRoute = AdminBackupRouteImport.update({
+  id: '/backup',
+  path: '/backup',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminCmsSiteRoute = AdminCmsSiteRouteImport.update({
@@ -160,6 +173,12 @@ const AdminPacientesPatientIdRoute = AdminPacientesPatientIdRouteImport.update({
   path: '/$patientId',
   getParentRoute: () => AdminPacientesRoute,
 } as any)
+const AdminPacientesPatientIdPropostaRoute =
+  AdminPacientesPatientIdPropostaRouteImport.update({
+    id: '/proposta',
+    path: '/proposta',
+    getParentRoute: () => AdminPacientesPatientIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -167,8 +186,10 @@ export interface FileRoutesByFullPath {
   '/blog': typeof BlogRouteWithChildren
   '/contato': typeof ContatoRoute
   '/entrar': typeof EntrarRoute
+  '/galeria': typeof GaleriaRoute
   '/servicos': typeof ServicosRoute
   '/admin/agenda': typeof AdminAgendaRoute
+  '/admin/backup': typeof AdminBackupRoute
   '/admin/cms-site': typeof AdminCmsSiteRoute
   '/admin/configuracoes': typeof AdminConfiguracoesRoute
   '/admin/contas': typeof AdminContasRoute
@@ -186,15 +207,18 @@ export interface FileRoutesByFullPath {
   '/admin/whatsapp': typeof AdminWhatsappRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/admin/': typeof AdminIndexRoute
-  '/admin/pacientes/$patientId': typeof AdminPacientesPatientIdRoute
+  '/admin/pacientes/$patientId': typeof AdminPacientesPatientIdRouteWithChildren
+  '/admin/pacientes/$patientId/proposta': typeof AdminPacientesPatientIdPropostaRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/blog': typeof BlogRouteWithChildren
   '/contato': typeof ContatoRoute
   '/entrar': typeof EntrarRoute
+  '/galeria': typeof GaleriaRoute
   '/servicos': typeof ServicosRoute
   '/admin/agenda': typeof AdminAgendaRoute
+  '/admin/backup': typeof AdminBackupRoute
   '/admin/cms-site': typeof AdminCmsSiteRoute
   '/admin/configuracoes': typeof AdminConfiguracoesRoute
   '/admin/contas': typeof AdminContasRoute
@@ -212,7 +236,8 @@ export interface FileRoutesByTo {
   '/admin/whatsapp': typeof AdminWhatsappRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/admin': typeof AdminIndexRoute
-  '/admin/pacientes/$patientId': typeof AdminPacientesPatientIdRoute
+  '/admin/pacientes/$patientId': typeof AdminPacientesPatientIdRouteWithChildren
+  '/admin/pacientes/$patientId/proposta': typeof AdminPacientesPatientIdPropostaRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -221,8 +246,10 @@ export interface FileRoutesById {
   '/blog': typeof BlogRouteWithChildren
   '/contato': typeof ContatoRoute
   '/entrar': typeof EntrarRoute
+  '/galeria': typeof GaleriaRoute
   '/servicos': typeof ServicosRoute
   '/admin/agenda': typeof AdminAgendaRoute
+  '/admin/backup': typeof AdminBackupRoute
   '/admin/cms-site': typeof AdminCmsSiteRoute
   '/admin/configuracoes': typeof AdminConfiguracoesRoute
   '/admin/contas': typeof AdminContasRoute
@@ -240,7 +267,8 @@ export interface FileRoutesById {
   '/admin/whatsapp': typeof AdminWhatsappRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/admin/': typeof AdminIndexRoute
-  '/admin/pacientes/$patientId': typeof AdminPacientesPatientIdRoute
+  '/admin/pacientes/$patientId': typeof AdminPacientesPatientIdRouteWithChildren
+  '/admin/pacientes/$patientId/proposta': typeof AdminPacientesPatientIdPropostaRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -250,8 +278,10 @@ export interface FileRouteTypes {
     | '/blog'
     | '/contato'
     | '/entrar'
+    | '/galeria'
     | '/servicos'
     | '/admin/agenda'
+    | '/admin/backup'
     | '/admin/cms-site'
     | '/admin/configuracoes'
     | '/admin/contas'
@@ -270,14 +300,17 @@ export interface FileRouteTypes {
     | '/blog/$slug'
     | '/admin/'
     | '/admin/pacientes/$patientId'
+    | '/admin/pacientes/$patientId/proposta'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/blog'
     | '/contato'
     | '/entrar'
+    | '/galeria'
     | '/servicos'
     | '/admin/agenda'
+    | '/admin/backup'
     | '/admin/cms-site'
     | '/admin/configuracoes'
     | '/admin/contas'
@@ -296,6 +329,7 @@ export interface FileRouteTypes {
     | '/blog/$slug'
     | '/admin'
     | '/admin/pacientes/$patientId'
+    | '/admin/pacientes/$patientId/proposta'
   id:
     | '__root__'
     | '/'
@@ -303,8 +337,10 @@ export interface FileRouteTypes {
     | '/blog'
     | '/contato'
     | '/entrar'
+    | '/galeria'
     | '/servicos'
     | '/admin/agenda'
+    | '/admin/backup'
     | '/admin/cms-site'
     | '/admin/configuracoes'
     | '/admin/contas'
@@ -323,6 +359,7 @@ export interface FileRouteTypes {
     | '/blog/$slug'
     | '/admin/'
     | '/admin/pacientes/$patientId'
+    | '/admin/pacientes/$patientId/proposta'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -331,6 +368,7 @@ export interface RootRouteChildren {
   BlogRoute: typeof BlogRouteWithChildren
   ContatoRoute: typeof ContatoRoute
   EntrarRoute: typeof EntrarRoute
+  GaleriaRoute: typeof GaleriaRoute
   ServicosRoute: typeof ServicosRoute
 }
 
@@ -371,6 +409,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EntrarRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/galeria': {
+      id: '/galeria'
+      path: '/galeria'
+      fullPath: '/galeria'
+      preLoaderRoute: typeof GaleriaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/servicos': {
       id: '/servicos'
       path: '/servicos'
@@ -390,6 +435,13 @@ declare module '@tanstack/react-router' {
       path: '/agenda'
       fullPath: '/admin/agenda'
       preLoaderRoute: typeof AdminAgendaRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/backup': {
+      id: '/admin/backup'
+      path: '/backup'
+      fullPath: '/admin/backup'
+      preLoaderRoute: typeof AdminBackupRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/cms-site': {
@@ -511,15 +563,36 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminPacientesPatientIdRouteImport
       parentRoute: typeof AdminPacientesRoute
     }
+    '/admin/pacientes/$patientId/proposta': {
+      id: '/admin/pacientes/$patientId/proposta'
+      path: '/proposta'
+      fullPath: '/admin/pacientes/$patientId/proposta'
+      preLoaderRoute: typeof AdminPacientesPatientIdPropostaRouteImport
+      parentRoute: typeof AdminPacientesPatientIdRoute
+    }
   }
 }
 
+interface AdminPacientesPatientIdRouteChildren {
+  AdminPacientesPatientIdPropostaRoute: typeof AdminPacientesPatientIdPropostaRoute
+}
+
+const AdminPacientesPatientIdRouteChildren: AdminPacientesPatientIdRouteChildren =
+  {
+    AdminPacientesPatientIdPropostaRoute: AdminPacientesPatientIdPropostaRoute,
+  }
+
+const AdminPacientesPatientIdRouteWithChildren =
+  AdminPacientesPatientIdRoute._addFileChildren(
+    AdminPacientesPatientIdRouteChildren,
+  )
+
 interface AdminPacientesRouteChildren {
-  AdminPacientesPatientIdRoute: typeof AdminPacientesPatientIdRoute
+  AdminPacientesPatientIdRoute: typeof AdminPacientesPatientIdRouteWithChildren
 }
 
 const AdminPacientesRouteChildren: AdminPacientesRouteChildren = {
-  AdminPacientesPatientIdRoute: AdminPacientesPatientIdRoute,
+  AdminPacientesPatientIdRoute: AdminPacientesPatientIdRouteWithChildren,
 }
 
 const AdminPacientesRouteWithChildren = AdminPacientesRoute._addFileChildren(
@@ -528,6 +601,7 @@ const AdminPacientesRouteWithChildren = AdminPacientesRoute._addFileChildren(
 
 interface AdminRouteChildren {
   AdminAgendaRoute: typeof AdminAgendaRoute
+  AdminBackupRoute: typeof AdminBackupRoute
   AdminCmsSiteRoute: typeof AdminCmsSiteRoute
   AdminConfiguracoesRoute: typeof AdminConfiguracoesRoute
   AdminContasRoute: typeof AdminContasRoute
@@ -548,6 +622,7 @@ interface AdminRouteChildren {
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminAgendaRoute: AdminAgendaRoute,
+  AdminBackupRoute: AdminBackupRoute,
   AdminCmsSiteRoute: AdminCmsSiteRoute,
   AdminConfiguracoesRoute: AdminConfiguracoesRoute,
   AdminContasRoute: AdminContasRoute,
@@ -584,6 +659,7 @@ const rootRouteChildren: RootRouteChildren = {
   BlogRoute: BlogRouteWithChildren,
   ContatoRoute: ContatoRoute,
   EntrarRoute: EntrarRoute,
+  GaleriaRoute: GaleriaRoute,
   ServicosRoute: ServicosRoute,
 }
 export const routeTree = rootRouteImport

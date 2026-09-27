@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { db } from "@/integrations/mysql/client";
+import { db } from "@/integrations/supabase/client";
 import { ADMIN_MODULES, DASHBOARD_MODULE, SETTINGS_MODULE } from "@/lib/modules";
 
 export const Route = createFileRoute("/admin/")({
@@ -11,8 +11,7 @@ function Launcher() {
   const [disabledModules, setDisabledModules] = useState<string[]>([]);
 
   useEffect(() => {
-    db
-      .from("clinic_settings")
+    db.from("clinic_settings")
       .select("disabled_modules")
       .eq("id", "default")
       .maybeSingle()

@@ -1,5 +1,5 @@
 import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import {
   LogOut,
   ChevronDown,
@@ -10,9 +10,10 @@ import {
   User,
   ArrowLeft,
 } from "lucide-react";
-import { db } from "@/integrations/mysql/client";
+import { db } from "@/integrations/supabase/client";
 import { ADMIN_MODULES, DASHBOARD_MODULE, SETTINGS_MODULE, ToothIcon } from "@/lib/modules";
-import { applyThemePrefs, loadThemePrefs } from "@/lib/theme";
+import { mountAdminTheme } from "@/lib/theme";
+import { mountAdminZoom } from "@/lib/zoom";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -53,17 +54,15 @@ function AdminLayout() {
   const [notifPermission, setNotifPermission] = useState<NotifState>("default");
 
   useEffect(() => {
-    db
-      .from("clinic_settings")
+    db.from("clinic_settings")
       .select("disabled_modules")
       .eq("id", "default")
       .maybeSingle()
       .then(({ data }) => setDisabledModules(data?.disabled_modules ?? []));
   }, []);
 
-  useEffect(() => {
-    applyThemePrefs(loadThemePrefs());
-  }, []);
+  useLayoutEffect(() => mountAdminTheme(), []);
+  useLayoutEffect(() => mountAdminZoom(), []);
 
   const allModules = useMemo(() => {
     const modules = ADMIN_MODULES.filter((m) => !disabledModules.includes(m.id));
@@ -139,14 +138,14 @@ function AdminLayout() {
   const currentModule = allModules.find((m) => pathname.startsWith(m.to));
 
   return (
-    <div className="min-h-screen bg-muted/30">
+    <div className="min-h-screen bg-muted/30 print:bg-white">
       {isLauncher ? (
-        <header className="flex flex-wrap items-center justify-between gap-4 border-b border-border bg-card px-6 py-4 sm:px-10">
+        <header className="flex flex-wrap items-center justify-between gap-4 border-b border-border bg-card px-6 py-4 sm:px-10 print:hidden">
           <Link to="/admin" className="flex items-center gap-3">
-            <ToothIcon className="h-10 w-10 text-teal-500" />
+            <ToothIcon className="h-10 w-10 text-primary" />
             <span className="text-xl font-extrabold tracking-tight">
               <span className="text-foreground">DENTISTA </span>
-              <span className="text-teal-500">DO POVO</span>
+              <span className="text-primary">DO POVO</span>
             </span>
           </Link>
 
@@ -162,7 +161,7 @@ function AdminLayout() {
           </div>
         </header>
       ) : (
-        <header className="flex items-center justify-between border-b border-border bg-card px-4 py-3 sm:px-6">
+        <header className="flex items-center justify-between border-b border-border bg-card px-4 py-3 sm:px-6 print:hidden">
           <div className="flex items-center gap-3">
             <Link
               to="/admin"
@@ -192,7 +191,7 @@ function AdminLayout() {
         </header>
       )}
 
-      <main className={isLauncher ? "p-6 sm:p-10" : "p-4 sm:p-6"}>
+      <main className={`${isLauncher ? "p-6 sm:p-10" : "p-4 sm:p-6"} print:p-0`}>
         <Outlet />
       </main>
     </div>
