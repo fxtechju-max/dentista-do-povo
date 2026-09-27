@@ -16,7 +16,7 @@ const GALLERY_IMAGE_PATH = /^\/api\/gallery\/([0-9a-f-]{36})$/i;
 
 async function serveGalleryImage(id: string): Promise<Response | null> {
   const { getPool } = await import("./integrations/mysql/pool.server");
-  const [rows] = await getPool().execute<import("mysql2").RowDataPacket[]>(
+  const [rows] = await getPool().execute<import("@/integrations/mysql/pool.server").Row[]>(
     "SELECT image_data, mime_type FROM gallery_photos WHERE id=?",
     [id],
   );
