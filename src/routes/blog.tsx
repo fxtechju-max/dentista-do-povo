@@ -5,6 +5,7 @@ import { SiteHeader } from "@/components/site/SiteHeader";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { ChatWidget } from "@/components/site/ChatWidget";
 import { AdSlot } from "@/components/site/AdSlot";
+import { imageUrlForWidth } from "@/lib/images";
 import { db } from "@/integrations/mysql/client";
 
 export const Route = createFileRoute("/blog")({
@@ -109,8 +110,12 @@ function Blog() {
               >
                 {post.cover_image_url ? (
                   <img
-                    src={post.cover_image_url}
+                    src={imageUrlForWidth(post.cover_image_url, 640)}
                     alt={post.title}
+                    loading="lazy"
+                    decoding="async"
+                    width={640}
+                    height={320}
                     className="h-40 w-full object-cover"
                   />
                 ) : (

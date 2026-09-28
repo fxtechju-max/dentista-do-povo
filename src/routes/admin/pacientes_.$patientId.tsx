@@ -42,11 +42,8 @@ import {
   type BudgetStatus,
   type PaymentStatus,
 } from "@/lib/admin/labels";
-import {
-  PatientDialog,
-  emptyPatientForm,
-  type PatientFormValues,
-} from "@/components/admin/PatientDialog";
+import { PatientDialog } from "@/components/admin/PatientDialog";
+import { emptyPatientForm, type PatientFormValues } from "@/lib/admin/patient-form";
 import type { ToothCondition } from "@/lib/odontogram";
 import {
   procedureLabel,

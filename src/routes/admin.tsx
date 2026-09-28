@@ -16,9 +16,9 @@ import {
   DASHBOARD_MODULE,
   SETTINGS_MODULE,
   TUTORIAL_MODULE,
-  ToothIcon,
   sortModules,
 } from "@/lib/modules";
+import { ToothIcon } from "@/components/ToothIcon";
 import { mountAdminTheme } from "@/lib/theme";
 import { mountAdminZoom } from "@/lib/zoom";
 import {

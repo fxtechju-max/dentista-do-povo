@@ -45,6 +45,16 @@ export type TutorialUpdate = {
 export const TUTORIAL_UPDATES: TutorialUpdate[] = [
   {
     date: "2026-09-28",
+    title: "Site mais rápido",
+    sections: ["painel", "cms-site"],
+    items: [
+      "As páginas aparecem mais rápido: os anúncios do Google carregam logo depois que a página fica pronta.",
+      "A lista do Blog baixa as fotos no tamanho certo e só quando aparecem na tela (de ≈2,6 MB para ≈240 KB).",
+      "Revisão completa: todas as páginas do site e do painel abrindo sem erros no celular e no computador.",
+    ],
+  },
+  {
+    date: "2026-09-28",
     title: "Orçamentos, Financeiro e Contas renovados",
     sections: ["orcamentos", "financeiro", "contas"],
     items: [

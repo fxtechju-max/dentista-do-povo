@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { ArrowLeft, Printer } from "lucide-react";
 import { db } from "@/integrations/mysql/client";
 import { calculateAge, formatCurrency } from "@/lib/admin/labels";
-import { ToothIcon } from "@/lib/modules";
+import { ToothIcon } from "@/components/ToothIcon";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/admin/pacientes_/$patientId_/proposta")({

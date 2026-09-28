@@ -87,6 +87,10 @@ function Index() {
           <img
             src={hero.imageId ? siteImageUrl(hero.imageId) : heroImg}
             alt={hero.imageAlt}
+            fetchPriority="high"
+            decoding="async"
+            width={1600}
+            height={1200}
             className="aspect-[4/3] w-full rounded-3xl object-cover shadow-2xl"
           />
           {(hero.floatingTitle || hero.floatingSubtitle) && (

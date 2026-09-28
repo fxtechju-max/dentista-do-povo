@@ -6,6 +6,7 @@ import { SiteFooter } from "@/components/site/SiteFooter";
 import { ChatWidget } from "@/components/site/ChatWidget";
 import { AdSlot } from "@/components/site/AdSlot";
 import { BlogContent } from "@/components/site/BlogContent";
+import { imageUrlForWidth } from "@/lib/images";
 import { db } from "@/integrations/mysql/client";
 
 export const Route = createFileRoute("/blog_/$slug")({
@@ -64,8 +65,12 @@ function BlogPost() {
           <article className="mt-6">
             {post.cover_image_url && (
               <img
-                src={post.cover_image_url}
+                src={imageUrlForWidth(post.cover_image_url, 1200)}
                 alt={post.title}
+                fetchPriority="high"
+                decoding="async"
+                width={1200}
+                height={675}
                 className="mb-6 aspect-video w-full rounded-2xl object-cover"
               />
             )}

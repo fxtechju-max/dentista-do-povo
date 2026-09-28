@@ -147,12 +147,33 @@ function RootShell({ children }: { children: ReactNode }) {
 function useAdsenseScript(clientId: string | null) {
   useEffect(() => {
     if (!clientId || document.querySelector("script[data-adsense]")) return;
-    const script = document.createElement("script");
-    script.async = true;
-    script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${clientId}`;
-    script.crossOrigin = "anonymous";
-    script.dataset["adsense"] = "";
-    document.head.appendChild(script);
+    // Espera a página terminar de carregar e o navegador ficar livre: o site
+    // aparece primeiro e os anúncios (≈1 MB do Google) entram logo depois.
+    let cancelled = false;
+    let idleId: number | undefined;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const inject = () => {
+      if (cancelled || document.querySelector("script[data-adsense]")) return;
+      const script = document.createElement("script");
+      script.async = true;
+      script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${clientId}`;
+      script.crossOrigin = "anonymous";
+      script.dataset["adsense"] = "";
+      document.head.appendChild(script);
+    };
+    const whenIdle = () => {
+      if ("requestIdleCallback" in window)
+        idleId = window.requestIdleCallback(inject, { timeout: 3000 });
+      else timer = setTimeout(inject, 1500);
+    };
+    if (document.readyState === "complete") whenIdle();
+    else window.addEventListener("load", whenIdle, { once: true });
+    return () => {
+      cancelled = true;
+      window.removeEventListener("load", whenIdle);
+      if (idleId !== undefined) window.cancelIdleCallback(idleId);
+      if (timer) clearTimeout(timer);
+    };
   }, [clientId]);
 }
 

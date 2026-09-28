@@ -15,7 +15,8 @@ import {
 } from "lucide-react";
 import { db } from "@/integrations/mysql/client";
 import { PageHeader } from "@/components/admin/PageHeader";
-import { DocumentPage, PAGE_HEIGHT, PAGE_WIDTH } from "@/components/admin/documents/DocumentPage";
+import { DocumentPage } from "@/components/admin/documents/DocumentPage";
+import { PAGE_HEIGHT, PAGE_WIDTH } from "@/lib/document-page";
 import {
   DOCUMENT_LAYOUTS,
   PLACEHOLDERS,

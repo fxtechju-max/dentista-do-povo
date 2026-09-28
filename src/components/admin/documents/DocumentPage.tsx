@@ -1,21 +1,10 @@
 import { forwardRef, type CSSProperties, type ReactNode } from "react";
 import type { ClinicInfo, DocumentLayout } from "@/lib/document-templates";
 import { longDate } from "@/lib/document-templates";
+import { COLORS, PAGE_HEIGHT, PAGE_WIDTH } from "@/lib/document-page";
 
-// Folha A4 (794 × 1123 px a 96 dpi). Estilos inline — não dependem do CSS do
-// painel, para a impressão, o PDF e a tela ficarem idênticos.
-export const PAGE_WIDTH = 794;
-export const PAGE_HEIGHT = 1123;
-
-export const COLORS = {
-  blue: "#1d4ed8",
-  blueLight: "#dbeafe",
-  dark: "#0f172a",
-  text: "#1e293b",
-  muted: "#64748b",
-  white: "#ffffff",
-};
-
+// Estilos inline — não dependem do CSS do painel, para a impressão, o PDF e a
+// tela ficarem idênticos.
 const TOOTH_PATH =
   "M12 3c-2.5 0-4 1.5-5.5 1.5C4.5 4.5 3 6.3 3 8.8c0 1.8.8 2.7.9 4.3.2 3 1.3 8 3.3 8 1.6 0 1.7-3.8 2.2-6 .3-1.3.7-2.1 2.1-2.1s1.8.8 2.1 2.1c.5 2.2.6 6 2.2 6 2 0 3.1-5 3.3-8 .1-1.6.9-2.5.9-4.3 0-2.5-1.5-4.3-3.5-4.3C16 4.5 14.5 3 12 3Z";
 

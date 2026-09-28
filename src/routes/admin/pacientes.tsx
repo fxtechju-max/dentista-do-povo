@@ -4,11 +4,8 @@ import { Users, Plus, Pencil, Trash2, Search, Mail, Phone, FileText } from "luci
 import { db } from "@/integrations/mysql/client";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { EmptyState } from "@/components/admin/EmptyState";
-import {
-  PatientDialog,
-  emptyPatientForm,
-  type PatientFormValues,
-} from "@/components/admin/PatientDialog";
+import { PatientDialog } from "@/components/admin/PatientDialog";
+import { emptyPatientForm, type PatientFormValues } from "@/lib/admin/patient-form";
 import { PatientQuickView } from "@/components/admin/PatientQuickView";
 import { patientCode } from "@/lib/admin/labels";
 import { PatientDocumentsDialog } from "@/components/admin/PatientDocumentsDialog";
