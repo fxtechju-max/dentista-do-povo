@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
   ArrowLeft,
@@ -19,6 +19,11 @@ import {
   MapPin,
   UserRound,
   Pencil,
+  Printer,
+  ChevronDown,
+  LayoutDashboard,
+  ListChecks,
+  FolderOpen,
 } from "lucide-react";
 import { db } from "@/integrations/mysql/client";
 import { summarizePatientHistory } from "@/lib/admin/functions";
@@ -31,6 +36,8 @@ import {
   PAYMENT_STATUS_VARIANT,
   formatCurrency,
   calculateAge,
+  GENDER_LABEL,
+  patientCode,
   type AppointmentStatus,
   type BudgetStatus,
   type PaymentStatus,
@@ -40,25 +47,28 @@ import {
   emptyPatientForm,
   type PatientFormValues,
 } from "@/components/admin/PatientDialog";
+import type { ToothCondition } from "@/lib/odontogram";
 import {
-  TOOTH_CONDITIONS,
-  TOOTH_CONDITION_LABEL,
-  TOOTH_CONDITION_CODE,
-  TOOTH_CONDITION_COLOR,
-  UPPER_TEETH,
-  LOWER_TEETH,
-  primaryCondition,
-  toothType,
-  type ToothCondition,
-  type Dentition,
-  type ToothType,
-} from "@/lib/odontogram";
+  procedureLabel,
+  situationOf,
+  sortProcedures,
+  statusOf,
+  surfaceLabel,
+  type ToothProcedure,
+} from "@/lib/odontogram-pro";
+import { OdontogramModule } from "@/components/admin/odontogram/OdontogramModule";
+import { PatientDocumentsDialog } from "@/components/admin/PatientDocumentsDialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { EmptyState } from "@/components/admin/EmptyState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Dialog,
   DialogContent,
@@ -78,8 +88,11 @@ import {
 } from "@/components/ui/select";
 
 const TAB_VALUES = [
+  "resumo",
+  "dados",
   "anamnese",
   "odontograma",
+  "plano",
   "evolucao",
   "consultas",
   "orcamentos",
@@ -108,6 +121,9 @@ type Patient = {
   guardian_name: string | null;
   guardian_phone: string | null;
   guardian_cpf: string | null;
+  gender: string | null;
+  responsible_dentist: string | null;
+  code: number | null;
   created_at: string;
 };
 type Appointment = {
@@ -189,6 +205,10 @@ const emptyAnamnesis: Anamnesis = {
   additional_notes: "",
 };
 
+function formatBirth(date: string | null) {
+  return date ? new Date(`${date.slice(0, 10)}T12:00:00`).toLocaleDateString("pt-BR") : "—";
+}
+
 function Prontuario() {
   const { patientId } = Route.useParams();
   const { tab } = Route.useSearch();
@@ -201,7 +221,10 @@ function Prontuario() {
   const [documents, setDocuments] = useState<DocumentRow[]>([]);
   const [anamnesis, setAnamnesis] = useState<Anamnesis>(emptyAnamnesis);
   const [toothRecords, setToothRecords] = useState<Map<number, ToothRecord>>(new Map());
-  const [dentition, setDentition] = useState<Dentition>("permanente");
+  const [activeTab, setActiveTab] = useState<TabValue>(tab ?? "resumo");
+  const [docsOpen, setDocsOpen] = useState(false);
+  const [plan, setPlan] = useState<ToothProcedure[]>([]);
+  const navigate = useNavigate();
   const [clinicalNotes, setClinicalNotes] = useState<ClinicalNote[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingAnamnesis, setSavingAnamnesis] = useState(false);
@@ -234,11 +257,12 @@ function Prontuario() {
       { data: anamnesisData },
       { data: toothData },
       { data: notesData },
+      { data: planData },
     ] = await Promise.all([
       db
         .from("patients")
         .select(
-          "id, name, phone, email, cpf, birth_date, address, guardian_name, guardian_phone, guardian_cpf, created_at",
+          "id, name, phone, email, cpf, birth_date, address, guardian_name, guardian_phone, guardian_cpf, gender, responsible_dentist, code, created_at",
         )
         .eq("id", patientId)
         .single(),
@@ -273,6 +297,7 @@ function Prontuario() {
         .select("id, note, created_at")
         .eq("patient_id", patientId)
         .order("created_at", { ascending: false }),
+      db.from("tooth_procedures").select("*").eq("patient_id", patientId),
     ]);
     setPatient((patientData as Patient) ?? null);
     setAppointments((appointmentsData ?? []) as Appointment[]);
@@ -294,6 +319,7 @@ function Prontuario() {
       new Map(((toothData ?? []) as ToothRecord[]).map((t) => [t.tooth_number, t] as const)),
     );
     setClinicalNotes((notesData ?? []) as ClinicalNote[]);
+    setPlan(sortProcedures((planData ?? []) as ToothProcedure[]));
     setLoading(false);
   }
 
@@ -374,24 +400,6 @@ function Prontuario() {
     setTimeout(() => setAnamnesisSaved(false), 2000);
   }
 
-  async function saveTooth(toothNumber: number, conditions: ToothCondition[], notes: string) {
-    await db.from("tooth_records").upsert(
-      {
-        patient_id: patientId,
-        tooth_number: toothNumber,
-        conditions,
-        notes: notes.trim() || null,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "patient_id,tooth_number" },
-    );
-    setToothRecords((prev) => {
-      const next = new Map(prev);
-      next.set(toothNumber, { tooth_number: toothNumber, conditions, notes: notes.trim() || null });
-      return next;
-    });
-  }
-
   async function addClinicalNote() {
     if (!newNote.trim() || savingNote) return;
     setSavingNote(true);
@@ -454,6 +462,11 @@ function Prontuario() {
     );
   }
 
+  const patientAge = patient.birth_date ? calculateAge(patient.birth_date) : null;
+  const legacyConditions = new Map<number, ToothCondition[]>(
+    [...toothRecords.values()].map((t) => [t.tooth_number, t.conditions]),
+  );
+
   const totalPaid = payments
     .filter((p) => p.status === "pago")
     .reduce((s, p) => s + Number(p.amount), 0);
@@ -462,121 +475,321 @@ function Prontuario() {
     <div className="animate-in fade-in space-y-4 duration-300">
       <Link
         to="/admin/pacientes"
-        className="inline-flex items-center gap-1.5 text-sm font-semibold text-muted-foreground hover:text-foreground"
+        className="inline-flex items-center gap-1.5 text-sm font-semibold text-muted-foreground hover:text-foreground print:hidden"
       >
         <ArrowLeft className="h-4 w-4" /> Voltar para pacientes
       </Link>
 
-      <div className="rounded-2xl border border-border bg-card p-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-xl font-extrabold text-primary">
+      <div className="rounded-2xl border border-border bg-card p-5">
+        <div className="flex flex-wrap items-center gap-5">
+          <div className="flex min-w-60 items-center gap-4">
+            <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-primary text-2xl font-extrabold text-primary-foreground shadow">
               {patient.name.charAt(0).toUpperCase()}
             </span>
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-xl font-extrabold">{patient.name}</h1>
-                {patient.birth_date &&
-                  (() => {
-                    const age = calculateAge(patient.birth_date);
-                    return age != null ? (
-                      <Badge variant={age < 18 ? "secondary" : "outline"}>
-                        {age} {age === 1 ? "ano" : "anos"}
-                        {age < 18 ? " · menor" : ""}
-                      </Badge>
-                    ) : null;
-                  })()}
+            <div className="min-w-0">
+              <h1 className="truncate text-xl font-extrabold">{patient.name}</h1>
+              <p className="text-xs text-muted-foreground">Código: {patientCode(patient.code)}</p>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {patient.gender && (
+                  <Badge variant="secondary">
+                    <UserRound className="h-3 w-3" />
+                    {GENDER_LABEL[patient.gender] ?? patient.gender}
+                  </Badge>
+                )}
+                {patientAge != null && (
+                  <Badge variant="secondary">
+                    {patientAge} {patientAge === 1 ? "ano" : "anos"}
+                    {patientAge < 18 ? " · menor" : ""}
+                  </Badge>
+                )}
               </div>
-              <div className="mt-1 flex flex-wrap gap-3 text-sm text-muted-foreground">
-                {patient.phone && (
-                  <span className="flex items-center gap-1">
-                    <Phone className="h-3.5 w-3.5" /> {patient.phone}
-                  </span>
-                )}
-                {patient.email && (
-                  <span className="flex items-center gap-1">
-                    <Mail className="h-3.5 w-3.5" /> {patient.email}
-                  </span>
-                )}
-                {patient.cpf && (
-                  <span className="flex items-center gap-1">
-                    <IdCard className="h-3.5 w-3.5" /> {patient.cpf}
-                  </span>
-                )}
-                <span>
-                  Paciente desde {new Date(patient.created_at).toLocaleDateString("pt-BR")}
-                </span>
-              </div>
-              {patient.address && (
-                <p className="mt-1.5 flex items-start gap-1 text-sm text-muted-foreground">
-                  <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" /> {patient.address}
-                </p>
-              )}
-              {patient.guardian_name && (
-                <p className="mt-1.5 flex items-start gap-1 text-sm text-muted-foreground">
-                  <UserRound className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                  Responsável: {patient.guardian_name}
-                  {patient.guardian_phone ? ` · ${patient.guardian_phone}` : ""}
-                  {patient.guardian_cpf ? ` · CPF ${patient.guardian_cpf}` : ""}
-                </p>
-              )}
-              <Button
-                variant="link"
-                size="sm"
-                className="mt-1 h-auto px-0"
-                onClick={() => setEditDialogOpen(true)}
-              >
-                <Pencil className="h-3.5 w-3.5" /> Editar dados cadastrais
-              </Button>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-4 text-center">
-            <div>
-              <p className="text-lg font-extrabold">{appointments.length}</p>
-              <p className="text-xs text-muted-foreground">Consultas</p>
-            </div>
-            <div>
-              <p className="text-lg font-extrabold text-emerald-600">{formatCurrency(totalPaid)}</p>
-              <p className="text-xs text-muted-foreground">Pago</p>
-            </div>
-            <div>
-              <p className="text-lg font-extrabold">{documents.length}</p>
-              <p className="text-xs text-muted-foreground">Documentos</p>
-            </div>
-          </div>
-        </div>
 
-        <div className="mt-4 border-t border-border pt-4">
-          <Button variant="outline" size="sm" onClick={summarizeWithAI} disabled={aiLoading}>
-            <Sparkles className={aiLoading ? "animate-pulse" : undefined} />
-            {aiLoading ? "Gerando resumo..." : "Resumir histórico com IA"}
-          </Button>
-          {aiError && <p className="mt-2 text-xs font-semibold text-destructive">{aiError}</p>}
-          {aiSummary && (
-            <p className="mt-3 whitespace-pre-line rounded-lg bg-muted/50 p-3 text-sm">
-              {aiSummary}
-            </p>
-          )}
+          <div className="grid flex-1 grid-cols-2 gap-4 border-border md:grid-cols-4 lg:border-l lg:pl-5">
+            {[
+              {
+                icon: <Calendar className="h-4 w-4" />,
+                label: "Nascimento",
+                value: formatBirth(patient.birth_date),
+              },
+              {
+                icon: <Phone className="h-4 w-4" />,
+                label: "Telefone",
+                value: patient.phone || "—",
+              },
+              { icon: <IdCard className="h-4 w-4" />, label: "CPF", value: patient.cpf || "—" },
+              {
+                icon: <Stethoscope className="h-4 w-4" />,
+                label: "Dentista responsável",
+                value: patient.responsible_dentist || "—",
+              },
+            ].map((item) => (
+              <div key={item.label} className="flex items-start gap-2">
+                <span className="mt-0.5 text-muted-foreground">{item.icon}</span>
+                <div className="min-w-0">
+                  <p className="text-[11px] text-muted-foreground">{item.label}</p>
+                  <p className="truncate text-sm font-semibold">{item.value}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex flex-wrap gap-2 print:hidden">
+            <Button size="sm" onClick={() => setActiveTab("evolucao")}>
+              <Plus className="h-4 w-4" /> Nova Evolução
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => window.print()}>
+              <Printer className="h-4 w-4" /> Imprimir
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  Mais ações <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setEditDialogOpen(true)}>
+                  <Pencil className="h-3.5 w-3.5" /> Editar dados cadastrais
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setDocsOpen(true)}>
+                  <FolderOpen className="h-3.5 w-3.5" /> Ver todos os documentos
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setApptDialog(true)}>
+                  <Calendar className="h-3.5 w-3.5" /> Agendar consulta
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setRxDialog(true)}>
+                  <ClipboardList className="h-3.5 w-3.5" /> Nova receita
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() =>
+                    navigate({ to: "/admin/pacientes/$patientId/proposta", params: { patientId } })
+                  }
+                >
+                  <FileText className="h-3.5 w-3.5" /> Gerar proposta
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setActiveTab("resumo");
+                    summarizeWithAI();
+                  }}
+                >
+                  <Sparkles className="h-3.5 w-3.5" /> Resumir histórico com IA
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
 
-      <Tabs defaultValue={tab ?? "anamnese"}>
-        <TabsList className="flex h-auto flex-wrap justify-start gap-1">
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)}>
+        <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 print:hidden">
+          <TabsTrigger value="resumo">
+            <LayoutDashboard className="h-3.5 w-3.5" /> Resumo
+          </TabsTrigger>
+          <TabsTrigger value="dados">
+            <UserRound className="h-3.5 w-3.5" /> Dados do Paciente
+          </TabsTrigger>
           <TabsTrigger value="anamnese">
-            <Stethoscope className="h-3.5 w-3.5" /> Anamnese
+            <Stethoscope className="h-3.5 w-3.5" /> Prontuário
           </TabsTrigger>
           <TabsTrigger value="odontograma">
             <Smile className="h-3.5 w-3.5" /> Odontograma
           </TabsTrigger>
-          <TabsTrigger value="evolucao">
-            <NotebookPen className="h-3.5 w-3.5" /> Evolução
+          <TabsTrigger value="plano">
+            <ListChecks className="h-3.5 w-3.5" /> Plano de Tratamento
           </TabsTrigger>
-          <TabsTrigger value="consultas">📅 Consultas</TabsTrigger>
-          <TabsTrigger value="orcamentos">🧾 Orçamentos</TabsTrigger>
-          <TabsTrigger value="financeiro">💰 Financeiro</TabsTrigger>
-          <TabsTrigger value="receitas">💊 Receitas</TabsTrigger>
-          <TabsTrigger value="documentos">📄 Documentos</TabsTrigger>
+          <TabsTrigger value="evolucao">
+            <NotebookPen className="h-3.5 w-3.5" /> Evoluções
+          </TabsTrigger>
+          <TabsTrigger value="consultas">
+            <Calendar className="h-3.5 w-3.5" /> Consultas
+          </TabsTrigger>
+          <TabsTrigger value="documentos">
+            <FileText className="h-3.5 w-3.5" /> Documentos
+          </TabsTrigger>
+          <TabsTrigger value="receitas">
+            <ClipboardList className="h-3.5 w-3.5" /> Receitas
+          </TabsTrigger>
+          <TabsTrigger value="orcamentos">
+            <Receipt className="h-3.5 w-3.5" /> Orçamentos
+          </TabsTrigger>
+          <TabsTrigger value="financeiro">
+            <DollarSign className="h-3.5 w-3.5" /> Financeiro
+          </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="resumo" className="space-y-4">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            {[
+              ["Consultas", String(appointments.length)],
+              ["Pago", formatCurrency(totalPaid)],
+              [
+                "Procedimentos em aberto",
+                String(plan.filter((p) => p.status !== "concluido").length),
+              ],
+              ["Documentos", String(documents.length + prescriptions.length)],
+            ].map(([label, value]) => (
+              <div key={label} className="rounded-2xl border border-border bg-card p-4 text-center">
+                <p className="text-xl font-extrabold">{value}</p>
+                <p className="text-xs text-muted-foreground">{label}</p>
+              </div>
+            ))}
+          </div>
+          <div className="rounded-2xl border border-border bg-card p-5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-bold">Resumo clínico com IA</p>
+              <Button variant="outline" size="sm" onClick={summarizeWithAI} disabled={aiLoading}>
+                <Sparkles className={aiLoading ? "animate-pulse" : undefined} />
+                {aiLoading ? "Gerando resumo..." : "Resumir histórico com IA"}
+              </Button>
+            </div>
+            {aiError && <p className="mt-2 text-xs font-semibold text-destructive">{aiError}</p>}
+            {aiSummary ? (
+              <p className="mt-3 whitespace-pre-line rounded-lg bg-muted/50 p-3 text-sm">
+                {aiSummary}
+              </p>
+            ) : (
+              <p className="mt-2 text-sm text-muted-foreground">
+                Gere um resumo das consultas, orçamentos, pagamentos e receitas deste paciente.
+              </p>
+            )}
+          </div>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div className="rounded-2xl border border-border bg-card p-5">
+              <p className="mb-2 text-sm font-bold">Últimas consultas</p>
+              {appointments.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nenhuma consulta.</p>
+              ) : (
+                appointments.slice(0, 5).map((a) => (
+                  <div key={a.id} className="flex items-center justify-between gap-2 py-1 text-sm">
+                    <span className="truncate">
+                      {new Date(a.scheduled_at).toLocaleDateString("pt-BR")} — {a.treatment}
+                    </span>
+                    <Badge variant={APPOINTMENT_STATUS_VARIANT[a.status]}>
+                      {APPOINTMENT_STATUS_LABEL[a.status]}
+                    </Badge>
+                  </div>
+                ))
+              )}
+            </div>
+            <div className="rounded-2xl border border-border bg-card p-5">
+              <p className="mb-2 text-sm font-bold">Últimas evoluções</p>
+              {clinicalNotes.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nenhuma anotação.</p>
+              ) : (
+                clinicalNotes.slice(0, 4).map((n) => (
+                  <div key={n.id} className="py-1 text-sm">
+                    <p className="text-[11px] text-muted-foreground">
+                      {new Date(n.created_at).toLocaleString("pt-BR")}
+                    </p>
+                    <p className="line-clamp-2">{n.note}</p>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="dados">
+          <div className="rounded-2xl border border-border bg-card p-5">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-bold">Dados cadastrais</p>
+              <Button variant="outline" size="sm" onClick={() => setEditDialogOpen(true)}>
+                <Pencil className="h-3.5 w-3.5" /> Editar
+              </Button>
+            </div>
+            <dl className="mt-4 grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
+              {[
+                ["Nome completo", patient.name],
+                ["Código", patientCode(patient.code)],
+                ["Sexo", patient.gender ? (GENDER_LABEL[patient.gender] ?? patient.gender) : null],
+                ["Data de nascimento", formatBirth(patient.birth_date)],
+                ["CPF", patient.cpf],
+                ["Telefone", patient.phone],
+                ["Email", patient.email],
+                ["Dentista responsável", patient.responsible_dentist],
+                ["Paciente desde", new Date(patient.created_at).toLocaleDateString("pt-BR")],
+                ["Endereço", patient.address],
+                ["Responsável", patient.guardian_name],
+                ["Telefone do responsável", patient.guardian_phone],
+                ["CPF do responsável", patient.guardian_cpf],
+              ].map(([label, value]) => (
+                <div key={label}>
+                  <dt className="text-xs text-muted-foreground">{label}</dt>
+                  <dd className="mt-0.5 break-words text-sm font-semibold">{value || "—"}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="plano">
+          <div className="rounded-2xl border border-border bg-card p-5">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-bold">Plano de tratamento</p>
+              <Button variant="outline" size="sm" onClick={() => setActiveTab("odontograma")}>
+                <Smile className="h-3.5 w-3.5" /> Abrir odontograma
+              </Button>
+            </div>
+            {plan.length === 0 ? (
+              <EmptyState
+                icon={ListChecks}
+                title="Nenhum procedimento registrado. Use o odontograma para planejar."
+              />
+            ) : (
+              <div className="mt-3 overflow-x-auto">
+                <table className="w-full min-w-[600px] text-left text-sm">
+                  <thead className="bg-muted/60 text-xs text-muted-foreground">
+                    <tr>
+                      {[
+                        "Dente",
+                        "Situação",
+                        "Procedimento",
+                        "Faces",
+                        "Status",
+                        "Data",
+                        "Profissional",
+                      ].map((h) => (
+                        <th key={h} className="px-3 py-2 font-semibold">
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {plan.map((p) => (
+                      <tr key={p.id} className="border-b border-border last:border-0">
+                        <td className="px-3 py-2 font-bold">{p.tooth_number}</td>
+                        <td className="px-3 py-2">
+                          <span className="flex items-center gap-1.5">
+                            <span
+                              className="h-3 w-3 rounded border border-stone-400"
+                              style={{ background: situationOf(p.situation).color }}
+                            />
+                            {situationOf(p.situation).label}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2">{procedureLabel(p.planned_procedure)}</td>
+                        <td className="px-3 py-2 text-xs">
+                          {p.surfaces.map((s) => surfaceLabel(s, p.tooth_number)).join(", ") || "—"}
+                        </td>
+                        <td className="px-3 py-2">
+                          <span className="flex items-center gap-1.5 text-xs">
+                            <span className={`h-2 w-2 rounded-full ${statusOf(p.status).dot}`} />
+                            {statusOf(p.status).label}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2 text-xs">{formatBirth(p.record_date)}</td>
+                        <td className="px-3 py-2 text-xs">{p.dentist || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </TabsContent>
 
         <TabsContent value="anamnese" className="space-y-4">
           <div className="rounded-2xl border border-border bg-card p-5">
@@ -730,69 +943,12 @@ function Prontuario() {
           </div>
         </TabsContent>
 
-        <TabsContent value="odontograma" className="space-y-4">
-          <div className="rounded-2xl border border-border bg-card p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-sm font-bold">Odontograma</p>
-              <div className="flex items-center gap-1 rounded-lg border border-border bg-background p-0.5">
-                {[
-                  { id: "permanente" as const, label: "Permanentes" },
-                  { id: "deciduo" as const, label: "Decíduos" },
-                ].map((opt) => (
-                  <button
-                    key={opt.id}
-                    onClick={() => setDentition(opt.id)}
-                    className={`rounded-md px-3 py-1 text-xs font-bold transition-colors ${
-                      dentition === opt.id
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="mt-4 space-y-3 overflow-x-auto pb-2">
-              <div className="flex min-w-max justify-center gap-1.5">
-                {UPPER_TEETH[dentition].map((n) => (
-                  <ToothButton
-                    key={n}
-                    number={n}
-                    dentition={dentition}
-                    arch="upper"
-                    record={toothRecords.get(n)}
-                    onSave={saveTooth}
-                  />
-                ))}
-              </div>
-              <div className="flex min-w-max justify-center gap-1.5">
-                {LOWER_TEETH[dentition].map((n) => (
-                  <ToothButton
-                    key={n}
-                    number={n}
-                    dentition={dentition}
-                    arch="lower"
-                    record={toothRecords.get(n)}
-                    onSave={saveTooth}
-                  />
-                ))}
-              </div>
-            </div>
-            <div className="mt-5 flex flex-wrap gap-3 border-t border-border pt-4">
-              {TOOTH_CONDITIONS.map((c) => (
-                <span key={c} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <span
-                    className={`h-3 w-3 rounded-full border ${TOOTH_CONDITION_COLOR[c]
-                      .split(" ")
-                      .filter((cl) => cl.startsWith("border-") || cl.startsWith("bg-"))
-                      .join(" ")}`}
-                  />
-                  {TOOTH_CONDITION_LABEL[c]}
-                </span>
-              ))}
-            </div>
-          </div>
+        <TabsContent value="odontograma">
+          <OdontogramModule
+            patientId={patientId}
+            defaultDentist={patient.responsible_dentist ?? ""}
+            legacyConditions={legacyConditions}
+          />
         </TabsContent>
 
         <TabsContent value="evolucao" className="space-y-3">
@@ -957,6 +1113,11 @@ function Prontuario() {
         </TabsContent>
 
         <TabsContent value="documentos" className="space-y-3">
+          <div className="flex justify-end">
+            <Button size="sm" onClick={() => setDocsOpen(true)}>
+              <FolderOpen className="h-4 w-4" /> Ver todos (arquivos, receitas e imagens)
+            </Button>
+          </div>
           {documents.length === 0 ? (
             <div className="rounded-2xl border border-border bg-card">
               <EmptyState icon={FileText} title="Nenhum documento anexado." />
@@ -1074,6 +1235,13 @@ function Prontuario() {
         </DialogContent>
       </Dialog>
 
+      <PatientDocumentsDialog
+        patientId={patient.id}
+        patientName={patient.name}
+        open={docsOpen}
+        onOpenChange={setDocsOpen}
+      />
+
       <PatientDialog
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
@@ -1088,157 +1256,11 @@ function Prontuario() {
           guardian_name: patient.guardian_name ?? "",
           guardian_phone: patient.guardian_phone ?? "",
           guardian_cpf: patient.guardian_cpf ?? "",
+          gender: patient.gender ?? "",
+          responsible_dentist: patient.responsible_dentist ?? "",
         }}
         onSaved={load}
       />
     </div>
-  );
-}
-
-function ToothSvg({ type, className }: { type: ToothType; className?: string }) {
-  const crown = {
-    incisor: { x: 9, w: 10, rx: 3 },
-    canine: { x: 8, w: 12, rx: 3 },
-    premolar: { x: 6, w: 16, rx: 4 },
-    molar: { x: 3, w: 22, rx: 4 },
-  }[type];
-
-  return (
-    <svg viewBox="0 0 28 48" className={className} aria-hidden="true">
-      <rect x={crown.x} y={2} width={crown.w} height={16} rx={crown.rx} />
-      {type === "canine" && <polygon points="14,0 11,6 17,6" />}
-      {type === "premolar" && (
-        <>
-          <circle cx={10} cy={4} r={2} />
-          <circle cx={18} cy={4} r={2} />
-        </>
-      )}
-      {type === "molar" && (
-        <>
-          <circle cx={8} cy={4} r={2.2} />
-          <circle cx={14} cy={3.5} r={2.2} />
-          <circle cx={20} cy={4} r={2.2} />
-        </>
-      )}
-      {type === "molar" ? (
-        <>
-          <polygon points="4,20 11,20 9,42 6,42" />
-          <polygon points="17,20 24,20 22,42 19,42" />
-        </>
-      ) : type === "premolar" ? (
-        <polygon points="9,20 19,20 16,44 12,44" />
-      ) : (
-        <polygon points="11,20 17,20 15,46 13,46" />
-      )}
-    </svg>
-  );
-}
-
-function ToothButton({
-  number,
-  dentition,
-  arch,
-  record,
-  onSave,
-}: {
-  number: number;
-  dentition: Dentition;
-  arch: "upper" | "lower";
-  record: ToothRecord | undefined;
-  onSave: (toothNumber: number, conditions: ToothCondition[], notes: string) => Promise<void>;
-}) {
-  const [open, setOpen] = useState(false);
-  const [conditions, setConditions] = useState<ToothCondition[]>(record?.conditions ?? []);
-  const [notes, setNotes] = useState(record?.notes ?? "");
-  const [saving, setSaving] = useState(false);
-
-  const main = primaryCondition(record?.conditions ?? []);
-  const type = toothType(number, dentition);
-  const colorClasses = main ? TOOTH_CONDITION_COLOR[main] : "border-border fill-background";
-  const extraCount = (record?.conditions.length ?? 0) - (main ? 1 : 0);
-
-  function toggleCondition(c: ToothCondition) {
-    setConditions((prev) => (prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c]));
-  }
-
-  const numberLabel = (
-    <p className="text-center text-[10px] font-bold text-muted-foreground">{number}</p>
-  );
-
-  return (
-    <Popover
-      open={open}
-      onOpenChange={(next) => {
-        setOpen(next);
-        if (next) {
-          setConditions(record?.conditions ?? []);
-          setNotes(record?.notes ?? "");
-        }
-      }}
-    >
-      <PopoverTrigger asChild>
-        <button
-          title={`Dente ${number}${main ? ` — ${TOOTH_CONDITION_LABEL[main]}` : ""}`}
-          className="flex w-8 shrink-0 flex-col items-center gap-0.5 transition-transform hover:scale-110"
-        >
-          {arch === "upper" && numberLabel}
-          <span className="relative">
-            <ToothSvg
-              type={type}
-              className={`h-10 w-7 stroke-border [&_circle]:stroke-1 [&_polygon]:stroke-1 [&_rect]:stroke-1 ${colorClasses}`}
-            />
-            {extraCount > 0 && (
-              <span className="absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-foreground text-[8px] font-bold text-background">
-                +{extraCount}
-              </span>
-            )}
-          </span>
-          {main && main !== "higido" && (
-            <span className="text-[9px] font-bold leading-none text-muted-foreground">
-              {TOOTH_CONDITION_CODE[main]}
-            </span>
-          )}
-          {arch === "lower" && numberLabel}
-        </button>
-      </PopoverTrigger>
-      <PopoverContent className="w-80">
-        <p className="mb-2 text-sm font-bold">Dente {number}</p>
-        <div className="grid max-h-64 grid-cols-2 gap-x-3 gap-y-1 overflow-y-auto pr-1">
-          {TOOTH_CONDITIONS.map((c) => (
-            <label key={c} className="flex items-center gap-1.5 py-0.5 text-xs">
-              <input
-                type="checkbox"
-                checked={conditions.includes(c)}
-                onChange={() => toggleCondition(c)}
-                className="h-3.5 w-3.5 accent-primary"
-              />
-              {TOOTH_CONDITION_LABEL[c]}
-            </label>
-          ))}
-        </div>
-        <div className="mt-3 space-y-1.5">
-          <Label htmlFor={`tooth-notes-${number}`}>Observações</Label>
-          <Textarea
-            id={`tooth-notes-${number}`}
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            className="min-h-16"
-          />
-        </div>
-        <Button
-          size="sm"
-          className="mt-3 w-full"
-          disabled={saving}
-          onClick={async () => {
-            setSaving(true);
-            await onSave(number, conditions, notes);
-            setSaving(false);
-            setOpen(false);
-          }}
-        >
-          {saving ? "Salvando..." : "Salvar"}
-        </Button>
-      </PopoverContent>
-    </Popover>
   );
 }

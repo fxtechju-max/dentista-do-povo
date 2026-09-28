@@ -9,7 +9,7 @@ type ServerEntry = {
 
 let serverEntryPromise: Promise<ServerEntry> | undefined;
 
-// Gallery photos are stored as blobs in MySQL (no object storage configured),
+// Gallery photos are stored as bytea in the Supabase database (no object storage),
 // so they're served through a plain GET here — outside the TanStack Start
 // router/server-function RPC layer — so a normal <img src> just works.
 const GALLERY_IMAGE_PATH = /^\/api\/gallery\/([0-9a-f-]{36})$/i;
@@ -26,6 +26,38 @@ async function serveGalleryImage(id: string): Promise<Response | null> {
     headers: {
       "content-type": String(row["mime_type"]),
       "cache-control": "public, max-age=31536000, immutable",
+    },
+  });
+}
+
+// Odontogram photos/X-rays are clinical data: served only to a logged-in
+// administrator (session cookie checked here, outside the router context).
+const TOOTH_ATTACHMENT_PATH = /^\/api\/tooth-attachments\/([0-9a-f-]{36})$/i;
+
+async function serveToothAttachment(request: Request, id: string): Promise<Response> {
+  const token = /(?:^|;\s*)ddp_session=([a-f0-9]{64})(?:;|$)/.exec(
+    request.headers.get("cookie") ?? "",
+  )?.[1];
+  const forbidden = new Response("Acesso negado.", { status: 403 });
+  if (!token) return forbidden;
+  const { digest } = await import("./integrations/mysql/auth.server");
+  const { getPool } = await import("./integrations/mysql/pool.server");
+  type Row = import("@/integrations/mysql/pool.server").Row;
+  const [admins] = await getPool().execute<Row[]>(
+    "SELECT 1 FROM sessions s JOIN user_roles r ON r.user_id=s.user_id AND r.role='admin' WHERE s.token_hash=? AND s.expires_at>now() LIMIT 1",
+    [digest(token)],
+  );
+  if (!admins.length) return forbidden;
+  const [rows] = await getPool().execute<Row[]>(
+    "SELECT image_data, mime_type FROM tooth_attachments WHERE id=?",
+    [id],
+  );
+  const row = rows[0];
+  if (!row) return new Response("Não encontrado.", { status: 404 });
+  return new Response(new Uint8Array(row["image_data"] as Buffer), {
+    headers: {
+      "content-type": String(row["mime_type"]),
+      "cache-control": "private, max-age=3600",
     },
   });
 }
@@ -69,6 +101,8 @@ export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
       if (request.method === "GET") {
+        const attachment = TOOTH_ATTACHMENT_PATH.exec(new URL(request.url).pathname);
+        if (attachment?.[1]) return await serveToothAttachment(request, attachment[1]);
         const match = GALLERY_IMAGE_PATH.exec(new URL(request.url).pathname);
         if (match?.[1]) {
           const imageResponse = await serveGalleryImage(match[1]);

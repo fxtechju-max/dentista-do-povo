@@ -146,3 +146,14 @@ export function slugify(value: string) {
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "");
 }
+
+export const GENDER_LABEL: Record<string, string> = {
+  masculino: "Masculino",
+  feminino: "Feminino",
+  outro: "Outro",
+};
+
+/** Código sequencial do paciente no formato #000125. */
+export function patientCode(code: number | null | undefined) {
+  return code != null ? `#${String(code).padStart(6, "0")}` : "—";
+}

@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { Users, Plus, Pencil, Trash2, Search, Mail, Phone, FileText } from "lucide-react";
 import { db } from "@/integrations/mysql/client";
@@ -9,6 +9,9 @@ import {
   emptyPatientForm,
   type PatientFormValues,
 } from "@/components/admin/PatientDialog";
+import { PatientQuickView } from "@/components/admin/PatientQuickView";
+import { patientCode } from "@/lib/admin/labels";
+import { PatientDocumentsDialog } from "@/components/admin/PatientDocumentsDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -45,6 +48,9 @@ type Patient = {
   guardian_name: string | null;
   guardian_phone: string | null;
   guardian_cpf: string | null;
+  gender: string | null;
+  responsible_dentist: string | null;
+  code: number | null;
   created_at: string;
 };
 
@@ -55,13 +61,15 @@ function Pacientes() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Patient | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Patient | null>(null);
+  const [viewing, setViewing] = useState<Patient | null>(null);
+  const [docsFor, setDocsFor] = useState<Patient | null>(null);
 
   async function load() {
     setLoading(true);
     const { data } = await db
       .from("patients")
       .select(
-        "id, name, phone, email, cpf, birth_date, address, guardian_name, guardian_phone, guardian_cpf, created_at",
+        "id, name, phone, email, cpf, birth_date, address, guardian_name, guardian_phone, guardian_cpf, gender, responsible_dentist, code, created_at",
       )
       .order("created_at", { ascending: false });
     setPatients((data ?? []) as Patient[]);
@@ -80,7 +88,8 @@ function Pacientes() {
         p.name.toLowerCase().includes(q) ||
         p.phone?.toLowerCase().includes(q) ||
         p.email?.toLowerCase().includes(q) ||
-        p.cpf?.toLowerCase().includes(q),
+        p.cpf?.toLowerCase().includes(q) ||
+        patientCode(p.code).includes(q),
     );
   }, [patients, query]);
 
@@ -112,6 +121,8 @@ function Pacientes() {
         guardian_name: editing.guardian_name ?? "",
         guardian_phone: editing.guardian_phone ?? "",
         guardian_cpf: editing.guardian_cpf ?? "",
+        gender: editing.gender ?? "",
+        responsible_dentist: editing.responsible_dentist ?? "",
       }
     : emptyPatientForm;
 
@@ -133,7 +144,7 @@ function Pacientes() {
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar por nome, telefone, email ou CPF..."
+            placeholder="Buscar por nome, telefone, email, CPF ou código..."
             className="pl-9"
           />
         </div>
@@ -163,13 +174,16 @@ function Pacientes() {
               {filtered.map((p) => (
                 <TableRow key={p.id} className="animate-in fade-in">
                   <TableCell className="font-semibold">
-                    <Link
-                      to="/admin/pacientes/$patientId"
-                      params={{ patientId: p.id }}
-                      className="hover:text-primary hover:underline"
+                    <button
+                      type="button"
+                      onClick={() => setViewing(p)}
+                      className="text-left hover:text-primary hover:underline"
                     >
                       {p.name}
-                    </Link>
+                    </button>
+                    <p className="text-[11px] font-normal text-muted-foreground">
+                      {patientCode(p.code)}
+                    </p>
                   </TableCell>
                   <TableCell className="text-muted-foreground">{p.cpf || "—"}</TableCell>
                   <TableCell className="text-muted-foreground">
@@ -194,16 +208,11 @@ function Pacientes() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      asChild
+                      onClick={() => setDocsFor(p)}
                       aria-label="Ver documentos do paciente"
+                      title="Ver todos os documentos"
                     >
-                      <Link
-                        to="/admin/pacientes/$patientId"
-                        params={{ patientId: p.id }}
-                        search={{ tab: "documentos" }}
-                      >
-                        <FileText className="h-4 w-4" />
-                      </Link>
+                      <FileText className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="ghost"
@@ -236,6 +245,25 @@ function Pacientes() {
         patientId={editing?.id ?? null}
         initial={initialForm}
         onSaved={load}
+      />
+
+      <PatientQuickView
+        patient={viewing}
+        open={!!viewing}
+        onOpenChange={(open) => !open && setViewing(null)}
+        onEdit={() => {
+          const p = viewing;
+          setViewing(null);
+          if (p) openEdit(p);
+        }}
+        onDocuments={() => setDocsFor(viewing)}
+      />
+
+      <PatientDocumentsDialog
+        patientId={docsFor?.id ?? null}
+        patientName={docsFor?.name ?? ""}
+        open={!!docsFor}
+        onOpenChange={(open) => !open && setDocsFor(null)}
       />
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>

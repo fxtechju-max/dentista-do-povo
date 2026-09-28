@@ -87,6 +87,9 @@ export type Database = {
           id: string;
           name: string;
           phone: string | null;
+          gender: string | null;
+          responsible_dentist: string | null;
+          code: number;
         };
         Insert: {
           address?: string | null;
@@ -100,6 +103,9 @@ export type Database = {
           id?: string;
           name: string;
           phone?: string | null;
+          gender?: string | null;
+          responsible_dentist?: string | null;
+          code?: number;
         };
         Update: {
           address?: string | null;
@@ -113,6 +119,9 @@ export type Database = {
           id?: string;
           name?: string;
           phone?: string | null;
+          gender?: string | null;
+          responsible_dentist?: string | null;
+          code?: number;
         };
         Relationships: [];
       };
@@ -638,6 +647,97 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "tooth_records_patient_id_fkey";
+            columns: ["patient_id"];
+            isOneToOne: false;
+            referencedRelation: "patients";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      tooth_procedures: {
+        Row: {
+          created_at: string;
+          dentist: string | null;
+          id: string;
+          notes: string | null;
+          patient_id: string;
+          planned_procedure: string | null;
+          record_date: string;
+          situation: string;
+          status: string;
+          surfaces: string[];
+          tooth_number: number;
+        };
+        Insert: {
+          created_at?: string;
+          dentist?: string | null;
+          id?: string;
+          notes?: string | null;
+          patient_id: string;
+          planned_procedure?: string | null;
+          record_date?: string;
+          situation: string;
+          status?: string;
+          surfaces?: string[];
+          tooth_number: number;
+        };
+        Update: {
+          created_at?: string;
+          dentist?: string | null;
+          id?: string;
+          notes?: string | null;
+          patient_id?: string;
+          planned_procedure?: string | null;
+          record_date?: string;
+          situation?: string;
+          status?: string;
+          surfaces?: string[];
+          tooth_number?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "tooth_procedures_patient_id_fkey";
+            columns: ["patient_id"];
+            isOneToOne: false;
+            referencedRelation: "patients";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      tooth_attachments: {
+        Row: {
+          byte_size: number;
+          created_at: string;
+          id: string;
+          mime_type: string;
+          patient_id: string;
+          procedure_id: string | null;
+          title: string | null;
+          tooth_number: number;
+        };
+        Insert: {
+          byte_size: number;
+          created_at?: string;
+          id?: string;
+          mime_type: string;
+          patient_id: string;
+          procedure_id?: string | null;
+          title?: string | null;
+          tooth_number: number;
+        };
+        Update: {
+          byte_size?: number;
+          created_at?: string;
+          id?: string;
+          mime_type?: string;
+          patient_id?: string;
+          procedure_id?: string | null;
+          title?: string | null;
+          tooth_number?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "tooth_attachments_patient_id_fkey";
             columns: ["patient_id"];
             isOneToOne: false;
             referencedRelation: "patients";

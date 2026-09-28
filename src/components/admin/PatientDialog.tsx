@@ -6,6 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Dialog,
   DialogContent,
   DialogFooter,
@@ -23,6 +30,8 @@ export type PatientFormValues = {
   guardian_name: string;
   guardian_phone: string;
   guardian_cpf: string;
+  gender: string;
+  responsible_dentist: string;
 };
 
 export const emptyPatientForm: PatientFormValues = {
@@ -35,6 +44,8 @@ export const emptyPatientForm: PatientFormValues = {
   guardian_name: "",
   guardian_phone: "",
   guardian_cpf: "",
+  gender: "",
+  responsible_dentist: "",
 };
 
 export function PatientDialog({
@@ -77,6 +88,8 @@ export function PatientDialog({
       guardian_name: form.guardian_name.trim() || null,
       guardian_phone: form.guardian_phone.trim() || null,
       guardian_cpf: form.guardian_cpf.trim() || null,
+      gender: form.gender || null,
+      responsible_dentist: form.responsible_dentist.trim() || null,
     };
     if (patientId) {
       await db.from("patients").update(payload).eq("id", patientId);
@@ -129,6 +142,36 @@ export function PatientDialog({
                   {isMinor ? " · menor de idade" : ""}
                 </p>
               )}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Sexo</Label>
+              <Select
+                value={form.gender || "nao_informado"}
+                onValueChange={(v) =>
+                  setForm((f) => ({ ...f, gender: v === "nao_informado" ? "" : v }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="nao_informado">Não informado</SelectItem>
+                  <SelectItem value="feminino">Feminino</SelectItem>
+                  <SelectItem value="masculino">Masculino</SelectItem>
+                  <SelectItem value="outro">Outro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="p-dentist">Dentista responsável</Label>
+              <Input
+                id="p-dentist"
+                value={form.responsible_dentist}
+                onChange={(e) => setForm((f) => ({ ...f, responsible_dentist: e.target.value }))}
+                placeholder="Dr(a). nome"
+              />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
