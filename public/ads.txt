@@ -1,4 +1,0 @@
-# Required by Google AdSense once your account is approved. Replace
-# pub-0000000000000000 with your real publisher ID (the number after
-# "ca-pub-" in VITE_GOOGLE_ADSENSE_CLIENT_ID) and remove this comment block.
-# google.com, pub-0000000000000000, DIRECT, f08c47fec0942fa0

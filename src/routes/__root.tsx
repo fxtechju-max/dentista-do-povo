@@ -14,6 +14,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "../components/ui/sonner";
 import { refreshPreferences } from "../lib/preferences";
 import { clearLegacyStorage } from "../lib/clear-legacy-storage";
+import { ADSENSE_OFF, loadAdsense } from "../lib/adsense";
 
 function NotFoundComponent() {
   return (
@@ -76,8 +77,13 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  head: () => {
-    const adsenseClientId = import.meta.env["VITE_GOOGLE_ADSENSE_CLIENT_ID"] as string | undefined;
+  // AdSense (Configurações › Anúncios): só no site público, nunca no painel/login.
+  loader: ({ location }) =>
+    /^\/(admin|entrar)(\/|$)/.test(location.pathname) ? ADSENSE_OFF : loadAdsense(),
+  staleTime: 5 * 60_000,
+  head: ({ loaderData }) => {
+    const adsense = loaderData ?? ADSENSE_OFF;
+    const adsenseClientId = adsense.enabled ? adsense.clientId : null;
     return {
       meta: [
         { charSet: "utf-8" },
@@ -96,6 +102,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         },
         { property: "og:type", content: "website" },
         { name: "twitter:card", content: "summary_large_image" },
+        ...(adsenseClientId ? [{ name: "google-adsense-account", content: adsenseClientId }] : []),
       ],
       links: [
         {

@@ -35,10 +35,14 @@ test("public content is filtered on the server even if a visitor asks for drafts
     guest,
   );
   assert.deepEqual(result.filters.at(-1), { column: "status", op: "eq", value: "publicado" });
+  // Visitantes veem só contatos e a configuração pública do AdSense (o ID já
+  // aparece no código da página); chaves de IA e linhas extras do ads.txt, não.
+  const publicColumns = authorize(query("clinic_settings"), guest).columns;
   assert.equal(
-    authorize(query("clinic_settings"), guest).columns,
-    "id, clinic_name, phone, address, instagram_url, facebook_url, whatsapp_number",
+    publicColumns,
+    "id, clinic_name, phone, address, instagram_url, facebook_url, whatsapp_number, adsense_enabled, adsense_client_id, adsense_slot_home, adsense_slot_blog_list, adsense_slot_blog_post",
   );
+  assert.doesNotMatch(publicColumns, /ai_gateway|ads_txt_extra|disabled_/);
 });
 test("invalid identifiers cannot enter SQL, including admin requests", () => {
   assert.throws(() => query("patients; DROP TABLE users"));

@@ -85,7 +85,8 @@ export function authorize(query: Query, actor: Actor): Query {
   if (q.action === "select" && q.table === "site_content") return q;
   if (q.action === "select" && q.table === "clinic_settings") {
     // Operational settings are private; public callers only receive contact information.
-    q.columns = "id, clinic_name, phone, address, instagram_url, facebook_url, whatsapp_number";
+    q.columns =
+      "id, clinic_name, phone, address, instagram_url, facebook_url, whatsapp_number, adsense_enabled, adsense_client_id, adsense_slot_home, adsense_slot_blog_list, adsense_slot_blog_post";
     return q;
   }
   if (actor.visitorHash && ["conversations", "messages"].includes(q.table)) {

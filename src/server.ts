@@ -81,6 +81,32 @@ async function serveSiteImage(id: string): Promise<Response | null> {
   });
 }
 
+// /ads.txt gerado a partir de Configurações › Anúncios (Google AdSense).
+async function serveAdsTxt(): Promise<Response> {
+  let body = "# Configure o Google AdSense na área restrita (Configurações › Anúncios).\n";
+  try {
+    const { getPool } = await import("./integrations/mysql/pool.server");
+    const { buildAdsTxt } = await import("./lib/adsense");
+    const [rows] = await getPool().execute<import("@/integrations/mysql/pool.server").Row[]>(
+      "SELECT adsense_client_id, ads_txt_extra FROM clinic_settings WHERE id=?",
+      ["default"],
+    );
+    const row = rows[0];
+    body = buildAdsTxt(
+      (row?.["adsense_client_id"] as string | null) ?? null,
+      (row?.["ads_txt_extra"] as string | null) ?? null,
+    );
+  } catch (error) {
+    console.error("ads.txt:", error);
+  }
+  return new Response(body, {
+    headers: {
+      "content-type": "text/plain; charset=utf-8",
+      "cache-control": "public, max-age=300",
+    },
+  });
+}
+
 async function getServerEntry(): Promise<ServerEntry> {
   if (!serverEntryPromise) {
     serverEntryPromise = import("@tanstack/react-start/server-entry").then(
@@ -120,6 +146,7 @@ export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
       if (request.method === "GET") {
+        if (new URL(request.url).pathname === "/ads.txt") return await serveAdsTxt();
         const attachment = TOOTH_ATTACHMENT_PATH.exec(new URL(request.url).pathname);
         if (attachment?.[1]) return await serveToothAttachment(request, attachment[1]);
         const siteImage = SITE_IMAGE_PATH.exec(new URL(request.url).pathname);

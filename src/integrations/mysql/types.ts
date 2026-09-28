@@ -479,6 +479,12 @@ export type Database = {
           clinic_city: string | null;
           disabled_payment_methods: string[];
           module_order: string[];
+          adsense_enabled: boolean;
+          adsense_client_id: string | null;
+          adsense_slot_home: string | null;
+          adsense_slot_blog_list: string | null;
+          adsense_slot_blog_post: string | null;
+          ads_txt_extra: string | null;
         };
         Insert: {
           address?: string | null;
@@ -497,6 +503,12 @@ export type Database = {
           clinic_city?: string | null;
           disabled_payment_methods?: string[];
           module_order?: string[];
+          adsense_enabled?: boolean;
+          adsense_client_id?: string | null;
+          adsense_slot_home?: string | null;
+          adsense_slot_blog_list?: string | null;
+          adsense_slot_blog_post?: string | null;
+          ads_txt_extra?: string | null;
         };
         Update: {
           address?: string | null;
@@ -515,6 +527,12 @@ export type Database = {
           clinic_city?: string | null;
           disabled_payment_methods?: string[];
           module_order?: string[];
+          adsense_enabled?: boolean;
+          adsense_client_id?: string | null;
+          adsense_slot_home?: string | null;
+          adsense_slot_blog_list?: string | null;
+          adsense_slot_blog_post?: string | null;
+          ads_txt_extra?: string | null;
         };
         Relationships: [];
       };

@@ -3,6 +3,7 @@ import { ArrowRight, Clock, MapPin, Phone, ShieldCheck, Sparkles, Star } from "l
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { ChatWidget } from "@/components/site/ChatWidget";
+import { AdSlot } from "@/components/site/AdSlot";
 import { db } from "@/integrations/mysql/client";
 import heroImg from "@/assets/clinica-hero.jpg";
 import { mapsUrl, parseHomeContent, siteImageUrl, type Stat } from "@/lib/site-content";
@@ -214,6 +215,8 @@ function Index() {
           </div>
         </section>
       )}
+
+      <AdSlot position="home" className="mx-auto max-w-4xl px-4 pt-10" />
 
       {/* Perguntas frequentes */}
       {faq.enabled && faq.items.length > 0 && (

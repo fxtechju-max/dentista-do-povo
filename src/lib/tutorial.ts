@@ -45,6 +45,17 @@ export type TutorialUpdate = {
 export const TUTORIAL_UPDATES: TutorialUpdate[] = [
   {
     date: "2026-09-28",
+    title: "Anúncios do Google AdSense pela área restrita",
+    sections: ["configuracoes"],
+    items: [
+      "Nova seção Configurações › Anúncios (AdSense): cole seu ID de editor e ligue Exibir anúncios.",
+      "O código de verificação do Google e o arquivo /ads.txt são publicados automaticamente.",
+      "Espaços de anúncio na lista do blog, no final de cada post e na página inicial (opcionais).",
+      "Anúncios nunca aparecem no painel nem na tela de login.",
+    ],
+  },
+  {
+    date: "2026-09-28",
     title: "Organize os módulos arrastando",
     sections: ["painel"],
     items: [
@@ -749,6 +760,10 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
       {
         title: "Seu perfil",
         text: "Altere nome de exibição, email e senha.",
+      },
+      {
+        title: "Anúncios (Google AdSense)",
+        text: "Em Site › Anúncios, siga o passo a passo: cole o ID de editor (ca-pub-…), ligue Exibir anúncios e salve. O ads.txt é criado sozinho. Depois da aprovação do Google, cole os IDs dos blocos (lista do blog, final do post, página inicial) ou ative os anúncios automáticos no próprio AdSense.",
       },
       {
         title: "Formas de pagamento",

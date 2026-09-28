@@ -14,6 +14,7 @@ import {
 const booleans = new Set([
   "active",
   "ai_secretary_enabled",
+  "adsense_enabled",
   "is_smoker",
   "is_pregnant",
   "has_diabetes",

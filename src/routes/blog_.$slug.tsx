@@ -87,7 +87,7 @@ function BlogPost() {
             <BlogContent content={post.content} />
 
             <div className="mt-8 border-t border-border pt-8">
-              <AdSlot slot="0000000002" className="min-h-[100px]" />
+              <AdSlot position="blog_post" className="min-h-[100px]" />
             </div>
           </article>
         )}

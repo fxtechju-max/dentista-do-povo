@@ -153,6 +153,10 @@ function AdminLayout() {
 
   return (
     <div className="min-h-screen bg-[var(--admin-surface,var(--muted))] print:bg-white">
+      {/* Anúncios nunca aparecem no painel, mesmo vindo do site público. */}
+      <style>
+        {"ins.adsbygoogle,.google-auto-placed,.adsbygoogle-noablate{display:none!important}"}
+      </style>
       {isLauncher ? (
         <header className="flex flex-wrap items-center justify-between gap-4 border-b border-border bg-card px-6 py-4 sm:px-10 print:hidden">
           <Link to="/admin" className="flex items-center gap-3">

@@ -52,6 +52,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { PAYMENT_METHODS } from "@/lib/payment-methods";
+import { AdsenseSettings } from "@/components/admin/settings/AdsenseSettings";
 import {
   SECTIONS,
   SectionHeader,
@@ -1119,6 +1120,14 @@ function Configuracoes() {
                 </span>
               </div>
             </div>
+          </TabsContent>
+
+          <TabsContent
+            value="anuncios"
+            className="mt-0 data-[state=active]:animate-in data-[state=active]:fade-in data-[state=active]:slide-in-from-bottom-3 data-[state=active]:duration-300"
+          >
+            <SectionHeader id="anuncios" />
+            <AdsenseSettings />
           </TabsContent>
 
           <TabsContent

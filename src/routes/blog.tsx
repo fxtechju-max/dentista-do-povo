@@ -88,7 +88,7 @@ function Blog() {
         )}
 
         <div className="mt-8">
-          <AdSlot slot="0000000001" className="min-h-[100px]" />
+          <AdSlot position="blog_list" className="min-h-[100px]" />
         </div>
 
         {loading ? (

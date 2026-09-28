@@ -56,6 +56,12 @@ export const tableColumns = {
     "disabled_modules",
     "disabled_payment_methods",
     "module_order",
+    "adsense_enabled",
+    "adsense_client_id",
+    "adsense_slot_home",
+    "adsense_slot_blog_list",
+    "adsense_slot_blog_post",
+    "ads_txt_extra",
   ],
   blog_posts: [
     "id",

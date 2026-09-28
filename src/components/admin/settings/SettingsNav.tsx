@@ -9,6 +9,7 @@ import {
   Sparkles,
   Users,
   User as UserIcon,
+  Megaphone,
 } from "lucide-react";
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -57,6 +58,13 @@ export const SECTIONS = [
     icon: Users,
   },
   {
+    id: "anuncios",
+    group: "Site",
+    label: "Anúncios (AdSense)",
+    description: "Google AdSense e ads.txt",
+    icon: Megaphone,
+  },
+  {
     id: "aparencia",
     group: "Sistema",
     label: "Aparência",
@@ -79,7 +87,7 @@ export const SECTIONS = [
   },
 ] as const;
 export type SectionId = (typeof SECTIONS)[number]["id"];
-export const SECTION_GROUPS = ["Conta", "Clínica", "Equipe", "Sistema"] as const;
+export const SECTION_GROUPS = ["Conta", "Clínica", "Equipe", "Site", "Sistema"] as const;
 
 export function SectionHeader({ id }: { id: SectionId }) {
   const section = SECTIONS.find((x) => x.id === id)!;
