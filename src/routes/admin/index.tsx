@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { db } from "@/integrations/mysql/client";
-import { ADMIN_MODULES, DASHBOARD_MODULE, SETTINGS_MODULE } from "@/lib/modules";
+import { ADMIN_MODULES, DASHBOARD_MODULE, SETTINGS_MODULE, TUTORIAL_MODULE } from "@/lib/modules";
 
 export const Route = createFileRoute("/admin/")({
   component: Launcher,
@@ -22,6 +22,7 @@ function Launcher() {
     DASHBOARD_MODULE,
     ...ADMIN_MODULES.filter((m) => !disabledModules.includes(m.id)),
     SETTINGS_MODULE,
+    TUTORIAL_MODULE,
   ];
 
   return (

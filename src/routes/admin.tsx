@@ -11,7 +11,13 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { db } from "@/integrations/mysql/client";
-import { ADMIN_MODULES, DASHBOARD_MODULE, SETTINGS_MODULE, ToothIcon } from "@/lib/modules";
+import {
+  ADMIN_MODULES,
+  DASHBOARD_MODULE,
+  SETTINGS_MODULE,
+  TUTORIAL_MODULE,
+  ToothIcon,
+} from "@/lib/modules";
 import { mountAdminTheme } from "@/lib/theme";
 import { mountAdminZoom } from "@/lib/zoom";
 import {
@@ -66,7 +72,7 @@ function AdminLayout() {
 
   const allModules = useMemo(() => {
     const modules = ADMIN_MODULES.filter((m) => !disabledModules.includes(m.id));
-    return [DASHBOARD_MODULE, ...modules, SETTINGS_MODULE];
+    return [DASHBOARD_MODULE, ...modules, SETTINGS_MODULE, TUTORIAL_MODULE];
   }, [disabledModules]);
 
   useEffect(() => {

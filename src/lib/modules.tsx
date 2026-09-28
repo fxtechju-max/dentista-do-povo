@@ -15,6 +15,7 @@ import {
   Settings,
   ArrowLeftRight,
   DatabaseBackup,
+  BookOpen,
   type LucideIcon,
 } from "lucide-react";
 
@@ -64,6 +65,19 @@ export const SETTINGS_MODULE: AdminModule = {
   to: "/admin/configuracoes",
   icon: Settings,
   description: "Perfil, clínica e módulos",
+  iconColor: "text-primary",
+  iconBg: "bg-primary/10",
+};
+
+// Always available (not part of the on/off list): explanations for every
+// module plus the "Novidades" changelog — see src/lib/tutorial.ts.
+export const TUTORIAL_MODULE: AdminModule = {
+  id: "tutorial",
+  name: "Tutorial",
+  label: "📘 Tutorial",
+  to: "/admin/tutorial",
+  icon: BookOpen,
+  description: "Explicações e novidades",
   iconColor: "text-primary",
   iconBg: "bg-primary/10",
 };
