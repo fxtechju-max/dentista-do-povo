@@ -45,6 +45,18 @@ export type TutorialUpdate = {
 export const TUTORIAL_UPDATES: TutorialUpdate[] = [
   {
     date: "2026-09-28",
+    title: "Site e painel prontos para celular",
+    sections: ["painel", "pacientes", "configuracoes"],
+    items: [
+      "Site público com menu ☰ no celular para acessar Serviços, Galeria, Blog, Contato e Área Restrita.",
+      "Pacientes em cartões no celular; prontuário com o nome completo e abas que deslizam para o lado.",
+      "Configurações e Tutorial com menu compacto no topo no celular; abas e tabelas deslizam em vez de sair da tela.",
+      "Modelos de Documentos: a pré-visualização A4 se ajusta ao tamanho da tela.",
+      "Site mais rápido: o script de anúncios agora carrega depois que a página monta.",
+    ],
+  },
+  {
+    date: "2026-09-28",
     title: "Aparência renovada e salva de verdade no projeto",
     sections: ["configuracoes"],
     items: [

@@ -73,14 +73,29 @@ function ScaledPage(props: {
   body: string;
   pageRef?: React.Ref<HTMLDivElement>;
 }) {
-  const { scale, pageRef, ...page } = props;
+  const { scale: maxScale, pageRef, ...page } = props;
+  // Diminui a folha para caber na largura disponível (celular), sem passar de maxScale.
+  const boxRef = useRef<HTMLDivElement>(null);
+  const [available, setAvailable] = useState<number | null>(null);
+  useEffect(() => {
+    const el = boxRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(([entry]) =>
+      setAvailable(entry?.contentRect.width ?? null),
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+  const scale = available ? Math.min(maxScale, available / PAGE_WIDTH) : maxScale;
   return (
-    <div
-      className="overflow-hidden rounded-md shadow-xl ring-1 ring-black/10"
-      style={{ width: PAGE_WIDTH * scale, height: PAGE_HEIGHT * scale }}
-    >
-      <div style={{ transform: `scale(${scale})`, transformOrigin: "top left" }}>
-        <DocumentPage ref={pageRef} {...page} />
+    <div ref={boxRef} className="w-full" style={{ maxWidth: PAGE_WIDTH * maxScale }}>
+      <div
+        className="overflow-hidden rounded-md shadow-xl ring-1 ring-black/10"
+        style={{ width: PAGE_WIDTH * scale, height: PAGE_HEIGHT * scale }}
+      >
+        <div style={{ transform: `scale(${scale})`, transformOrigin: "top left" }}>
+          <DocumentPage ref={pageRef} {...page} />
+        </div>
       </div>
     </div>
   );
@@ -94,7 +109,7 @@ function LayoutPicker({
   onChange: (layout: DocumentLayout) => void;
 }) {
   return (
-    <div className="grid grid-cols-3 gap-2">
+    <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
       {DOCUMENT_LAYOUTS.map((l) => (
         <button
           key={l.id}
@@ -244,7 +259,7 @@ function Generate({
     return <p className="p-8 text-center text-sm text-muted-foreground">Carregando modelos...</p>;
 
   return (
-    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_auto]">
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-5 xl:grid-cols-[minmax(0,1fr)_auto]">
       <div className="space-y-4">
         <div className="rounded-2xl border border-border bg-card p-4">
           <Label>1. Escolha o modelo</Label>
@@ -280,7 +295,7 @@ function Generate({
             </div>
           ) : (
             <div className="relative mt-2">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="pointer-events-none absolute left-3 top-[18px] h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={patientQuery}
                 onChange={(e) => setPatientQuery(e.target.value)}
@@ -322,7 +337,7 @@ function Generate({
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <Label>4. Revise e edite o texto</Label>
             <Button
               variant="ghost"
@@ -464,7 +479,7 @@ function TemplateEditor({
   const preview = draft ? fillTemplate(draft.body, placeholderValues(clinic, SAMPLE_PATIENT)) : "";
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[220px_minmax(0,1fr)_auto]">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[220px_minmax(0,1fr)_auto]">
       <div className="space-y-2">
         {templates.map((t) => (
           <button
@@ -625,7 +640,7 @@ function ClinicForm({ clinic, onSaved }: { clinic: ClinicInfo; onSaved: () => Pr
   }
 
   return (
-    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_auto]">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-5 xl:grid-cols-[minmax(0,1fr)_auto]">
       <div className="rounded-2xl border border-border bg-card p-5">
         <p className="text-sm text-muted-foreground">
           Estes dados aparecem no cabeçalho, na assinatura e no rodapé de todos os documentos.

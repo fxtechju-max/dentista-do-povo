@@ -49,6 +49,7 @@ export function TutorialView({
   onNavigate: (id: string) => void;
 }) {
   const [query, setQuery] = useState("");
+  const [navOpen, setNavOpen] = useState(false);
 
   const visible = useMemo(
     () => (query.trim() ? TUTORIAL_SECTIONS.filter((s) => matches(s, query)) : TUTORIAL_SECTIONS),
@@ -57,6 +58,7 @@ export function TutorialView({
   const section = TUTORIAL_SECTIONS.find((s) => s.id === active);
 
   function open(id: string) {
+    setNavOpen(false);
     onNavigate(id);
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -80,7 +82,22 @@ export function TutorialView({
             />
           </div>
 
-          <nav className="rounded-2xl border border-border bg-card p-2">
+          <button
+            type="button"
+            onClick={() => setNavOpen((o) => !o)}
+            aria-expanded={navOpen}
+            className="flex w-full items-center justify-between rounded-2xl border border-border bg-card px-4 py-3 text-left text-sm font-semibold lg:hidden"
+          >
+            <span className="truncate">
+              {section ? `${section.emoji} ${section.title}` : "✨ Novidades"}
+            </span>
+            <span className="text-xs text-primary">
+              {navOpen ? "Fechar ▲" : "Todas as seções ▼"}
+            </span>
+          </button>
+          <nav
+            className={`${navOpen || query.trim() ? "block" : "hidden"} rounded-2xl border border-border bg-card p-2 lg:block`}
+          >
             <button
               type="button"
               onClick={() => open(NOVIDADES)}

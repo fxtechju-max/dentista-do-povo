@@ -160,57 +160,34 @@ function Pacientes() {
             title={query ? "Nenhum paciente encontrado." : "Nenhum paciente cadastrado ainda."}
           />
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>CPF</TableHead>
-                <TableHead>Contato</TableHead>
-                <TableHead>Cadastrado em</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          <>
+            {/* Celular: cartões */}
+            <ul className="divide-y divide-border md:hidden">
               {filtered.map((p) => (
-                <TableRow key={p.id} className="animate-in fade-in">
-                  <TableCell className="font-semibold">
-                    <button
-                      type="button"
-                      onClick={() => setViewing(p)}
-                      className="text-left hover:text-primary hover:underline"
-                    >
-                      {p.name}
-                    </button>
-                    <p className="text-[11px] font-normal text-muted-foreground">
-                      {patientCode(p.code)}
-                    </p>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{p.cpf || "—"}</TableCell>
-                  <TableCell className="text-muted-foreground">
-                    <div className="flex flex-col gap-0.5 text-xs">
-                      {p.phone && (
-                        <span className="flex items-center gap-1">
-                          <Phone className="h-3 w-3" /> {p.phone}
-                        </span>
-                      )}
-                      {p.email && (
-                        <span className="flex items-center gap-1">
-                          <Mail className="h-3 w-3" /> {p.email}
-                        </span>
-                      )}
-                      {!p.phone && !p.email && "—"}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {new Date(p.created_at).toLocaleDateString("pt-BR")}
-                  </TableCell>
-                  <TableCell className="text-right">
+                <li key={p.id} className="flex items-center gap-3 px-4 py-3">
+                  <button
+                    type="button"
+                    onClick={() => setViewing(p)}
+                    className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                  >
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 font-extrabold text-primary">
+                      {p.name.charAt(0).toUpperCase()}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate font-semibold">{p.name}</span>
+                      <span className="block truncate text-xs text-muted-foreground">
+                        {patientCode(p.code)}
+                        {p.phone ? ` · ${p.phone}` : ""}
+                        {p.cpf ? ` · ${p.cpf}` : ""}
+                      </span>
+                    </span>
+                  </button>
+                  <div className="flex shrink-0">
                     <Button
                       variant="ghost"
                       size="icon"
                       onClick={() => setDocsFor(p)}
                       aria-label="Ver documentos do paciente"
-                      title="Ver todos os documentos"
                     >
                       <FileText className="h-4 w-4" />
                     </Button>
@@ -231,11 +208,90 @@ function Pacientes() {
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
-                  </TableCell>
-                </TableRow>
+                  </div>
+                </li>
               ))}
-            </TableBody>
-          </Table>
+            </ul>
+            {/* Computador: tabela */}
+            <div className="hidden md:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>CPF</TableHead>
+                    <TableHead>Contato</TableHead>
+                    <TableHead>Cadastrado em</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtered.map((p) => (
+                    <TableRow key={p.id} className="animate-in fade-in">
+                      <TableCell className="font-semibold">
+                        <button
+                          type="button"
+                          onClick={() => setViewing(p)}
+                          className="text-left hover:text-primary hover:underline"
+                        >
+                          {p.name}
+                        </button>
+                        <p className="text-[11px] font-normal text-muted-foreground">
+                          {patientCode(p.code)}
+                        </p>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{p.cpf || "—"}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        <div className="flex flex-col gap-0.5 text-xs">
+                          {p.phone && (
+                            <span className="flex items-center gap-1">
+                              <Phone className="h-3 w-3" /> {p.phone}
+                            </span>
+                          )}
+                          {p.email && (
+                            <span className="flex items-center gap-1">
+                              <Mail className="h-3 w-3" /> {p.email}
+                            </span>
+                          )}
+                          {!p.phone && !p.email && "—"}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {new Date(p.created_at).toLocaleDateString("pt-BR")}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setDocsFor(p)}
+                          aria-label="Ver documentos do paciente"
+                          title="Ver todos os documentos"
+                        >
+                          <FileText className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openEdit(p)}
+                          aria-label="Editar"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setDeleteTarget(p)}
+                          aria-label="Excluir"
+                          className="text-muted-foreground hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </>
         )}
       </div>
 

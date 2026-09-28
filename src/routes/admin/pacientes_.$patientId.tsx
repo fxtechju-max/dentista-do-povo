@@ -487,7 +487,7 @@ function Prontuario() {
               {patient.name.charAt(0).toUpperCase()}
             </span>
             <div className="min-w-0">
-              <h1 className="truncate text-xl font-extrabold">{patient.name}</h1>
+              <h1 className="break-words text-xl font-extrabold sm:truncate">{patient.name}</h1>
               <p className="text-xs text-muted-foreground">Código: {patientCode(patient.code)}</p>
               <div className="mt-1.5 flex flex-wrap gap-1.5">
                 {patient.gender && (
@@ -590,7 +590,7 @@ function Prontuario() {
       </div>
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)}>
-        <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 print:hidden">
+        <TabsList className="flex h-auto w-full flex-nowrap justify-start gap-1 print:hidden lg:flex-wrap">
           <TabsTrigger value="resumo">
             <LayoutDashboard className="h-3.5 w-3.5" /> Resumo
           </TabsTrigger>

@@ -158,7 +158,7 @@ function Odontograma() {
                   key={p.id}
                   type="button"
                   onClick={() => choose(p.id)}
-                  className="flex items-center gap-3 rounded-xl border border-border p-3 text-left transition-colors hover:border-primary hover:bg-accent"
+                  className="flex w-full min-w-0 items-center gap-3 rounded-xl border border-border p-3 text-left transition-colors hover:border-primary hover:bg-accent"
                 >
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 font-extrabold text-primary">
                     {p.name.charAt(0).toUpperCase()}

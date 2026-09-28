@@ -117,15 +117,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         },
         { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
       ],
-      scripts: adsenseClientId
-        ? [
-            {
-              async: true,
-              src: `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseClientId}`,
-              crossOrigin: "anonymous" as const,
-            },
-          ]
-        : [],
+      // O script do AdSense é carregado depois da hidratação (ver RootComponent):
+      // anúncios automáticos inserem elementos na página e, se rodassem antes do
+      // React montar, causariam erro de hidratação. A verificação do Google usa a
+      // meta "google-adsense-account" acima, que continua no <head>.
     };
   },
   shellComponent: RootShell,
@@ -148,11 +143,26 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
+/** Injeta o script do AdSense uma única vez, depois que a página já montou. */
+function useAdsenseScript(clientId: string | null) {
+  useEffect(() => {
+    if (!clientId || document.querySelector("script[data-adsense]")) return;
+    const script = document.createElement("script");
+    script.async = true;
+    script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${clientId}`;
+    script.crossOrigin = "anonymous";
+    script.dataset["adsense"] = "";
+    document.head.appendChild(script);
+  }, [clientId]);
+}
+
 function RootComponent() {
   useEffect(() => {
     clearLegacyStorage();
     void refreshPreferences();
   }, []);
+  const adsense = Route.useLoaderData();
+  useAdsenseScript(adsense?.enabled ? adsense.clientId : null);
   const { queryClient } = Route.useRouteContext();
 
   return (
