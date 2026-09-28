@@ -45,6 +45,15 @@ export type TutorialUpdate = {
 export const TUTORIAL_UPDATES: TutorialUpdate[] = [
   {
     date: "2026-09-28",
+    title: "Correção: ads.txt do Google AdSense no site publicado",
+    sections: ["configuracoes"],
+    items: [
+      "O arquivo /ads.txt agora mostra corretamente o seu ID de editor no site publicado na Vercel.",
+      "Conferido: o código do AdSense aparece nas páginas públicas e nunca no painel ou no login.",
+    ],
+  },
+  {
+    date: "2026-09-28",
     title: "Correções: prontuário do paciente e editor da página inicial",
     sections: ["pacientes", "cms-site"],
     items: [

@@ -86,7 +86,7 @@ async function serveAdsTxt(): Promise<Response> {
   let body = "# Configure o Google AdSense na área restrita (Configurações › Anúncios).\n";
   try {
     const { getPool } = await import("./integrations/mysql/pool.server");
-    const { buildAdsTxt } = await import("./lib/adsense");
+    const { buildAdsTxt } = await import("./lib/adsense-core");
     const [rows] = await getPool().execute<import("@/integrations/mysql/pool.server").Row[]>(
       "SELECT adsense_client_id, ads_txt_extra FROM clinic_settings WHERE id=?",
       ["default"],

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { adsenseFromRow, buildAdsTxt, normalizeClientId } from "../src/lib/adsense";
+import { adsenseFromRow, buildAdsTxt, normalizeClientId } from "../src/lib/adsense-core";
 
 test("AdSense: ID de editor aceita os formatos comuns", () => {
   assert.equal(normalizeClientId("ca-pub-1234567890123456"), "ca-pub-1234567890123456");
@@ -32,4 +32,11 @@ test("AdSense: desligado ou sem ID não carrega anúncios", () => {
   assert.equal(on.clientId, "ca-pub-1234567890123456");
   assert.equal(on.slots.blog_post, "1234567890");
   assert.equal(on.slots.home, null);
+});
+
+test("AdSense: funções usadas pelo servidor (/ads.txt) não importam nada", async () => {
+  // Importar código de tela no servidor quebrou o /ads.txt no pacote da Vercel.
+  const { readFile } = await import("node:fs/promises");
+  const source = await readFile(new URL("../src/lib/adsense-core.ts", import.meta.url), "utf8");
+  assert.doesNotMatch(source, /^\s*import\s/m);
 });
