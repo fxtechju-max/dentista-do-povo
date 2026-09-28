@@ -94,6 +94,9 @@ export const tableColumns = {
     "updated_at",
   ],
   tooth_records: ["id", "patient_id", "tooth_number", "conditions", "notes", "updated_at"],
+  site_content: ["id", "content", "updated_at"],
+  // image_data never enters this allowlist (see migration 0008).
+  site_images: ["id", "slot", "mime_type", "width", "height", "byte_size", "created_at"],
   document_templates: [
     "id",
     "kind",

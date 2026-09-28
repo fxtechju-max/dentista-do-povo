@@ -675,6 +675,54 @@ export type Database = {
           },
         ];
       };
+      site_content: {
+        Row: {
+          id: string;
+          content: string;
+          updated_at: string;
+        };
+        Insert: {
+          id: string;
+          content?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          content?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      site_images: {
+        Row: {
+          id: string;
+          slot: string;
+          mime_type: string;
+          width: number;
+          height: number;
+          byte_size: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          slot: string;
+          mime_type: string;
+          width: number;
+          height: number;
+          byte_size: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          slot?: string;
+          mime_type?: string;
+          width?: number;
+          height?: number;
+          byte_size?: number;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       document_templates: {
         Row: {
           id: string;

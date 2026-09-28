@@ -62,6 +62,25 @@ async function serveToothAttachment(request: Request, id: string): Promise<Respo
   });
 }
 
+// Public site images (CMS › Página inicial), stored as bytea like the gallery.
+const SITE_IMAGE_PATH = /^\/api\/site-images\/([0-9a-f-]{36})$/i;
+
+async function serveSiteImage(id: string): Promise<Response | null> {
+  const { getPool } = await import("./integrations/mysql/pool.server");
+  const [rows] = await getPool().execute<import("@/integrations/mysql/pool.server").Row[]>(
+    "SELECT image_data, mime_type FROM site_images WHERE id=?",
+    [id],
+  );
+  const row = rows[0];
+  if (!row) return null;
+  return new Response(new Uint8Array(row["image_data"] as Buffer), {
+    headers: {
+      "content-type": String(row["mime_type"]),
+      "cache-control": "public, max-age=31536000, immutable",
+    },
+  });
+}
+
 async function getServerEntry(): Promise<ServerEntry> {
   if (!serverEntryPromise) {
     serverEntryPromise = import("@tanstack/react-start/server-entry").then(
@@ -103,6 +122,11 @@ export default {
       if (request.method === "GET") {
         const attachment = TOOTH_ATTACHMENT_PATH.exec(new URL(request.url).pathname);
         if (attachment?.[1]) return await serveToothAttachment(request, attachment[1]);
+        const siteImage = SITE_IMAGE_PATH.exec(new URL(request.url).pathname);
+        if (siteImage?.[1]) {
+          const imageResponse = await serveSiteImage(siteImage[1]);
+          if (imageResponse) return imageResponse;
+        }
         const match = GALLERY_IMAGE_PATH.exec(new URL(request.url).pathname);
         if (match?.[1]) {
           const imageResponse = await serveGalleryImage(match[1]);

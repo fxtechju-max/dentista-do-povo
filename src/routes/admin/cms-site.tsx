@@ -25,6 +25,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { HomeContentTab } from "@/components/admin/cms/HomeContentTab";
 import {
   Select,
   SelectContent,
@@ -59,12 +60,16 @@ function CmsSite() {
     <div className="animate-in fade-in duration-300">
       <PageHeader title="🌐 CMS Site" description="Gerencie tudo que aparece no site público." />
 
-      <Tabs defaultValue="servicos" className="mt-4">
+      <Tabs defaultValue="inicio" className="mt-4">
         <TabsList>
+          <TabsTrigger value="inicio">🏠 Página inicial</TabsTrigger>
           <TabsTrigger value="servicos">🦷 Serviços</TabsTrigger>
           <TabsTrigger value="blog">📰 Blog</TabsTrigger>
           <TabsTrigger value="galeria">🖼️ Galeria</TabsTrigger>
         </TabsList>
+        <TabsContent value="inicio" className="mt-4">
+          <HomeContentTab />
+        </TabsContent>
         <TabsContent value="servicos" className="mt-4">
           <ServicosTab />
         </TabsContent>

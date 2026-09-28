@@ -44,6 +44,17 @@ export type TutorialUpdate = {
 // Mais recente primeiro.
 export const TUTORIAL_UPDATES: TutorialUpdate[] = [
   {
+    date: "2026-09-28",
+    title: "Página inicial do site editável e novas seções sobre Cujubim",
+    sections: ["cms-site"],
+    items: [
+      "Nova aba Página inicial no CMS Site: edite título, texto, botões, números, selo e a foto principal.",
+      "Envie a foto direto do computador — o sistema recorta no formato certo (4:3) e otimiza sozinho.",
+      "Novas seções no site: Sobre o Dentista do Povo, Por que escolher, Referência em Cujubim (com botão Como chegar), Perguntas frequentes e Chamada final.",
+      "Cada seção pode ser mostrada ou escondida e tem o botão Restaurar texto padrão.",
+    ],
+  },
+  {
     date: "2026-09-27",
     title: "Formas de pagamento e Configurações reorganizadas",
     sections: ["financeiro", "contas", "configuracoes"],
@@ -657,8 +668,20 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
     emoji: "🌐",
     title: "CMS do Site",
     to: "/admin/cms-site",
-    summary: "Tudo que aparece no site público: serviços, blog e fotos.",
+    summary: "Tudo que aparece no site público: página inicial, serviços, blog e fotos.",
     steps: [
+      {
+        title: "Página inicial",
+        text: "Na aba Página inicial, abra cada seção (Destaque, Sobre, Por que escolher, Referência em Cujubim, Perguntas frequentes, Chamada final), edite os textos e use a chave Visível/Oculta para mostrar ou esconder.",
+      },
+      {
+        title: "Trocar a foto principal",
+        text: "Em Destaque, clique em Enviar foto do computador. Formato ideal: foto horizontal 4:3 (1600 × 1200 px), JPG/PNG/WEBP até 15 MB — mas qualquer foto funciona: o sistema recorta e otimiza sozinho.",
+      },
+      {
+        title: "Publicar",
+        text: "Clique em Salvar e publicar no topo. Use Ver site para conferir. Enquanto não salvar, aparece “Alterações não publicadas”.",
+      },
       {
         title: "Serviços",
         text: "Cadastre os serviços com descrição e preço (em branco = “sob consulta”) e marque Visível no site.",
