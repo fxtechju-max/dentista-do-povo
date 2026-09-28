@@ -28,15 +28,20 @@ export function normalizeClientId(value: string | null | undefined): string | nu
   return id ? `ca-pub-${id}` : null;
 }
 
+/**
+ * ID de editor do Google AdSense da clínica (Dentista do Povo). Usado quando o
+ * banco ainda não tem um ID salvo ou está fora do ar — assim o /ads.txt e a
+ * verificação do Google funcionam sempre. Pode ser trocado em Configurações › Anúncios.
+ */
+export const DEFAULT_ADSENSE_CLIENT_ID = "ca-pub-1471215282419135";
+
 /** Conteúdo do /ads.txt: linha oficial do Google + linhas extras (outras redes). */
 export function buildAdsTxt(clientId: string | null, extra?: string | null): string {
   const lines: string[] = [];
-  const id = normalizeClientId(clientId);
-  if (id) lines.push(`google.com, ${id.replace(/^ca-/, "")}, DIRECT, f08c47fec0942fa0`);
+  const id = normalizeClientId(clientId) ?? DEFAULT_ADSENSE_CLIENT_ID;
+  lines.push(`google.com, ${id.replace(/^ca-/, "")}, DIRECT, f08c47fec0942fa0`);
   const more = (extra ?? "").trim();
   if (more) lines.push(more);
-  if (!lines.length)
-    lines.push("# Configure o Google AdSense na área restrita (Configurações › Anúncios).");
   return `${lines.join("\n")}\n`;
 }
 

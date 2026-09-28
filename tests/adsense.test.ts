@@ -14,7 +14,8 @@ test("AdSense: ads.txt usa a linha oficial do Google", () => {
     buildAdsTxt("ca-pub-1234567890123456", "outra.com, 9, DIRECT"),
     "google.com, pub-1234567890123456, DIRECT, f08c47fec0942fa0\noutra.com, 9, DIRECT\n",
   );
-  assert.match(buildAdsTxt(null), /^# Configure/);
+  // Sem ID salvo, usa o ID de editor da clínica.
+  assert.equal(buildAdsTxt(null), "google.com, pub-1471215282419135, DIRECT, f08c47fec0942fa0\n");
 });
 
 test("AdSense: desligado ou sem ID não carrega anúncios", () => {

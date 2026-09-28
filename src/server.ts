@@ -83,10 +83,11 @@ async function serveSiteImage(id: string): Promise<Response | null> {
 
 // /ads.txt gerado a partir de Configurações › Anúncios (Google AdSense).
 async function serveAdsTxt(): Promise<Response> {
-  let body = "# Configure o Google AdSense na área restrita (Configurações › Anúncios).\n";
+  const { buildAdsTxt } = await import("./lib/adsense-core");
+  // Sem banco, sai a linha do ID de editor da clínica (DEFAULT_ADSENSE_CLIENT_ID).
+  let body = buildAdsTxt(null);
   try {
     const { getPool } = await import("./integrations/mysql/pool.server");
-    const { buildAdsTxt } = await import("./lib/adsense-core");
     const [rows] = await getPool().execute<import("@/integrations/mysql/pool.server").Row[]>(
       "SELECT adsense_client_id, ads_txt_extra FROM clinic_settings WHERE id=?",
       ["default"],

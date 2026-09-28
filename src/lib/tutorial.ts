@@ -45,6 +45,15 @@ export type TutorialUpdate = {
 export const TUTORIAL_UPDATES: TutorialUpdate[] = [
   {
     date: "2026-09-28",
+    title: "Google AdSense da clínica configurado",
+    sections: ["configuracoes"],
+    items: [
+      "ID de editor ca-pub-1471215282419135 configurado: o /ads.txt e o código de verificação do Google já saem no site.",
+      "Funciona mesmo se o banco estiver fora do ar. Para desligar ou trocar, use Configurações › Anúncios.",
+    ],
+  },
+  {
+    date: "2026-09-28",
     title: "Correção: ads.txt do Google AdSense no site publicado",
     sections: ["configuracoes"],
     items: [
