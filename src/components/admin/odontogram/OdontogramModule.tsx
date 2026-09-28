@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { Camera, Check, Info, MoreHorizontal, Pencil, Trash2, X } from "lucide-react";
 import { db } from "@/integrations/mysql/client";
@@ -34,6 +34,7 @@ import {
 } from "@/lib/tooth-attachments.functions";
 import { SurfaceDiagram, ToothGraphic } from "./ToothGraphic";
 import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -117,6 +118,17 @@ export function OdontogramModule({
   const [pendingFiles, setPendingFiles] = useState<{ file: File; preview: string }[]>([]);
   const [saving, setSaving] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
+  const [isDesktop, setIsDesktop] = useState(false);
+  // Celular: a folha deslizante abre ao tocar no dente; fechar mantém o dente
+  // selecionado para ver o histórico logo abaixo.
+  const [sheetOpen, setSheetOpen] = useState(false);
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 1280px)");
+    const update = () => setIsDesktop(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
 
   async function load() {
     const [{ data: procs }, { data: files }] = await Promise.all([
@@ -181,12 +193,14 @@ export function OdontogramModule({
   }
 
   function selectTooth(n: number) {
+    setSheetOpen(true);
     setSelected(n);
     setForm(blankForm(n));
     setPendingFiles([]);
   }
 
   function editProcedure(p: ToothProcedure) {
+    setSheetOpen(true);
     setSelected(p.tooth_number);
     setPendingFiles([]);
     setForm({
@@ -256,6 +270,7 @@ export function OdontogramModule({
     }
     setSaving(false);
     toast.success(`Registro do dente ${selected} salvo.`);
+    setSheetOpen(false);
     await load();
     setPendingFiles([]);
     setForm(blankForm(selected));
@@ -290,43 +305,303 @@ export function OdontogramModule({
 
   function renderArch(teeth: number[], lower: boolean) {
     const half = teeth.length / 2;
+    const sides = [teeth.slice(0, half), teeth.slice(half)];
     return (
-      <div className="flex min-w-max justify-center">
-        {[teeth.slice(0, half), teeth.slice(half)].map((side, i) => (
-          <div key={i} className={`flex gap-1 px-2 ${i === 0 ? "border-r-2 border-border" : ""}`}>
-            {side.map((n) => {
-              const situation = currentSituation(n);
-              const active = selected === n;
-              return (
-                <button
-                  key={n}
-                  type="button"
-                  onClick={() => selectTooth(n)}
-                  title={`Dente ${n} — ${situation ? situationOf(situation).label : "Sem registro"}`}
-                  className={`flex w-14 flex-col items-center gap-1 rounded-lg border-2 px-0.5 py-1 transition-all hover:-translate-y-0.5 hover:bg-accent ${
-                    active ? "border-primary bg-primary/5 shadow-md" : "border-transparent"
-                  }`}
-                >
-                  <span
-                    className={`text-[11px] font-bold ${active ? "text-primary" : "text-muted-foreground"}`}
+      <div className="grid gap-3 md:flex md:justify-center md:gap-0">
+        {sides.map((side, i) => (
+          <div key={i} className={`md:px-2 ${i === 0 ? "md:border-r-2 md:border-border" : ""}`}>
+            <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground md:hidden">
+              {i === 0 ? "Lado direito do paciente" : "Lado esquerdo do paciente"}
+            </p>
+            {/* Celular: grade que ocupa a largura; computador: dentes lado a lado */}
+            <div
+              className="grid gap-0.5 md:flex md:gap-1"
+              style={{ gridTemplateColumns: `repeat(${side.length}, minmax(0, 1fr))` }}
+            >
+              {side.map((n) => {
+                const situation = currentSituation(n);
+                const active = selected === n;
+                return (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => selectTooth(n)}
+                    title={`Dente ${n} — ${situation ? situationOf(situation).label : "Sem registro"}`}
+                    className={`flex min-w-0 flex-col items-center gap-0.5 rounded-lg border-2 px-0 py-1 transition-all hover:bg-accent md:w-14 md:gap-1 md:px-0.5 md:hover:-translate-y-0.5 ${
+                      active ? "border-primary bg-primary/5 shadow-md" : "border-transparent"
+                    }`}
                   >
-                    {n}
-                  </span>
-                  <ToothGraphic
-                    type={toothType(n, dentition)}
-                    lower={lower}
-                    situation={situation}
-                    className="h-24 w-12"
-                  />
-                  <SurfaceDiagram toothNumber={n} fills={surfaceFills(n)} className="h-7 w-7" />
-                </button>
-              );
-            })}
+                    <span
+                      className={`text-[10px] font-bold md:text-[11px] ${active ? "text-primary" : "text-muted-foreground"}`}
+                    >
+                      {n}
+                    </span>
+                    <ToothGraphic
+                      type={toothType(n, dentition)}
+                      lower={lower}
+                      situation={situation}
+                      className="h-14 w-full max-w-9 md:h-24 md:w-12 md:max-w-none"
+                    />
+                    <SurfaceDiagram
+                      toothNumber={n}
+                      fills={surfaceFills(n)}
+                      className="h-5 w-5 md:h-7 md:w-7"
+                    />
+                  </button>
+                );
+              })}
+            </div>
           </div>
         ))}
       </div>
     );
   }
+
+  const panel: ReactNode = (
+    <>
+      {selected == null || !form ? (
+        <div className="flex h-full min-h-64 flex-col items-center justify-center gap-2 text-center text-sm text-muted-foreground">
+          <ToothGraphic type="molar" lower={false} situation={null} className="h-20 w-12" />
+          Selecione um dente no odontograma para registrar situação, procedimento e anexos.
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <p className="text-base font-extrabold">Dente {selected}</p>
+              <p className="text-xs text-muted-foreground">{toothName(selected)}</p>
+              {form.editingId && (
+                <p className="mt-1 text-xs font-semibold text-primary">Editando registro</p>
+              )}
+            </div>
+            <Button variant="ghost" size="icon" onClick={closePanel} aria-label="Fechar">
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="flex flex-1 items-center justify-center gap-3 rounded-xl bg-muted/40 p-3">
+              <ToothGraphic
+                type={toothType(selected, selected >= 50 ? "deciduo" : "permanente")}
+                lower={[3, 4, 7, 8].includes(Math.floor(selected / 10))}
+                situation={form.situation}
+                className="h-28 w-14"
+              />
+              <SurfaceDiagram
+                toothNumber={selected}
+                fills={Object.fromEntries(
+                  form.surfaces.map((s) => [
+                    s,
+                    form.situation === "saudavel" ? "#ffffff" : situationOf(form.situation).color,
+                  ]),
+                )}
+                selected={form.surfaces}
+                onToggle={toggleSurface}
+                className="h-20 w-20"
+              />
+            </div>
+            <div className="flex w-28 flex-col gap-1">
+              {SURFACES.map((s) => {
+                const on = form.surfaces.includes(s);
+                return (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => toggleSurface(s)}
+                    className={`flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-semibold transition-colors ${
+                      on
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-background hover:bg-accent"
+                    }`}
+                  >
+                    {on ? (
+                      <Check className="h-3 w-3" />
+                    ) : (
+                      <span className="h-3 w-3 rounded-sm border" />
+                    )}
+                    {surfaceLabel(s, selected)}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Situação atual</Label>
+            <Select
+              value={form.situation}
+              onValueChange={(v) => setForm({ ...form, situation: v as Situation })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SITUATIONS.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    <span className="flex items-center gap-2">
+                      <span
+                        className="h-3 w-3 rounded-full border border-stone-400"
+                        style={{ background: s.color }}
+                      />
+                      {s.label}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Procedimento planejado</Label>
+            <Select
+              value={form.planned_procedure || "nenhum"}
+              onValueChange={(v) =>
+                setForm({ ...form, planned_procedure: v === "nenhum" ? "" : v })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="nenhum">Nenhum</SelectItem>
+                {PROCEDURES.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Procedimento realizado</Label>
+            <Select
+              value={form.status}
+              onValueChange={(v) => setForm({ ...form, status: v as ProcedureStatus })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {STATUSES.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    <span className="flex items-center gap-2">
+                      <span className={`h-2 w-2 rounded-full ${s.dot}`} />
+                      {s.label}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="odo-notes">Observações clínicas</Label>
+            <Textarea
+              id="odo-notes"
+              rows={3}
+              value={form.notes}
+              onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              placeholder="Ex: cárie na face oclusal, planejada restauração em resina composta."
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="odo-date">Data do registro</Label>
+              <Input
+                id="odo-date"
+                type="date"
+                value={form.record_date}
+                onChange={(e) => setForm({ ...form, record_date: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="odo-dentist">Dentista responsável</Label>
+              <Input
+                id="odo-dentist"
+                value={form.dentist}
+                onChange={(e) => setForm({ ...form, dentist: e.target.value })}
+                placeholder="Dr(a)."
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Anexos / Fotos / Radiografias</Label>
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => fileInput.current?.click()}
+                className="flex aspect-square flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-primary/40 bg-primary/5 text-center text-[10px] font-semibold text-primary hover:bg-primary/10"
+              >
+                <Camera className="h-5 w-5" />
+                Adicionar foto
+                <span className="font-normal text-muted-foreground">JPG/PNG até 10MB</span>
+              </button>
+              {toothFiles.map((a) => (
+                <div key={a.id} className="group relative aspect-square">
+                  <a href={toothAttachmentUrl(a.id)} target="_blank" rel="noreferrer">
+                    <img
+                      src={toothAttachmentUrl(a.id)}
+                      alt={a.title ?? `Anexo do dente ${a.tooth_number}`}
+                      className="h-full w-full rounded-lg border border-border object-cover"
+                    />
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => removeAttachment(a)}
+                    aria-label="Excluir anexo"
+                    className="absolute -right-1.5 -top-1.5 hidden h-5 w-5 items-center justify-center rounded-full bg-foreground text-background group-hover:flex"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+              {pendingFiles.map((p, i) => (
+                <div key={p.preview} className="relative aspect-square">
+                  <img
+                    src={p.preview}
+                    alt={p.file.name}
+                    className="h-full w-full rounded-lg border-2 border-dashed border-primary object-cover opacity-80"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setPendingFiles((prev) => prev.filter((_, j) => j !== i))}
+                    aria-label="Remover"
+                    className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-foreground text-background"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+            {pendingFiles.length > 0 && (
+              <p className="text-[11px] text-muted-foreground">
+                {pendingFiles.length} foto(s) serão enviadas ao salvar o registro.
+              </p>
+            )}
+            <input
+              ref={fileInput}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              multiple
+              hidden
+              onChange={(e) => {
+                addFiles(e.target.files);
+                e.target.value = "";
+              }}
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 border-t border-border pt-3">
+            <Button variant="outline" onClick={() => selectTooth(selected)}>
+              Cancelar
+            </Button>
+            <Button onClick={save} disabled={saving}>
+              <Check className="h-4 w-4" /> {saving ? "Salvando..." : "Salvar Registro"}
+            </Button>
+          </div>
+        </div>
+      )}
+    </>
+  );
 
   const segmented = (active: boolean) =>
     `rounded-md px-3 py-1.5 text-xs font-bold transition-colors ${
@@ -336,7 +611,7 @@ export function OdontogramModule({
     }`;
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
       <div className="space-y-4">
         <div className="rounded-2xl border border-border bg-card p-4 sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -424,325 +699,149 @@ export function OdontogramModule({
               Nenhum registro para o dente {selected} ainda.
             </p>
           ) : (
-            <div className="mt-3 overflow-x-auto">
-              <table className="w-full min-w-[640px] text-left text-xs">
-                <thead className="bg-muted/60 text-muted-foreground">
-                  <tr>
-                    {[
-                      "Data",
-                      "Situação",
-                      "Procedimento",
-                      "Superfície",
-                      "Status",
-                      "Observações",
-                      "Profissional",
-                      "",
-                    ].map((h) => (
-                      <th key={h} className="px-3 py-2 font-semibold">
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {history.map((p) => (
-                    <tr key={p.id} className="border-b border-border last:border-0">
-                      <td className="px-3 py-2">{formatDate(p.record_date)}</td>
-                      <td className="px-3 py-2">
-                        <span className="flex items-center gap-1.5">
-                          <span
-                            className="h-3 w-3 rounded border border-stone-400"
-                            style={{ background: situationOf(p.situation).color }}
-                          />
-                          {situationOf(p.situation).label}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2">{procedureLabel(p.planned_procedure)}</td>
-                      <td className="px-3 py-2">
-                        {p.surfaces.length
-                          ? p.surfaces.map((s) => surfaceLabel(s, p.tooth_number)).join(", ")
-                          : "—"}
-                      </td>
-                      <td className="px-3 py-2">
-                        <span className="flex items-center gap-1.5">
-                          <span className={`h-2 w-2 rounded-full ${statusOf(p.status).dot}`} />
-                          {statusOf(p.status).label}
-                        </span>
-                      </td>
-                      <td className="max-w-56 px-3 py-2 text-muted-foreground">{p.notes || "—"}</td>
-                      <td className="px-3 py-2">{p.dentist || "—"}</td>
-                      <td className="px-3 py-2 text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-7 w-7">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => editProcedure(p)}>
-                              <Pencil className="h-3.5 w-3.5" /> Editar
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => removeProcedure(p)}
-                              className="text-destructive"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" /> Excluir
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </td>
+            <>
+              {/* Celular: cartões */}
+              <ul className="mt-3 space-y-2 md:hidden">
+                {history.map((p) => (
+                  <li key={p.id} className="rounded-xl border border-border p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="flex items-center gap-2 text-sm font-bold">
+                        <span
+                          className="h-3.5 w-3.5 shrink-0 rounded border border-stone-400"
+                          style={{ background: situationOf(p.situation).color }}
+                        />
+                        {situationOf(p.situation).label}
+                      </span>
+                      <span className="shrink-0 text-xs text-muted-foreground">
+                        {formatDate(p.record_date)}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {procedureLabel(p.planned_procedure)}
+                      {p.surfaces.length
+                        ? ` · ${p.surfaces.map((s) => surfaceLabel(s, p.tooth_number)).join(", ")}`
+                        : ""}
+                    </p>
+                    <p className="mt-1 flex items-center gap-1.5 text-xs">
+                      <span className={`h-2 w-2 rounded-full ${statusOf(p.status).dot}`} />
+                      {statusOf(p.status).label}
+                      {p.dentist ? ` · ${p.dentist}` : ""}
+                    </p>
+                    {p.notes && <p className="mt-1.5 text-xs">{p.notes}</p>}
+                    <div className="mt-2 flex gap-2">
+                      <Button variant="outline" size="sm" onClick={() => editProcedure(p)}>
+                        <Pencil className="h-3.5 w-3.5" /> Editar
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive"
+                        onClick={() => removeProcedure(p)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" /> Excluir
+                      </Button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              {/* Computador: tabela */}
+              <div className="mt-3 hidden overflow-x-auto md:block">
+                <table className="w-full min-w-[640px] text-left text-xs">
+                  <thead className="bg-muted/60 text-muted-foreground">
+                    <tr>
+                      {[
+                        "Data",
+                        "Situação",
+                        "Procedimento",
+                        "Superfície",
+                        "Status",
+                        "Observações",
+                        "Profissional",
+                        "",
+                      ].map((h) => (
+                        <th key={h} className="px-3 py-2 font-semibold">
+                          {h}
+                        </th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {history.map((p) => (
+                      <tr key={p.id} className="border-b border-border last:border-0">
+                        <td className="px-3 py-2">{formatDate(p.record_date)}</td>
+                        <td className="px-3 py-2">
+                          <span className="flex items-center gap-1.5">
+                            <span
+                              className="h-3 w-3 rounded border border-stone-400"
+                              style={{ background: situationOf(p.situation).color }}
+                            />
+                            {situationOf(p.situation).label}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2">{procedureLabel(p.planned_procedure)}</td>
+                        <td className="px-3 py-2">
+                          {p.surfaces.length
+                            ? p.surfaces.map((s) => surfaceLabel(s, p.tooth_number)).join(", ")
+                            : "—"}
+                        </td>
+                        <td className="px-3 py-2">
+                          <span className="flex items-center gap-1.5">
+                            <span className={`h-2 w-2 rounded-full ${statusOf(p.status).dot}`} />
+                            {statusOf(p.status).label}
+                          </span>
+                        </td>
+                        <td className="max-w-56 px-3 py-2 text-muted-foreground">
+                          {p.notes || "—"}
+                        </td>
+                        <td className="px-3 py-2">{p.dentist || "—"}</td>
+                        <td className="px-3 py-2 text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-7 w-7">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => editProcedure(p)}>
+                                <Pencil className="h-3.5 w-3.5" /> Editar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => removeProcedure(p)}
+                                className="text-destructive"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" /> Excluir
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       </div>
 
-      <aside className="rounded-2xl border border-border bg-card p-4 xl:sticky xl:top-4 xl:self-start">
-        {selected == null || !form ? (
-          <div className="flex h-full min-h-64 flex-col items-center justify-center gap-2 text-center text-sm text-muted-foreground">
-            <ToothGraphic type="molar" lower={false} situation={null} className="h-20 w-12" />
-            Selecione um dente no odontograma para registrar situação, procedimento e anexos.
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <p className="text-base font-extrabold">Dente {selected}</p>
-                <p className="text-xs text-muted-foreground">{toothName(selected)}</p>
-                {form.editingId && (
-                  <p className="mt-1 text-xs font-semibold text-primary">Editando registro</p>
-                )}
-              </div>
-              <Button variant="ghost" size="icon" onClick={closePanel} aria-label="Fechar">
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <div className="flex flex-1 items-center justify-center gap-3 rounded-xl bg-muted/40 p-3">
-                <ToothGraphic
-                  type={toothType(selected, selected >= 50 ? "deciduo" : "permanente")}
-                  lower={[3, 4, 7, 8].includes(Math.floor(selected / 10))}
-                  situation={form.situation}
-                  className="h-28 w-14"
-                />
-                <SurfaceDiagram
-                  toothNumber={selected}
-                  fills={Object.fromEntries(
-                    form.surfaces.map((s) => [
-                      s,
-                      form.situation === "saudavel" ? "#ffffff" : situationOf(form.situation).color,
-                    ]),
-                  )}
-                  selected={form.surfaces}
-                  onToggle={toggleSurface}
-                  className="h-20 w-20"
-                />
-              </div>
-              <div className="flex w-28 flex-col gap-1">
-                {SURFACES.map((s) => {
-                  const on = form.surfaces.includes(s);
-                  return (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => toggleSurface(s)}
-                      className={`flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-semibold transition-colors ${
-                        on
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "border-border bg-background hover:bg-accent"
-                      }`}
-                    >
-                      {on ? (
-                        <Check className="h-3 w-3" />
-                      ) : (
-                        <span className="h-3 w-3 rounded-sm border" />
-                      )}
-                      {surfaceLabel(s, selected)}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>Situação atual</Label>
-              <Select
-                value={form.situation}
-                onValueChange={(v) => setForm({ ...form, situation: v as Situation })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {SITUATIONS.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      <span className="flex items-center gap-2">
-                        <span
-                          className="h-3 w-3 rounded-full border border-stone-400"
-                          style={{ background: s.color }}
-                        />
-                        {s.label}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Procedimento planejado</Label>
-              <Select
-                value={form.planned_procedure || "nenhum"}
-                onValueChange={(v) =>
-                  setForm({ ...form, planned_procedure: v === "nenhum" ? "" : v })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="nenhum">Nenhum</SelectItem>
-                  {PROCEDURES.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Procedimento realizado</Label>
-              <Select
-                value={form.status}
-                onValueChange={(v) => setForm({ ...form, status: v as ProcedureStatus })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {STATUSES.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      <span className="flex items-center gap-2">
-                        <span className={`h-2 w-2 rounded-full ${s.dot}`} />
-                        {s.label}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="odo-notes">Observações clínicas</Label>
-              <Textarea
-                id="odo-notes"
-                rows={3}
-                value={form.notes}
-                onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                placeholder="Ex: cárie na face oclusal, planejada restauração em resina composta."
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="odo-date">Data do registro</Label>
-                <Input
-                  id="odo-date"
-                  type="date"
-                  value={form.record_date}
-                  onChange={(e) => setForm({ ...form, record_date: e.target.value })}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="odo-dentist">Dentista responsável</Label>
-                <Input
-                  id="odo-dentist"
-                  value={form.dentist}
-                  onChange={(e) => setForm({ ...form, dentist: e.target.value })}
-                  placeholder="Dr(a)."
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Anexos / Fotos / Radiografias</Label>
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  onClick={() => fileInput.current?.click()}
-                  className="flex aspect-square flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-primary/40 bg-primary/5 text-center text-[10px] font-semibold text-primary hover:bg-primary/10"
-                >
-                  <Camera className="h-5 w-5" />
-                  Adicionar foto
-                  <span className="font-normal text-muted-foreground">JPG/PNG até 10MB</span>
-                </button>
-                {toothFiles.map((a) => (
-                  <div key={a.id} className="group relative aspect-square">
-                    <a href={toothAttachmentUrl(a.id)} target="_blank" rel="noreferrer">
-                      <img
-                        src={toothAttachmentUrl(a.id)}
-                        alt={a.title ?? `Anexo do dente ${a.tooth_number}`}
-                        className="h-full w-full rounded-lg border border-border object-cover"
-                      />
-                    </a>
-                    <button
-                      type="button"
-                      onClick={() => removeAttachment(a)}
-                      aria-label="Excluir anexo"
-                      className="absolute -right-1.5 -top-1.5 hidden h-5 w-5 items-center justify-center rounded-full bg-foreground text-background group-hover:flex"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                ))}
-                {pendingFiles.map((p, i) => (
-                  <div key={p.preview} className="relative aspect-square">
-                    <img
-                      src={p.preview}
-                      alt={p.file.name}
-                      className="h-full w-full rounded-lg border-2 border-dashed border-primary object-cover opacity-80"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setPendingFiles((prev) => prev.filter((_, j) => j !== i))}
-                      aria-label="Remover"
-                      className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-foreground text-background"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-              {pendingFiles.length > 0 && (
-                <p className="text-[11px] text-muted-foreground">
-                  {pendingFiles.length} foto(s) serão enviadas ao salvar o registro.
-                </p>
-              )}
-              <input
-                ref={fileInput}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                multiple
-                hidden
-                onChange={(e) => {
-                  addFiles(e.target.files);
-                  e.target.value = "";
-                }}
-              />
-            </div>
-
-            <div className="flex justify-end gap-2 border-t border-border pt-3">
-              <Button variant="outline" onClick={() => selectTooth(selected)}>
-                Cancelar
-              </Button>
-              <Button onClick={save} disabled={saving}>
-                <Check className="h-4 w-4" /> {saving ? "Salvando..." : "Salvar Registro"}
-              </Button>
-            </div>
-          </div>
-        )}
-      </aside>
+      {isDesktop ? (
+        <aside className="rounded-2xl border border-border bg-card p-4 xl:sticky xl:top-4 xl:self-start">
+          {panel}
+        </aside>
+      ) : (
+        <Sheet open={sheetOpen && selected != null && !!form} onOpenChange={setSheetOpen}>
+          <SheetContent
+            side="bottom"
+            className="max-h-[92dvh] overflow-y-auto rounded-t-3xl px-4 pb-6 pt-3 [&>button]:hidden"
+          >
+            <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-muted-foreground/30" />
+            <SheetTitle className="sr-only">
+              {selected != null ? `Registro do dente ${selected}` : "Registro do dente"}
+            </SheetTitle>
+            {panel}
+          </SheetContent>
+        </Sheet>
+      )}
     </div>
   );
 }

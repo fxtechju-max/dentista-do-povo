@@ -45,6 +45,16 @@ export type TutorialUpdate = {
 export const TUTORIAL_UPDATES: TutorialUpdate[] = [
   {
     date: "2026-09-28",
+    title: "Odontograma no celular",
+    sections: ["odontograma"],
+    items: [
+      "No celular, cada lado da boca aparece em uma fileira de 8 dentes que cabe na tela — sem arrastar para o lado.",
+      "Ao tocar em um dente, o painel de registro sobe de baixo da tela; ao salvar, ele fecha sozinho.",
+      "O histórico do dente aparece em cartões, com Editar e Excluir.",
+    ],
+  },
+  {
+    date: "2026-09-28",
     title: "Site e painel prontos para celular",
     sections: ["painel", "pacientes", "configuracoes"],
     items: [
@@ -444,7 +454,7 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
       },
       {
         title: "Selecione o dente",
-        text: "Clique no dente. À direita abre o painel com o desenho do dente e o nome (ex.: 1º Molar Superior Direito).",
+        text: "Clique no dente. No computador, o painel abre à direita com o desenho e o nome do dente (ex.: 1º Molar Superior Direito). No celular e tablet, o painel sobe de baixo da tela — arraste para baixo ou toque fora para fechar.",
       },
       {
         title: "Marque as faces",
