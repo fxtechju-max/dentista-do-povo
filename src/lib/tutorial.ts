@@ -45,6 +45,15 @@ export type TutorialUpdate = {
 export const TUTORIAL_UPDATES: TutorialUpdate[] = [
   {
     date: "2026-09-27",
+    title: "Abertura dos posts do blog corrigida",
+    sections: ["cms-site"],
+    items: [
+      "Clique na foto, no título ou em Ler mais para abrir o conteúdo completo do post.",
+      "Use Voltar para o blog para retornar à lista ou compartilhe o endereço do artigo.",
+    ],
+  },
+  {
+    date: "2026-09-27",
     title: "Atalho: módulo Odontograma",
     sections: ["odontograma"],
     items: [
@@ -571,6 +580,10 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
       {
         title: "Blog",
         text: "Crie posts com título, link (slug), resumo, conteúdo, imagem de capa e categoria. Salve como Rascunho ou Publicado.",
+      },
+      {
+        title: "Ler e compartilhar um post",
+        text: "Abra o Blog no site e clique na foto, no título ou em Ler mais. O artigo completo abre em uma página própria. Copie o endereço para compartilhar e use Voltar para o blog para ver os outros posts. Apenas posts salvos como Publicado aparecem no site.",
       },
       {
         title: "Fotos da clínica",

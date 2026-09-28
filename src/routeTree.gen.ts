@@ -36,7 +36,7 @@ import { Route as AdminSuporteRouteImport } from './routes/admin/suporte'
 import { Route as AdminTratamentosRouteImport } from './routes/admin/tratamentos'
 import { Route as AdminTutorialRouteImport } from './routes/admin/tutorial'
 import { Route as AdminWhatsappRouteImport } from './routes/admin/whatsapp'
-import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
+import { Route as BlogSlugRouteImport } from './routes/blog_.$slug'
 import { Route as AdminPacientesPatientIdRouteImport } from './routes/admin/pacientes.$patientId'
 import { Route as AdminPacientesPatientIdPropostaRouteImport } from './routes/admin/pacientes.$patientId.proposta'
 
@@ -176,9 +176,9 @@ const AdminWhatsappRoute = AdminWhatsappRouteImport.update({
   getParentRoute: () => AdminRoute,
 } as any)
 const BlogSlugRoute = BlogSlugRouteImport.update({
-  id: '/$slug',
-  path: '/$slug',
-  getParentRoute: () => BlogRoute,
+  id: '/blog_/$slug',
+  path: '/blog/$slug',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AdminPacientesPatientIdRoute = AdminPacientesPatientIdRouteImport.update({
   id: '/$patientId',
@@ -195,7 +195,7 @@ const AdminPacientesPatientIdPropostaRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
-  '/blog': typeof BlogRouteWithChildren
+  '/blog': typeof BlogRoute
   '/contato': typeof ContatoRoute
   '/entrar': typeof EntrarRoute
   '/galeria': typeof GaleriaRoute
@@ -226,7 +226,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/blog': typeof BlogRouteWithChildren
+  '/blog': typeof BlogRoute
   '/contato': typeof ContatoRoute
   '/entrar': typeof EntrarRoute
   '/galeria': typeof GaleriaRoute
@@ -259,7 +259,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
-  '/blog': typeof BlogRouteWithChildren
+  '/blog': typeof BlogRoute
   '/contato': typeof ContatoRoute
   '/entrar': typeof EntrarRoute
   '/galeria': typeof GaleriaRoute
@@ -283,7 +283,7 @@ export interface FileRoutesById {
   '/admin/tratamentos': typeof AdminTratamentosRoute
   '/admin/tutorial': typeof AdminTutorialRoute
   '/admin/whatsapp': typeof AdminWhatsappRoute
-  '/blog/$slug': typeof BlogSlugRoute
+  '/blog_/$slug': typeof BlogSlugRoute
   '/admin/': typeof AdminIndexRoute
   '/admin/pacientes/$patientId': typeof AdminPacientesPatientIdRouteWithChildren
   '/admin/pacientes/$patientId/proposta': typeof AdminPacientesPatientIdPropostaRoute
@@ -380,7 +380,7 @@ export interface FileRouteTypes {
     | '/admin/tratamentos'
     | '/admin/tutorial'
     | '/admin/whatsapp'
-    | '/blog/$slug'
+    | '/blog_/$slug'
     | '/admin/'
     | '/admin/pacientes/$patientId'
     | '/admin/pacientes/$patientId/proposta'
@@ -389,11 +389,12 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
-  BlogRoute: typeof BlogRouteWithChildren
+  BlogRoute: typeof BlogRoute
   ContatoRoute: typeof ContatoRoute
   EntrarRoute: typeof EntrarRoute
   GaleriaRoute: typeof GaleriaRoute
   ServicosRoute: typeof ServicosRoute
+  BlogSlugRoute: typeof BlogSlugRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -587,12 +588,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminWhatsappRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/blog/$slug': {
-      id: '/blog/$slug'
-      path: '/$slug'
+    '/blog_/$slug': {
+      id: '/blog_/$slug'
+      path: '/blog/$slug'
       fullPath: '/blog/$slug'
       preLoaderRoute: typeof BlogSlugRouteImport
-      parentRoute: typeof BlogRoute
+      parentRoute: typeof rootRouteImport
     }
     '/admin/pacientes/$patientId': {
       id: '/admin/pacientes/$patientId'
@@ -685,24 +686,15 @@ const AdminRouteChildren: AdminRouteChildren = {
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
-interface BlogRouteChildren {
-  BlogSlugRoute: typeof BlogSlugRoute
-}
-
-const BlogRouteChildren: BlogRouteChildren = {
-  BlogSlugRoute: BlogSlugRoute,
-}
-
-const BlogRouteWithChildren = BlogRoute._addFileChildren(BlogRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
-  BlogRoute: BlogRouteWithChildren,
+  BlogRoute: BlogRoute,
   ContatoRoute: ContatoRoute,
   EntrarRoute: EntrarRoute,
   GaleriaRoute: GaleriaRoute,
   ServicosRoute: ServicosRoute,
+  BlogSlugRoute: BlogSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

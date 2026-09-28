@@ -7,7 +7,7 @@ import { ChatWidget } from "@/components/site/ChatWidget";
 import { AdSlot } from "@/components/site/AdSlot";
 import { db } from "@/integrations/mysql/client";
 
-export const Route = createFileRoute("/blog/$slug")({
+export const Route = createFileRoute("/blog_/$slug")({
   head: () => ({
     meta: [{ title: "Blog — Dentista do Povo" }],
   }),
