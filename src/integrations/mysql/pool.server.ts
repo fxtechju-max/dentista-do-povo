@@ -84,7 +84,8 @@ export function getSql() {
       );
     const local = /@(localhost|127\.0\.0\.1)[:/]/.test(url);
     client = postgres(url, {
-      max: 3,
+      // Conexões simultâneas por servidor (DB_POOL_MAX, padrão 3).
+      max: Math.min(10, Math.max(1, Number(process.env["DB_POOL_MAX"]) || 3)),
       idle_timeout: 20,
       connect_timeout: 10,
       // O pooler do Supabase (porta 6543) não suporta prepared statements.

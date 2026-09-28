@@ -6,7 +6,7 @@ import { calculateAge, formatCurrency } from "@/lib/admin/labels";
 import { ToothIcon } from "@/lib/modules";
 import { Button } from "@/components/ui/button";
 
-export const Route = createFileRoute("/admin/pacientes/$patientId/proposta")({
+export const Route = createFileRoute("/admin/pacientes_/$patientId_/proposta")({
   component: Proposta,
 });
 

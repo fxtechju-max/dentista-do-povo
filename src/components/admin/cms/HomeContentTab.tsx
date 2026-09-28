@@ -299,28 +299,29 @@ export function HomeContentTab() {
 
   const { hero, about, why, city, faq, cta } = content;
 
+  // Cabeçalho da seção: o botão que abre/fecha e, ao lado (fora do botão), a
+  // chave Visível/Oculta — um botão não pode ficar dentro de outro.
   const sectionHeader = (
     title: string,
     description: string,
     section: SectionKey,
     toggle?: boolean,
   ) => (
-    <div className="flex flex-1 items-center justify-between gap-3 pr-2 text-left">
-      <span>
-        <span className="block font-bold">{title}</span>
-        <span className="block text-xs font-normal text-muted-foreground">{description}</span>
-      </span>
+    <div className="flex items-center gap-3">
+      <AccordionTrigger className="flex-1">
+        <span className="flex-1 pr-2 text-left">
+          <span className="block font-bold">{title}</span>
+          <span className="block text-xs font-normal text-muted-foreground">{description}</span>
+        </span>
+      </AccordionTrigger>
       {toggle !== undefined && (
-        <span
-          className="flex items-center gap-2 text-xs font-normal"
-          onClick={(e) => e.stopPropagation()}
-        >
+        <label className="flex shrink-0 cursor-pointer items-center gap-2 text-xs">
           {toggle ? "Visível" : "Oculta"}
           <Switch
             checked={toggle}
             onCheckedChange={(enabled) => patch(section, { enabled } as never)}
           />
-        </span>
+        </label>
       )}
     </div>
   );
@@ -355,13 +356,11 @@ export function HomeContentTab() {
 
       <Accordion type="multiple" defaultValue={["hero"]} className="space-y-3">
         <AccordionItem value="hero" className="rounded-2xl border border-border bg-card px-5">
-          <AccordionTrigger>
-            {sectionHeader(
-              "⭐ Destaque (topo do site)",
-              "Título, texto, botões, números e foto principal",
-              "hero",
-            )}
-          </AccordionTrigger>
+          {sectionHeader(
+            "⭐ Destaque (topo do site)",
+            "Título, texto, botões, números e foto principal",
+            "hero",
+          )}
           <AccordionContent className="space-y-4 pb-5">
             <ImageField
               label="Foto principal"
@@ -453,14 +452,12 @@ export function HomeContentTab() {
         </AccordionItem>
 
         <AccordionItem value="about" className="rounded-2xl border border-border bg-card px-5">
-          <AccordionTrigger>
-            {sectionHeader(
-              "🏥 Sobre o Dentista do Povo",
-              "Apresentação da clínica e destaques",
-              "about",
-              about.enabled,
-            )}
-          </AccordionTrigger>
+          {sectionHeader(
+            "🏥 Sobre o Dentista do Povo",
+            "Apresentação da clínica e destaques",
+            "about",
+            about.enabled,
+          )}
           <AccordionContent className="space-y-4 pb-5">
             <Field
               label="Chamada pequena"
@@ -501,14 +498,12 @@ export function HomeContentTab() {
         </AccordionItem>
 
         <AccordionItem value="why" className="rounded-2xl border border-border bg-card px-5">
-          <AccordionTrigger>
-            {sectionHeader(
-              "💙 Por que escolher",
-              "Diferenciais da clínica em cartões",
-              "why",
-              why.enabled,
-            )}
-          </AccordionTrigger>
+          {sectionHeader(
+            "💙 Por que escolher",
+            "Diferenciais da clínica em cartões",
+            "why",
+            why.enabled,
+          )}
           <AccordionContent className="space-y-4 pb-5">
             <Field
               label="Chamada pequena"
@@ -529,14 +524,12 @@ export function HomeContentTab() {
         </AccordionItem>
 
         <AccordionItem value="city" className="rounded-2xl border border-border bg-card px-5">
-          <AccordionTrigger>
-            {sectionHeader(
-              "📍 Referência em Cujubim",
-              "Texto sobre a cidade, endereço, telefone e horários",
-              "city",
-              city.enabled,
-            )}
-          </AccordionTrigger>
+          {sectionHeader(
+            "📍 Referência em Cujubim",
+            "Texto sobre a cidade, endereço, telefone e horários",
+            "city",
+            city.enabled,
+          )}
           <AccordionContent className="space-y-4 pb-5">
             <Field
               label="Chamada pequena"
@@ -578,14 +571,12 @@ export function HomeContentTab() {
         </AccordionItem>
 
         <AccordionItem value="faq" className="rounded-2xl border border-border bg-card px-5">
-          <AccordionTrigger>
-            {sectionHeader(
-              "❓ Perguntas frequentes",
-              "Dúvidas comuns dos pacientes",
-              "faq",
-              faq.enabled,
-            )}
-          </AccordionTrigger>
+          {sectionHeader(
+            "❓ Perguntas frequentes",
+            "Dúvidas comuns dos pacientes",
+            "faq",
+            faq.enabled,
+          )}
           <AccordionContent className="space-y-4 pb-5">
             <Field label="Título" value={faq.title} onChange={(title) => patch("faq", { title })} />
             <ListEditor<Faq>
@@ -615,14 +606,12 @@ export function HomeContentTab() {
         </AccordionItem>
 
         <AccordionItem value="cta" className="rounded-2xl border border-border bg-card px-5">
-          <AccordionTrigger>
-            {sectionHeader(
-              "📣 Chamada final",
-              "Convite para agendar no fim da página",
-              "cta",
-              cta.enabled,
-            )}
-          </AccordionTrigger>
+          {sectionHeader(
+            "📣 Chamada final",
+            "Convite para agendar no fim da página",
+            "cta",
+            cta.enabled,
+          )}
           <AccordionContent className="space-y-4 pb-5">
             <Field label="Título" value={cta.title} onChange={(title) => patch("cta", { title })} />
             <Field

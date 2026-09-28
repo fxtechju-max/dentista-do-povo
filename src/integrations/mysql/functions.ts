@@ -38,6 +38,9 @@ export const runQuery = createServerFn({ method: "POST" })
       return await executeQuery(data, actor);
     } catch (error) {
       const code = (error as { code?: string }).code;
+      // O usuário vê uma mensagem simples; o erro real vai para o log do
+      // servidor (Vercel › Logs) para diagnóstico.
+      console.error(`[banco] ${data.action} ${data.table} falhou:`, error);
       const message =
         code === "23503"
           ? "Este cadastro possui histórico vinculado e não pode ser excluído."

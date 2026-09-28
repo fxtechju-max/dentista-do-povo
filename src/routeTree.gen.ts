@@ -40,8 +40,8 @@ import { Route as AdminTratamentosRouteImport } from './routes/admin/tratamentos
 import { Route as AdminTutorialRouteImport } from './routes/admin/tutorial'
 import { Route as AdminWhatsappRouteImport } from './routes/admin/whatsapp'
 import { Route as BlogSlugRouteImport } from './routes/blog_.$slug'
-import { Route as AdminPacientesPatientIdRouteImport } from './routes/admin/pacientes.$patientId'
-import { Route as AdminPacientesPatientIdPropostaRouteImport } from './routes/admin/pacientes.$patientId.proposta'
+import { Route as AdminPacientesPatientIdRouteImport } from './routes/admin/pacientes_.$patientId'
+import { Route as AdminPacientesPatientIdPropostaRouteImport } from './routes/admin/pacientes_.$patientId_.proposta'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -199,15 +199,15 @@ const BlogSlugRoute = BlogSlugRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminPacientesPatientIdRoute = AdminPacientesPatientIdRouteImport.update({
-  id: '/$patientId',
-  path: '/$patientId',
-  getParentRoute: () => AdminPacientesRoute,
+  id: '/pacientes_/$patientId',
+  path: '/pacientes/$patientId',
+  getParentRoute: () => AdminRoute,
 } as any)
 const AdminPacientesPatientIdPropostaRoute =
   AdminPacientesPatientIdPropostaRouteImport.update({
-    id: '/proposta',
-    path: '/proposta',
-    getParentRoute: () => AdminPacientesPatientIdRoute,
+    id: '/pacientes_/$patientId_/proposta',
+    path: '/pacientes/$patientId/proposta',
+    getParentRoute: () => AdminRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -233,7 +233,7 @@ export interface FileRoutesByFullPath {
   '/admin/modelos': typeof AdminModelosRoute
   '/admin/odontograma': typeof AdminOdontogramaRoute
   '/admin/orcamentos': typeof AdminOrcamentosRoute
-  '/admin/pacientes': typeof AdminPacientesRouteWithChildren
+  '/admin/pacientes': typeof AdminPacientesRoute
   '/admin/receitas': typeof AdminReceitasRoute
   '/admin/relatorios': typeof AdminRelatoriosRoute
   '/admin/suporte': typeof AdminSuporteRoute
@@ -242,7 +242,7 @@ export interface FileRoutesByFullPath {
   '/admin/whatsapp': typeof AdminWhatsappRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/admin/': typeof AdminIndexRoute
-  '/admin/pacientes/$patientId': typeof AdminPacientesPatientIdRouteWithChildren
+  '/admin/pacientes/$patientId': typeof AdminPacientesPatientIdRoute
   '/admin/pacientes/$patientId/proposta': typeof AdminPacientesPatientIdPropostaRoute
 }
 export interface FileRoutesByTo {
@@ -267,7 +267,7 @@ export interface FileRoutesByTo {
   '/admin/modelos': typeof AdminModelosRoute
   '/admin/odontograma': typeof AdminOdontogramaRoute
   '/admin/orcamentos': typeof AdminOrcamentosRoute
-  '/admin/pacientes': typeof AdminPacientesRouteWithChildren
+  '/admin/pacientes': typeof AdminPacientesRoute
   '/admin/receitas': typeof AdminReceitasRoute
   '/admin/relatorios': typeof AdminRelatoriosRoute
   '/admin/suporte': typeof AdminSuporteRoute
@@ -276,7 +276,7 @@ export interface FileRoutesByTo {
   '/admin/whatsapp': typeof AdminWhatsappRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/admin': typeof AdminIndexRoute
-  '/admin/pacientes/$patientId': typeof AdminPacientesPatientIdRouteWithChildren
+  '/admin/pacientes/$patientId': typeof AdminPacientesPatientIdRoute
   '/admin/pacientes/$patientId/proposta': typeof AdminPacientesPatientIdPropostaRoute
 }
 export interface FileRoutesById {
@@ -303,7 +303,7 @@ export interface FileRoutesById {
   '/admin/modelos': typeof AdminModelosRoute
   '/admin/odontograma': typeof AdminOdontogramaRoute
   '/admin/orcamentos': typeof AdminOrcamentosRoute
-  '/admin/pacientes': typeof AdminPacientesRouteWithChildren
+  '/admin/pacientes': typeof AdminPacientesRoute
   '/admin/receitas': typeof AdminReceitasRoute
   '/admin/relatorios': typeof AdminRelatoriosRoute
   '/admin/suporte': typeof AdminSuporteRoute
@@ -312,8 +312,8 @@ export interface FileRoutesById {
   '/admin/whatsapp': typeof AdminWhatsappRoute
   '/blog_/$slug': typeof BlogSlugRoute
   '/admin/': typeof AdminIndexRoute
-  '/admin/pacientes/$patientId': typeof AdminPacientesPatientIdRouteWithChildren
-  '/admin/pacientes/$patientId/proposta': typeof AdminPacientesPatientIdPropostaRoute
+  '/admin/pacientes_/$patientId': typeof AdminPacientesPatientIdRoute
+  '/admin/pacientes_/$patientId_/proposta': typeof AdminPacientesPatientIdPropostaRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -418,8 +418,8 @@ export interface FileRouteTypes {
     | '/admin/whatsapp'
     | '/blog_/$slug'
     | '/admin/'
-    | '/admin/pacientes/$patientId'
-    | '/admin/pacientes/$patientId/proposta'
+    | '/admin/pacientes_/$patientId'
+    | '/admin/pacientes_/$patientId_/proposta'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -654,48 +654,22 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BlogSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin/pacientes/$patientId': {
-      id: '/admin/pacientes/$patientId'
-      path: '/$patientId'
+    '/admin/pacientes_/$patientId': {
+      id: '/admin/pacientes_/$patientId'
+      path: '/pacientes/$patientId'
       fullPath: '/admin/pacientes/$patientId'
       preLoaderRoute: typeof AdminPacientesPatientIdRouteImport
-      parentRoute: typeof AdminPacientesRoute
+      parentRoute: typeof AdminRoute
     }
-    '/admin/pacientes/$patientId/proposta': {
-      id: '/admin/pacientes/$patientId/proposta'
-      path: '/proposta'
+    '/admin/pacientes_/$patientId_/proposta': {
+      id: '/admin/pacientes_/$patientId_/proposta'
+      path: '/pacientes/$patientId/proposta'
       fullPath: '/admin/pacientes/$patientId/proposta'
       preLoaderRoute: typeof AdminPacientesPatientIdPropostaRouteImport
-      parentRoute: typeof AdminPacientesPatientIdRoute
+      parentRoute: typeof AdminRoute
     }
   }
 }
-
-interface AdminPacientesPatientIdRouteChildren {
-  AdminPacientesPatientIdPropostaRoute: typeof AdminPacientesPatientIdPropostaRoute
-}
-
-const AdminPacientesPatientIdRouteChildren: AdminPacientesPatientIdRouteChildren =
-  {
-    AdminPacientesPatientIdPropostaRoute: AdminPacientesPatientIdPropostaRoute,
-  }
-
-const AdminPacientesPatientIdRouteWithChildren =
-  AdminPacientesPatientIdRoute._addFileChildren(
-    AdminPacientesPatientIdRouteChildren,
-  )
-
-interface AdminPacientesRouteChildren {
-  AdminPacientesPatientIdRoute: typeof AdminPacientesPatientIdRouteWithChildren
-}
-
-const AdminPacientesRouteChildren: AdminPacientesRouteChildren = {
-  AdminPacientesPatientIdRoute: AdminPacientesPatientIdRouteWithChildren,
-}
-
-const AdminPacientesRouteWithChildren = AdminPacientesRoute._addFileChildren(
-  AdminPacientesRouteChildren,
-)
 
 interface AdminRouteChildren {
   AdminAgendaRoute: typeof AdminAgendaRoute
@@ -711,7 +685,7 @@ interface AdminRouteChildren {
   AdminModelosRoute: typeof AdminModelosRoute
   AdminOdontogramaRoute: typeof AdminOdontogramaRoute
   AdminOrcamentosRoute: typeof AdminOrcamentosRoute
-  AdminPacientesRoute: typeof AdminPacientesRouteWithChildren
+  AdminPacientesRoute: typeof AdminPacientesRoute
   AdminReceitasRoute: typeof AdminReceitasRoute
   AdminRelatoriosRoute: typeof AdminRelatoriosRoute
   AdminSuporteRoute: typeof AdminSuporteRoute
@@ -719,6 +693,8 @@ interface AdminRouteChildren {
   AdminTutorialRoute: typeof AdminTutorialRoute
   AdminWhatsappRoute: typeof AdminWhatsappRoute
   AdminIndexRoute: typeof AdminIndexRoute
+  AdminPacientesPatientIdRoute: typeof AdminPacientesPatientIdRoute
+  AdminPacientesPatientIdPropostaRoute: typeof AdminPacientesPatientIdPropostaRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
@@ -735,7 +711,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminModelosRoute: AdminModelosRoute,
   AdminOdontogramaRoute: AdminOdontogramaRoute,
   AdminOrcamentosRoute: AdminOrcamentosRoute,
-  AdminPacientesRoute: AdminPacientesRouteWithChildren,
+  AdminPacientesRoute: AdminPacientesRoute,
   AdminReceitasRoute: AdminReceitasRoute,
   AdminRelatoriosRoute: AdminRelatoriosRoute,
   AdminSuporteRoute: AdminSuporteRoute,
@@ -743,6 +719,8 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminTutorialRoute: AdminTutorialRoute,
   AdminWhatsappRoute: AdminWhatsappRoute,
   AdminIndexRoute: AdminIndexRoute,
+  AdminPacientesPatientIdRoute: AdminPacientesPatientIdRoute,
+  AdminPacientesPatientIdPropostaRoute: AdminPacientesPatientIdPropostaRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)

@@ -45,6 +45,16 @@ export type TutorialUpdate = {
 export const TUTORIAL_UPDATES: TutorialUpdate[] = [
   {
     date: "2026-09-28",
+    title: "Correções: prontuário do paciente e editor da página inicial",
+    sections: ["pacientes", "cms-site"],
+    items: [
+      "Abrir prontuário voltou a funcionar: a ficha completa do paciente (abas, odontograma, proposta) abre normalmente.",
+      "Editor da Página inicial no CMS corrigido (chave Visível/Oculta ao lado de cada seção).",
+      "Erros de banco agora ficam registrados no log do servidor para facilitar o suporte.",
+    ],
+  },
+  {
+    date: "2026-09-28",
     title: "Política de Privacidade e Termos de Uso",
     sections: ["cms-site"],
     items: [

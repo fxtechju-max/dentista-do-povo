@@ -102,7 +102,7 @@ const TAB_VALUES = [
 ] as const;
 type TabValue = (typeof TAB_VALUES)[number];
 
-export const Route = createFileRoute("/admin/pacientes/$patientId")({
+export const Route = createFileRoute("/admin/pacientes_/$patientId")({
   validateSearch: (search: Record<string, unknown>): { tab?: TabValue } => {
     const tab = search["tab"];
     return TAB_VALUES.includes(tab as TabValue) ? { tab: tab as TabValue } : {};
