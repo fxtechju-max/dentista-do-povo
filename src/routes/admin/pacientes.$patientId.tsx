@@ -558,6 +558,13 @@ function Prontuario() {
                 <DropdownMenuItem onClick={() => setApptDialog(true)}>
                   <Calendar className="h-3.5 w-3.5" /> Agendar consulta
                 </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() =>
+                    navigate({ to: "/admin/modelos", search: { paciente: patientId } })
+                  }
+                >
+                  <Printer className="h-3.5 w-3.5" /> Gerar documento (atestado, receituário...)
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setRxDialog(true)}>
                   <ClipboardList className="h-3.5 w-3.5" /> Nova receita
                 </DropdownMenuItem>

@@ -27,6 +27,7 @@ import { Route as AdminDashboardRouteImport } from './routes/admin/dashboard'
 import { Route as AdminDocumentosRouteImport } from './routes/admin/documentos'
 import { Route as AdminFinanceiroRouteImport } from './routes/admin/financeiro'
 import { Route as AdminIaRouteImport } from './routes/admin/ia'
+import { Route as AdminModelosRouteImport } from './routes/admin/modelos'
 import { Route as AdminOdontogramaRouteImport } from './routes/admin/odontograma'
 import { Route as AdminOrcamentosRouteImport } from './routes/admin/orcamentos'
 import { Route as AdminPacientesRouteImport } from './routes/admin/pacientes'
@@ -130,6 +131,11 @@ const AdminIaRoute = AdminIaRouteImport.update({
   path: '/ia',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminModelosRoute = AdminModelosRouteImport.update({
+  id: '/modelos',
+  path: '/modelos',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminOdontogramaRoute = AdminOdontogramaRouteImport.update({
   id: '/odontograma',
   path: '/odontograma',
@@ -210,6 +216,7 @@ export interface FileRoutesByFullPath {
   '/admin/documentos': typeof AdminDocumentosRoute
   '/admin/financeiro': typeof AdminFinanceiroRoute
   '/admin/ia': typeof AdminIaRoute
+  '/admin/modelos': typeof AdminModelosRoute
   '/admin/odontograma': typeof AdminOdontogramaRoute
   '/admin/orcamentos': typeof AdminOrcamentosRoute
   '/admin/pacientes': typeof AdminPacientesRouteWithChildren
@@ -241,6 +248,7 @@ export interface FileRoutesByTo {
   '/admin/documentos': typeof AdminDocumentosRoute
   '/admin/financeiro': typeof AdminFinanceiroRoute
   '/admin/ia': typeof AdminIaRoute
+  '/admin/modelos': typeof AdminModelosRoute
   '/admin/odontograma': typeof AdminOdontogramaRoute
   '/admin/orcamentos': typeof AdminOrcamentosRoute
   '/admin/pacientes': typeof AdminPacientesRouteWithChildren
@@ -274,6 +282,7 @@ export interface FileRoutesById {
   '/admin/documentos': typeof AdminDocumentosRoute
   '/admin/financeiro': typeof AdminFinanceiroRoute
   '/admin/ia': typeof AdminIaRoute
+  '/admin/modelos': typeof AdminModelosRoute
   '/admin/odontograma': typeof AdminOdontogramaRoute
   '/admin/orcamentos': typeof AdminOrcamentosRoute
   '/admin/pacientes': typeof AdminPacientesRouteWithChildren
@@ -308,6 +317,7 @@ export interface FileRouteTypes {
     | '/admin/documentos'
     | '/admin/financeiro'
     | '/admin/ia'
+    | '/admin/modelos'
     | '/admin/odontograma'
     | '/admin/orcamentos'
     | '/admin/pacientes'
@@ -339,6 +349,7 @@ export interface FileRouteTypes {
     | '/admin/documentos'
     | '/admin/financeiro'
     | '/admin/ia'
+    | '/admin/modelos'
     | '/admin/odontograma'
     | '/admin/orcamentos'
     | '/admin/pacientes'
@@ -371,6 +382,7 @@ export interface FileRouteTypes {
     | '/admin/documentos'
     | '/admin/financeiro'
     | '/admin/ia'
+    | '/admin/modelos'
     | '/admin/odontograma'
     | '/admin/orcamentos'
     | '/admin/pacientes'
@@ -525,6 +537,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIaRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/modelos': {
+      id: '/admin/modelos'
+      path: '/modelos'
+      fullPath: '/admin/modelos'
+      preLoaderRoute: typeof AdminModelosRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/odontograma': {
       id: '/admin/odontograma'
       path: '/odontograma'
@@ -649,6 +668,7 @@ interface AdminRouteChildren {
   AdminDocumentosRoute: typeof AdminDocumentosRoute
   AdminFinanceiroRoute: typeof AdminFinanceiroRoute
   AdminIaRoute: typeof AdminIaRoute
+  AdminModelosRoute: typeof AdminModelosRoute
   AdminOdontogramaRoute: typeof AdminOdontogramaRoute
   AdminOrcamentosRoute: typeof AdminOrcamentosRoute
   AdminPacientesRoute: typeof AdminPacientesRouteWithChildren
@@ -672,6 +692,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminDocumentosRoute: AdminDocumentosRoute,
   AdminFinanceiroRoute: AdminFinanceiroRoute,
   AdminIaRoute: AdminIaRoute,
+  AdminModelosRoute: AdminModelosRoute,
   AdminOdontogramaRoute: AdminOdontogramaRoute,
   AdminOrcamentosRoute: AdminOrcamentosRoute,
   AdminPacientesRoute: AdminPacientesRouteWithChildren,

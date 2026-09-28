@@ -16,6 +16,7 @@ import {
   ArrowLeftRight,
   DatabaseBackup,
   BookOpen,
+  Printer,
   type LucideIcon,
 } from "lucide-react";
 
@@ -192,6 +193,16 @@ export const ADMIN_MODULES: AdminModule[] = [
     to: "/admin/receitas",
     icon: Pill,
     description: "Prescrições",
+    iconColor: "text-primary",
+    iconBg: "bg-primary/10",
+  },
+  {
+    id: "modelos",
+    name: "Modelos de Documentos",
+    label: "🖨️ Modelos de Documentos",
+    to: "/admin/modelos",
+    icon: Printer,
+    description: "Receituário, atestado e declarações",
     iconColor: "text-primary",
     iconBg: "bg-primary/10",
   },

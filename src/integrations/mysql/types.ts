@@ -467,6 +467,10 @@ export type Database = {
           phone: string | null;
           updated_at: string;
           whatsapp_number: string | null;
+          dentist_name: string | null;
+          dentist_cro: string | null;
+          clinic_email: string | null;
+          clinic_city: string | null;
         };
         Insert: {
           address?: string | null;
@@ -479,6 +483,10 @@ export type Database = {
           phone?: string | null;
           updated_at?: string;
           whatsapp_number?: string | null;
+          dentist_name?: string | null;
+          dentist_cro?: string | null;
+          clinic_email?: string | null;
+          clinic_city?: string | null;
         };
         Update: {
           address?: string | null;
@@ -491,6 +499,10 @@ export type Database = {
           phone?: string | null;
           updated_at?: string;
           whatsapp_number?: string | null;
+          dentist_name?: string | null;
+          dentist_cro?: string | null;
+          clinic_email?: string | null;
+          clinic_city?: string | null;
         };
         Relationships: [];
       };
@@ -653,6 +665,42 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      document_templates: {
+        Row: {
+          id: string;
+          kind: string;
+          name: string;
+          title: string;
+          body: string;
+          layout: string;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          kind?: string;
+          name: string;
+          title: string;
+          body: string;
+          layout?: string;
+          sort_order?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          kind?: string;
+          name?: string;
+          title?: string;
+          body?: string;
+          layout?: string;
+          sort_order?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
       };
       tooth_procedures: {
         Row: {

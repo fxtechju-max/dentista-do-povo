@@ -45,6 +45,19 @@ export type TutorialUpdate = {
 export const TUTORIAL_UPDATES: TutorialUpdate[] = [
   {
     date: "2026-09-27",
+    title: "Modelos de Documentos: receituário, atestado e declaração",
+    sections: ["modelos"],
+    items: [
+      "Novo módulo Modelos de Documentos, ao lado de Documentos e Receitas.",
+      "Modelos prontos de Receituário, Atestado e Declaração de Comparecimento, com os dados do Dr. Álvaro Augusto Battiston (CRO/RO 2853) e da clínica.",
+      "Os dados do paciente (nome, CPF, endereço...) entram sozinhos a partir do cadastro.",
+      "Três layouts em preto, azul e branco: Clássico, Moderno e Elegante.",
+      "Edite o texto antes de imprimir, e exporte em PDF ou DOCX (Word).",
+      "Crie, duplique e edite seus próprios modelos com campos automáticos.",
+    ],
+  },
+  {
+    date: "2026-09-27",
     title: "Abertura dos posts do blog corrigida",
     sections: ["cms-site"],
     items: [
@@ -398,6 +411,50 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
         title: "Onde aparece",
         text: "A receita fica no prontuário (aba Receitas) e na janela de documentos do paciente.",
       },
+    ],
+  },
+  {
+    id: "modelos",
+    group: "clinico",
+    emoji: "🖨️",
+    title: "Modelos de Documentos",
+    to: "/admin/modelos",
+    summary:
+      "Receituário, atestado, declaração de comparecimento e seus próprios modelos, prontos para imprimir ou exportar.",
+    steps: [
+      {
+        title: "Abra o módulo",
+        text: "Clique em Modelos de Documentos no painel. Pelo prontuário do paciente, use Mais ações › Gerar documento para já abrir com o paciente escolhido.",
+      },
+      {
+        title: "Escolha o modelo e o paciente",
+        text: "Na aba Gerar documento, clique no modelo (Receituário, Atestado, Declaração...) e busque o paciente. Nome, CPF, endereço e data entram sozinhos.",
+      },
+      {
+        title: "Escolha o layout",
+        text: "Clássico (faixa azul lateral), Moderno (cabeçalho centralizado e contatos no rodapé) ou Elegante (marca d'água e rodapé escuro). Todos em preto, azul e branco.",
+      },
+      {
+        title: "Revise e edite",
+        text: "Complete os campos em branco (horários, dias, CID, medicamentos) direto no texto. A pré-visualização A4 mostra como vai sair.",
+      },
+      {
+        title: "Imprima ou exporte",
+        text: "Use Imprimir, Baixar PDF ou Baixar DOCX (abre no Word para editar).",
+      },
+      {
+        title: "Edite os modelos",
+        text: "Na aba Modelos, altere nome, título, texto e layout padrão. Clique nos campos automáticos (Nome do paciente, CPF, Data...) para inserir no texto. Use Novo modelo ou Duplicar para criar outros.",
+      },
+      {
+        title: "Dados da clínica",
+        text: "Na aba Dados da clínica, confira nome do dentista, CRO, telefone, endereço e cidade — eles aparecem em todos os documentos.",
+      },
+    ],
+    tips: [
+      "Campos sem informação no cadastro saem como linha em branco para preencher à mão.",
+      "As mudanças feitas em Gerar documento valem só para aquele documento; o modelo continua igual.",
+      "Na impressão, escolha papel A4 e desative “cabeçalhos e rodapés” do navegador, se aparecerem.",
     ],
   },
   {
