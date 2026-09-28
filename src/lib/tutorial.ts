@@ -45,6 +45,16 @@ export type TutorialUpdate = {
 export const TUTORIAL_UPDATES: TutorialUpdate[] = [
   {
     date: "2026-09-28",
+    title: "Organize os módulos arrastando",
+    sections: ["painel"],
+    items: [
+      "Na tela inicial do painel, segure um módulo e arraste para a posição que quiser.",
+      "A ordem é salva automaticamente no projeto (banco de dados), nunca no navegador — vale para todos os administradores e aparelhos.",
+      "O menu do topo segue a mesma ordem. Use Ordem padrão para voltar à original.",
+    ],
+  },
+  {
+    date: "2026-09-28",
     title: "Blog: 20 posts novos e contador de posts",
     sections: ["cms-site"],
     items: [
@@ -198,6 +208,10 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
       {
         title: "Escolha um módulo",
         text: "A tela inicial mostra um cartão para cada módulo ativo. Clique para abrir.",
+      },
+      {
+        title: "Mude a ordem dos módulos",
+        text: "No computador, clique e arraste o cartão do módulo. No celular, segure o dedo sobre o módulo por um instante e arraste. A nova ordem é salva sozinha no projeto e vale para todos. Para desfazer, clique em Ordem padrão.",
       },
       {
         title: "Trocar de módulo",

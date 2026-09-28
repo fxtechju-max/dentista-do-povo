@@ -55,6 +55,7 @@ export const tableColumns = {
     "ai_secretary_enabled",
     "disabled_modules",
     "disabled_payment_methods",
+    "module_order",
   ],
   blog_posts: [
     "id",

@@ -17,6 +17,7 @@ import {
   SETTINGS_MODULE,
   TUTORIAL_MODULE,
   ToothIcon,
+  sortModules,
 } from "@/lib/modules";
 import { mountAdminTheme } from "@/lib/theme";
 import { mountAdminZoom } from "@/lib/zoom";
@@ -57,14 +58,18 @@ function AdminLayout() {
   const [status, setStatus] = useState<"loading" | "denied" | "ok">("loading");
   const [email, setEmail] = useState<string | null>(null);
   const [disabledModules, setDisabledModules] = useState<string[]>([]);
+  const [moduleOrder, setModuleOrder] = useState<string[]>([]);
   const [notifPermission, setNotifPermission] = useState<NotifState>("default");
 
   useEffect(() => {
     db.from("clinic_settings")
-      .select("disabled_modules")
+      .select("disabled_modules, module_order")
       .eq("id", "default")
       .maybeSingle()
-      .then(({ data }) => setDisabledModules(data?.disabled_modules ?? []));
+      .then(({ data }) => {
+        setDisabledModules(data?.disabled_modules ?? []);
+        setModuleOrder(data?.module_order ?? []);
+      });
   }, []);
 
   useLayoutEffect(() => mountAdminTheme(), []);
@@ -72,8 +77,11 @@ function AdminLayout() {
 
   const allModules = useMemo(() => {
     const modules = ADMIN_MODULES.filter((m) => !disabledModules.includes(m.id));
-    return [DASHBOARD_MODULE, ...modules, SETTINGS_MODULE, TUTORIAL_MODULE];
-  }, [disabledModules]);
+    return sortModules(
+      [DASHBOARD_MODULE, ...modules, SETTINGS_MODULE, TUTORIAL_MODULE],
+      moduleOrder,
+    );
+  }, [disabledModules, moduleOrder]);
 
   useEffect(() => {
     (async () => {

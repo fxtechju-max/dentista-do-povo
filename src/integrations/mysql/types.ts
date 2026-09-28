@@ -478,6 +478,7 @@ export type Database = {
           clinic_email: string | null;
           clinic_city: string | null;
           disabled_payment_methods: string[];
+          module_order: string[];
         };
         Insert: {
           address?: string | null;
@@ -495,6 +496,7 @@ export type Database = {
           clinic_email?: string | null;
           clinic_city?: string | null;
           disabled_payment_methods?: string[];
+          module_order?: string[];
         };
         Update: {
           address?: string | null;
@@ -512,6 +514,7 @@ export type Database = {
           clinic_email?: string | null;
           clinic_city?: string | null;
           disabled_payment_methods?: string[];
+          module_order?: string[];
         };
         Relationships: [];
       };

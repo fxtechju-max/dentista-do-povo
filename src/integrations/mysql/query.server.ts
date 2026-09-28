@@ -55,6 +55,7 @@ function normalize(row: RowDataPacket): DataRow {
           ? Boolean(value)
           : (key === "disabled_modules" ||
                 key === "disabled_payment_methods" ||
+                key === "module_order" ||
                 key === "conditions" ||
                 key === "surfaces") &&
               typeof value === "string"

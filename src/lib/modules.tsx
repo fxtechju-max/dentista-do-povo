@@ -257,3 +257,13 @@ export const ADMIN_MODULES: AdminModule[] = [
     iconBg: "bg-primary/10",
   },
 ];
+
+/** Aplica a ordem salva (ids); módulos novos ou fora da lista vão para o fim. */
+export function sortModules<T extends { id: string }>(modules: T[], order: string[]): T[] {
+  const position = new Map(order.map((id, i) => [id, i]));
+  return [...modules].sort(
+    (a, b) =>
+      (position.get(a.id) ?? Number.MAX_SAFE_INTEGER) -
+        (position.get(b.id) ?? Number.MAX_SAFE_INTEGER) || modules.indexOf(a) - modules.indexOf(b),
+  );
+}
