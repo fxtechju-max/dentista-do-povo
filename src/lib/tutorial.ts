@@ -45,6 +45,16 @@ export type TutorialUpdate = {
 export const TUTORIAL_UPDATES: TutorialUpdate[] = [
   {
     date: "2026-09-27",
+    title: "Atalho: módulo Odontograma",
+    sections: ["odontograma"],
+    items: [
+      "Novo módulo Odontograma no painel, ao lado de Receitas.",
+      "Busque o paciente pelo nome, CPF, telefone ou código e o odontograma dele abre direto.",
+      "Botões para trocar de paciente ou abrir o prontuário completo.",
+    ],
+  },
+  {
+    date: "2026-09-27",
     title: "Módulo Tutorial",
     sections: ["tutorial"],
     items: [
@@ -270,13 +280,13 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
     group: "clinico",
     emoji: "🦷",
     title: "Odontograma",
-    to: "/admin/pacientes",
+    to: "/admin/odontograma",
     summary:
       "Registrar a situação de cada dente, as faces afetadas, procedimentos, fotos e radiografias.",
     steps: [
       {
         title: "Abra o odontograma",
-        text: "Em Pacientes, abra o prontuário do paciente e clique na aba Odontograma.",
+        text: "Pelo atalho: clique no módulo Odontograma (ao lado de Receitas), busque o paciente e clique no nome. Ou, em Pacientes, abra o prontuário e clique na aba Odontograma.",
       },
       {
         title: "Escolha a dentição e a vista",
@@ -304,6 +314,7 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
       },
     ],
     tips: [
+      "No módulo Odontograma, use Trocar paciente para atender o próximo sem sair da tela.",
       "As cores de cada situação estão na Legenda (botão Legenda para mostrar/esconder).",
       "O quadradinho abaixo de cada dente mostra as faces já registradas, coloridas.",
       "A aba Plano de Tratamento lista todos os procedimentos do paciente com o status.",

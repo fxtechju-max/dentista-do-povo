@@ -196,6 +196,16 @@ export const ADMIN_MODULES: AdminModule[] = [
     iconBg: "bg-primary/10",
   },
   {
+    id: "odontograma",
+    name: "Odontograma",
+    label: "🦷 Odontograma",
+    to: "/admin/odontograma",
+    icon: ToothIcon,
+    description: "Atalho para o odontograma do paciente",
+    iconColor: "text-primary",
+    iconBg: "bg-primary/10",
+  },
+  {
     id: "relatorios",
     name: "Relatórios",
     label: "📈 Relatórios",
