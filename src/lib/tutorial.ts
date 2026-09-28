@@ -45,6 +45,17 @@ export type TutorialUpdate = {
 export const TUTORIAL_UPDATES: TutorialUpdate[] = [
   {
     date: "2026-09-28",
+    title: "Aparência renovada e salva de verdade no projeto",
+    sections: ["configuracoes"],
+    items: [
+      "Correção: a cor, o tema e o zoom agora são lidos de volta do projeto — a mesma aparência aparece em todos os computadores e celulares.",
+      "Nova tela de Aparência: temas com ilustração, cores com nome, zoom deslizante e pré-visualização ao vivo do painel.",
+      "Aviso claro de salvamento: Salvando no projeto…, Salvo no projeto ✓ ou, se o banco não responder, a tela volta para a aparência salva.",
+      "Nada da interface fica guardado no navegador.",
+    ],
+  },
+  {
+    date: "2026-09-28",
     title: "Google AdSense da clínica configurado",
     sections: ["configuracoes"],
     items: [
@@ -813,7 +824,7 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
       },
       {
         title: "Aparência",
-        text: "Escolha o tema (claro, escuro ou do sistema), a cor da interface e o zoom. No tema claro, o fundo do painel fica 50% branco e 50% da cor escolhida.",
+        text: "Escolha o tema (claro, escuro ou automático), a cor da interface e o zoom. A pré-visualização mostra o resultado na hora. No tema claro, o fundo do painel fica 50% branco e 50% da cor escolhida. O aviso no topo confirma quando foi salvo no projeto.",
       },
       {
         title: "Dados da clínica",

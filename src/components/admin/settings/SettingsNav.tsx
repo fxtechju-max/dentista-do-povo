@@ -126,7 +126,7 @@ export function SettingsNav() {
               <TabsTrigger
                 key={section.id}
                 value={section.id}
-                className="group flex w-full items-center justify-start gap-3 rounded-xl px-3 py-2.5 text-left transition-all duration-200 hover:bg-accent data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md"
+                className="group flex w-full items-center justify-start gap-3 rounded-xl px-3 py-2.5 text-left transition-all duration-200 hover:bg-accent data-[state=active]:!bg-primary data-[state=active]:!text-primary-foreground data-[state=active]:shadow-md"
               >
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-data-[state=active]:bg-white/20 group-data-[state=active]:text-primary-foreground">
                   <Icon className="h-4 w-4" />

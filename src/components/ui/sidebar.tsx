@@ -81,9 +81,7 @@ const SidebarProvider = React.forwardRef<
         } else {
           _setOpen(openState);
         }
-
-        // This sets the cookie to keep the sidebar state.
-        document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
+        // Estado do menu não é salvo no navegador (regra do projeto: nada no navegador).
       },
       [setOpenProp, open],
     );

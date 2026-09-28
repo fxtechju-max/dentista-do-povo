@@ -44,22 +44,26 @@ export function refreshPreferences(): Promise<void> {
 }
 
 // Persist first: a failed save must not look like a successfully saved setting.
-let saves = Promise.resolve();
-export function savePreference(preference: Preference): Promise<void> {
+// Resolve true when the value is stored in the project (database), false otherwise;
+// on failure every screen goes back to the value that is really saved.
+let saves: Promise<boolean> = Promise.resolve(true);
+export function savePreference(preference: Preference): Promise<boolean> {
   const current = generation;
   const saving = saves.then(async () => {
     await refreshPreferences();
-    if (generation !== current) return;
+    if (generation !== current) return false;
     await setPreference({ data: preference });
-    if (generation !== current) return;
+    if (generation !== current) return false;
     values = { ...values, [preference.key]: preference.value };
     emit();
+    return true;
   });
   saves = saving.catch(() => {
     toast.error("Não foi possível salvar a preferência no projeto. Tente novamente.", {
       id: "preferences-save",
     });
     emit();
+    return false;
   });
   return saves;
 }

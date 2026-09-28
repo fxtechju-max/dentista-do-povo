@@ -26,7 +26,16 @@ export const getPreferences = createServerFn({ method: "POST" }).handler(async (
     OWNER,
   ]);
   return rows.flatMap((row) => {
-    const parsed = preference.safeParse(row);
+    // Registros antigos foram gravados como texto JSON dentro do jsonb; aceita os dois.
+    let value = row["value"];
+    if (typeof value === "string") {
+      try {
+        value = JSON.parse(value);
+      } catch {
+        return [];
+      }
+    }
+    const parsed = preference.safeParse({ key: row["key"], value });
     return parsed.success ? [parsed.data] : [];
   });
 });
@@ -39,7 +48,7 @@ export const setPreference = createServerFn({ method: "POST" })
       throw new Error("Apenas administradores alteram a interface.");
     const { getPool } = await import("@/integrations/mysql/pool.server");
     await getPool().execute(
-      `INSERT INTO preferences (owner,key,value) VALUES (?,?,?::jsonb)
+      `INSERT INTO preferences (owner,key,value) VALUES (?,?,?::text::jsonb)
        ON CONFLICT (owner,key) DO UPDATE SET value=EXCLUDED.value,updated_at=CURRENT_TIMESTAMP`,
       [OWNER, data.key, JSON.stringify(data.value)],
     );

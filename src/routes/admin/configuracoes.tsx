@@ -1,4 +1,3 @@
-import { subscribePreferences, refreshPreferences } from "@/lib/preferences";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
@@ -31,28 +30,13 @@ import { PageHeader } from "@/components/admin/PageHeader";
 import { EmptyState } from "@/components/admin/EmptyState";
 import { ADMIN_MODULES } from "@/lib/modules";
 import { AUDIT_TABLE_LABEL, AUDIT_ACTION_LABEL } from "@/lib/admin/labels";
-import {
-  THEME_COLORS,
-  applyThemePrefs,
-  loadThemePrefs,
-  saveThemePrefs,
-  type ThemeMode,
-} from "@/lib/theme";
-import {
-  ZOOM_MIN,
-  ZOOM_MAX,
-  ZOOM_STEP,
-  ZOOM_DEFAULT,
-  loadZoom,
-  saveZoom,
-  type ZoomScope,
-} from "@/lib/zoom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { PAYMENT_METHODS } from "@/lib/payment-methods";
 import { AdsenseSettings } from "@/components/admin/settings/AdsenseSettings";
+import { AppearanceSettings } from "@/components/admin/settings/AppearanceSettings";
 import {
   SECTIONS,
   SectionHeader,
@@ -86,12 +70,6 @@ export const Route = createFileRoute("/admin/configuracoes")({
   component: Configuracoes,
 });
 
-const MODE_OPTIONS: { id: ThemeMode; label: string; icon: typeof Sun }[] = [
-  { id: "light", label: "Claro", icon: Sun },
-  { id: "dark", label: "Escuro", icon: Moon },
-  { id: "system", label: "Automático", icon: Monitor },
-];
-
 function Configuracoes() {
   const [userId, setUserId] = useState<string | null>(null);
   const [email, setEmail] = useState("");
@@ -110,7 +88,6 @@ function Configuracoes() {
   const { aba } = Route.useSearch();
   const navigate = Route.useNavigate();
   const activeSection: SectionId = aba ?? "perfil";
-  const [themePrefs, setThemePrefs] = useState(() => loadThemePrefs());
   const [loading, setLoading] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingClinic, setSavingClinic] = useState(false);
@@ -165,19 +142,6 @@ function Configuracoes() {
   const [auditLog, setAuditLog] = useState<AuditEntry[]>([]);
   const [auditLoading, setAuditLoading] = useState(true);
   const [auditError, setAuditError] = useState<string | null>(null);
-
-  const [adminZoom, setAdminZoom] = useState(() => loadZoom("admin"));
-  const [publicZoom, setPublicZoom] = useState(() => loadZoom("public"));
-  useEffect(() => {
-    const refresh = () => {
-      setThemePrefs(loadThemePrefs());
-      setAdminZoom(loadZoom("admin"));
-      setPublicZoom(loadZoom("public"));
-    };
-    const unsubscribe = subscribePreferences(refresh);
-    void refreshPreferences().then(refresh);
-    return unsubscribe;
-  }, []);
 
   useEffect(() => {
     (async () => {
@@ -428,24 +392,6 @@ function Configuracoes() {
     setSavingPayments(false);
     setSavedPayments(true);
     setTimeout(() => setSavedPayments(false), 2000);
-  }
-
-  function updateTheme(patch: Partial<typeof themePrefs>) {
-    const next = { ...themePrefs, ...patch };
-    setThemePrefs(next);
-    applyThemePrefs(next);
-    saveThemePrefs(next);
-  }
-
-  function changeZoom(scope: ZoomScope, value: number) {
-    const clamped = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, value));
-    saveZoom(scope, clamped);
-    if (scope === "admin") {
-      setAdminZoom(clamped);
-      document.documentElement.style.setProperty("zoom", `${clamped}%`);
-    } else {
-      setPublicZoom(clamped);
-    }
   }
 
   if (loading) {
@@ -934,130 +880,7 @@ function Configuracoes() {
             className="mt-0 data-[state=active]:animate-in data-[state=active]:fade-in data-[state=active]:slide-in-from-bottom-3 data-[state=active]:duration-300"
           >
             <SectionHeader id="aparencia" />
-            <p className="mb-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-2.5 text-sm">
-              💾 Tudo o que você muda aqui fica <b>salvo no projeto</b> (banco de dados), não no
-              navegador — vale para todos os administradores, computadores e celulares.
-            </p>
-            <div className="rounded-2xl border border-border bg-card p-6">
-              <h2 className="font-bold">Tema</h2>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Escolha entre claro, escuro ou seguir o sistema. Aplica na hora.
-              </p>
-              <div className="mt-3 grid grid-cols-3 gap-2">
-                {MODE_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    aria-pressed={themePrefs.mode === opt.id}
-                    onClick={() => updateTheme({ mode: opt.id })}
-                    className={`flex flex-col items-center gap-1.5 rounded-xl border p-3 text-sm font-semibold transition-colors ${
-                      themePrefs.mode === opt.id
-                        ? "border-primary bg-primary/5 text-primary"
-                        : "border-border text-muted-foreground hover:bg-accent"
-                    }`}
-                  >
-                    <opt.icon className="h-4 w-4" />
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="mt-4 rounded-2xl border border-border bg-card p-6">
-              <h2 className="font-bold">Cor da interface</h2>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Escolha a cor de destaque dos botões, links e ícones de toda a área restrita. A
-                mudança é imediata e fica salva neste navegador.
-              </p>
-              <div className="mt-4 flex flex-wrap gap-3">
-                {THEME_COLORS.map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    aria-pressed={themePrefs.color === c.id}
-                    onClick={() => updateTheme({ color: c.id })}
-                    title={c.name}
-                    aria-label={c.name}
-                    className={`flex h-11 w-11 items-center justify-center rounded-full ring-2 ring-offset-2 ring-offset-card transition-transform hover:scale-110 ${
-                      themePrefs.color === c.id ? "ring-foreground" : "ring-transparent"
-                    }`}
-                  >
-                    <span
-                      className="flex h-9 w-9 items-center justify-center rounded-full"
-                      style={{ backgroundColor: c.primary }}
-                    >
-                      {themePrefs.color === c.id && <Check className="h-4 w-4 text-white" />}
-                    </span>
-                  </button>
-                ))}
-              </div>
-              <p className="mt-4 text-sm text-muted-foreground" role="status">
-                Cor selecionada: {THEME_COLORS.find((color) => color.id === themePrefs.color)?.name}
-                .
-              </p>
-            </div>
-
-            <div className="mt-4 rounded-2xl border border-border bg-card p-6">
-              <h2 className="font-bold">Zoom</h2>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Ajuste o tamanho de tudo na tela. A área restrita e o site público têm zooms
-                independentes.
-              </p>
-
-              <div className="mt-4 space-y-3">
-                {[
-                  {
-                    scope: "admin" as const,
-                    label: "Área restrita (este painel)",
-                    value: adminZoom,
-                  },
-                  { scope: "public" as const, label: "Site público", value: publicZoom },
-                ].map((z) => (
-                  <div
-                    key={z.scope}
-                    className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2.5"
-                  >
-                    <span className="text-sm font-semibold">{z.label}</span>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => changeZoom(z.scope, z.value - ZOOM_STEP)}
-                        disabled={z.value <= ZOOM_MIN}
-                        aria-label={`Diminuir zoom (${z.label})`}
-                      >
-                        <Minus className="h-3.5 w-3.5" />
-                      </Button>
-                      <span className="w-12 text-center text-sm font-bold tabular-nums">
-                        {z.value}%
-                      </span>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => changeZoom(z.scope, z.value + ZOOM_STEP)}
-                        disabled={z.value >= ZOOM_MAX}
-                        aria-label={`Aumentar zoom (${z.label})`}
-                      >
-                        <Plus className="h-3.5 w-3.5" />
-                      </Button>
-                      {z.value !== ZOOM_DEFAULT && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => changeZoom(z.scope, ZOOM_DEFAULT)}
-                          aria-label={`Redefinir zoom (${z.label})`}
-                        >
-                          <RotateCcw className="h-3.5 w-3.5" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <AppearanceSettings />
           </TabsContent>
 
           <TabsContent
