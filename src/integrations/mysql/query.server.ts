@@ -53,7 +53,10 @@ function normalize(row: RowDataPacket): DataRow {
         ? value.toISOString()
         : booleans.has(key)
           ? Boolean(value)
-          : (key === "disabled_modules" || key === "conditions" || key === "surfaces") &&
+          : (key === "disabled_modules" ||
+                key === "disabled_payment_methods" ||
+                key === "conditions" ||
+                key === "surfaces") &&
               typeof value === "string"
             ? JSON.parse(value)
             : value,

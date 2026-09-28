@@ -14,6 +14,13 @@ import {
   type PaymentStatus,
   formatCurrency,
 } from "@/lib/admin/labels";
+import { PaymentMethodFields } from "@/components/admin/PaymentMethodFields";
+import {
+  PAYMENT_METHODS,
+  paymentMethodLabel,
+  parseInstallments,
+  useEnabledPaymentMethods,
+} from "@/lib/payment-methods";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -68,6 +75,8 @@ type FinanceEntry = {
   patient_id: string | null;
   notes: string | null;
   created_at: string;
+  payment_method: string | null;
+  installments: number | null;
   patients: { name: string } | null;
 };
 
@@ -82,6 +91,8 @@ const emptyForm = {
   patient_id: "",
   status: "pendente" as PaymentStatus,
   notes: "",
+  payment_method: "",
+  installments: "",
 };
 
 function isOverdue(entry: FinanceEntry) {
@@ -96,6 +107,8 @@ function Contas() {
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<FinanceEntryType | "todos">("todos");
   const [statusFilter, setStatusFilter] = useState<PaymentStatus | "atrasado" | "todos">("todos");
+  const [methodFilter, setMethodFilter] = useState("todos");
+  const enabledMethods = useEnabledPaymentMethods();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<FinanceEntry | null>(null);
   const [form, setForm] = useState(emptyForm);
@@ -108,7 +121,7 @@ function Contas() {
       db
         .from("finance_entries")
         .select(
-          "id, type, description, category, amount, due_date, paid_at, status, patient_id, notes, created_at, patients(name)",
+          "id, type, description, category, amount, due_date, paid_at, status, patient_id, notes, created_at, payment_method, installments, patients(name)",
         )
         .order("due_date", { ascending: true }),
       db.from("patients").select("id, name").order("name"),
@@ -127,6 +140,8 @@ function Contas() {
     return entries.filter((e) => {
       if (typeFilter !== "todos" && e.type !== typeFilter) return false;
       if (statusFilter === "atrasado" && !isOverdue(e)) return false;
+      if (methodFilter !== "todos" && (e.payment_method ?? "nao_informada") !== methodFilter)
+        return false;
       if (statusFilter !== "todos" && statusFilter !== "atrasado" && e.status !== statusFilter)
         return false;
       if (
@@ -137,7 +152,7 @@ function Contas() {
         return false;
       return true;
     });
-  }, [entries, query, typeFilter, statusFilter]);
+  }, [entries, query, typeFilter, statusFilter, methodFilter]);
 
   const totals = useMemo(() => {
     const aPagar = entries
@@ -166,6 +181,8 @@ function Contas() {
       patient_id: e.patient_id ?? "",
       status: e.status,
       notes: e.notes ?? "",
+      payment_method: e.payment_method ?? "",
+      installments: e.installments ? String(e.installments) : "",
     });
     setDialogOpen(true);
   }
@@ -183,6 +200,8 @@ function Contas() {
       status: form.status,
       notes: form.notes.trim() || null,
       paid_at: form.status === "pago" ? new Date().toISOString() : null,
+      payment_method: form.payment_method || null,
+      installments: parseInstallments(form.payment_method, form.installments),
     };
     if (editing) {
       await db.from("finance_entries").update(payload).eq("id", editing.id);
@@ -289,6 +308,20 @@ function Contas() {
             ))}
           </SelectContent>
         </Select>
+        <Select value={methodFilter} onValueChange={setMethodFilter}>
+          <SelectTrigger className="w-48">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todas as formas</SelectItem>
+            <SelectItem value="nao_informada">Não informada</SelectItem>
+            {PAYMENT_METHODS.map((m) => (
+              <SelectItem key={m.id} value={m.id}>
+                {m.emoji} {m.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <span className="text-sm text-muted-foreground">{filtered.length} conta(s)</span>
       </div>
 
@@ -306,6 +339,7 @@ function Contas() {
                 <TableHead>Categoria</TableHead>
                 <TableHead>Vencimento</TableHead>
                 <TableHead>Valor</TableHead>
+                <TableHead>Forma</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
@@ -333,6 +367,9 @@ function Contas() {
                   <TableCell className={e.type === "pagar" ? "text-red-600" : "text-emerald-600"}>
                     {e.type === "pagar" ? "-" : "+"}
                     {formatCurrency(Number(e.amount))}
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap text-sm">
+                    {paymentMethodLabel(e.payment_method, e.installments)}
                   </TableCell>
                   <TableCell>
                     {isOverdue(e) ? (
@@ -496,6 +533,14 @@ function Contas() {
                 </Select>
               </div>
             </div>
+            <PaymentMethodFields
+              methods={enabledMethods}
+              method={form.payment_method}
+              installments={form.installments}
+              onChange={({ method, installments }) =>
+                setForm((f) => ({ ...f, payment_method: method, installments }))
+              }
+            />
             <div className="space-y-1.5">
               <Label htmlFor="c-notes">Observações</Label>
               <Textarea

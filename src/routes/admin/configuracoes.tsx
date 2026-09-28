@@ -23,6 +23,8 @@ import {
   History,
   Minus,
   RotateCcw,
+  CreditCard,
+  ChevronRight,
 } from "lucide-react";
 import { db } from "@/integrations/mysql/client";
 import { PageHeader } from "@/components/admin/PageHeader";
@@ -49,6 +51,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { PAYMENT_METHODS } from "@/lib/payment-methods";
+import {
+  SECTIONS,
+  SectionHeader,
+  SettingsNav,
+  type SectionId,
+} from "@/components/admin/settings/SettingsNav";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -69,6 +78,10 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export const Route = createFileRoute("/admin/configuracoes")({
+  validateSearch: (search: Record<string, unknown>): { aba?: SectionId } => {
+    const aba = search["aba"];
+    return SECTIONS.some((x) => x.id === aba) ? { aba: aba as SectionId } : {};
+  },
   component: Configuracoes,
 });
 
@@ -90,6 +103,12 @@ function Configuracoes() {
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [aiSecretaryEnabled, setAiSecretaryEnabled] = useState(false);
   const [disabledModules, setDisabledModules] = useState<string[]>([]);
+  const [disabledPayments, setDisabledPayments] = useState<string[]>([]);
+  const [savingPayments, setSavingPayments] = useState(false);
+  const [savedPayments, setSavedPayments] = useState(false);
+  const { aba } = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const activeSection: SectionId = aba ?? "perfil";
   const [themePrefs, setThemePrefs] = useState(() => loadThemePrefs());
   const [loading, setLoading] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
@@ -175,7 +194,7 @@ function Configuracoes() {
       const { data: clinic } = await db
         .from("clinic_settings")
         .select(
-          "clinic_name, phone, address, instagram_url, facebook_url, whatsapp_number, ai_secretary_enabled, disabled_modules",
+          "clinic_name, phone, address, instagram_url, facebook_url, whatsapp_number, ai_secretary_enabled, disabled_modules, disabled_payment_methods",
         )
         .eq("id", "default")
         .maybeSingle();
@@ -187,6 +206,7 @@ function Configuracoes() {
       setWhatsappNumber(clinic?.whatsapp_number ?? "");
       setAiSecretaryEnabled(clinic?.ai_secretary_enabled ?? false);
       setDisabledModules(clinic?.disabled_modules ?? []);
+      setDisabledPayments(clinic?.disabled_payment_methods ?? []);
       setLoading(false);
       loadAdmins();
       loadAiGateway();
@@ -393,6 +413,22 @@ function Configuracoes() {
     setTimeout(() => setSavedModules(false), 2000);
   }
 
+  function togglePayment(id: string, enabled: boolean) {
+    setDisabledPayments((prev) => (enabled ? prev.filter((m) => m !== id) : [...prev, id]));
+  }
+
+  async function savePayments() {
+    setSavingPayments(true);
+    await db.from("clinic_settings").upsert({
+      id: "default",
+      disabled_payment_methods: disabledPayments,
+      updated_at: new Date().toISOString(),
+    });
+    setSavingPayments(false);
+    setSavedPayments(true);
+    setTimeout(() => setSavedPayments(false), 2000);
+  }
+
   function updateTheme(patch: Partial<typeof themePrefs>) {
     const next = { ...themePrefs, ...patch };
     setThemePrefs(next);
@@ -416,640 +452,727 @@ function Configuracoes() {
   }
 
   return (
-    <div className="animate-in fade-in max-w-3xl duration-300">
+    <div className="animate-in fade-in duration-300">
       <PageHeader
         title="⚙️ Configurações"
-        description="Perfil, clínica, módulos e aparência do painel."
+        description="Conta, clínica, equipe e sistema — tudo organizado em um só lugar."
       />
 
-      <Tabs defaultValue="perfil" className="mt-4">
-        <TabsList>
-          <TabsTrigger value="perfil">
-            <UserIcon className="h-3.5 w-3.5" /> Perfil
-          </TabsTrigger>
-          <TabsTrigger value="seguranca">
-            <ShieldCheck className="h-3.5 w-3.5" /> Segurança
-          </TabsTrigger>
-          <TabsTrigger value="usuarios">
-            <Users className="h-3.5 w-3.5" /> Usuários
-          </TabsTrigger>
-          <TabsTrigger value="clinica">
-            <Building2 className="h-3.5 w-3.5" /> Clínica
-          </TabsTrigger>
-          <TabsTrigger value="ia">
-            <Sparkles className="h-3.5 w-3.5" /> Inteligência Artificial
-          </TabsTrigger>
-          <TabsTrigger value="modulos">
-            <Grid2x2 className="h-3.5 w-3.5" /> Módulos
-          </TabsTrigger>
-          <TabsTrigger value="aparencia">
-            <Palette className="h-3.5 w-3.5" /> Aparência
-          </TabsTrigger>
-          <TabsTrigger value="transparencia">
-            <History className="h-3.5 w-3.5" /> Transparência
-          </TabsTrigger>
-        </TabsList>
+      <Tabs
+        value={activeSection}
+        onValueChange={(v) => navigate({ search: { aba: v as SectionId }, replace: true })}
+        orientation="vertical"
+        className="mt-5 grid items-start gap-6 lg:grid-cols-[270px_minmax(0,1fr)]"
+      >
+        <SettingsNav />
 
-        <TabsContent value="perfil" className="mt-4">
-          <div className="rounded-2xl border border-border bg-card p-6">
-            <h2 className="font-bold">Seu perfil</h2>
-            <div className="mt-4 space-y-3">
-              <div className="space-y-1.5">
-                <Label>Email</Label>
-                <Input value={email} disabled />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="display-name">Nome de exibição</Label>
-                <Input
-                  id="display-name"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="Como você quer aparecer no painel"
-                />
-              </div>
-              <Button onClick={saveProfile} disabled={savingProfile}>
-                {savedProfile ? (
-                  <>
-                    <Check /> Salvo
-                  </>
-                ) : savingProfile ? (
-                  "Salvando..."
-                ) : (
-                  "Salvar perfil"
-                )}
-              </Button>
-            </div>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="seguranca" className="mt-4 space-y-4">
-          <div className="rounded-2xl border border-border bg-card p-6">
-            <h2 className="flex items-center gap-2 font-bold">
-              <Mail className="h-4 w-4 text-primary" /> Alterar email
-            </h2>
-            <p className="mt-1 text-xs text-muted-foreground">Email atual: {email}</p>
-            <div className="mt-4 space-y-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="email-current-password">Senha atual</Label>
-                <Input
-                  id="email-current-password"
-                  type="password"
-                  value={emailPassword}
-                  onChange={(e) => setEmailPassword(e.target.value)}
-                  placeholder="Confirme sua senha"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="new-email">Novo email</Label>
-                <Input
-                  id="new-email"
-                  type="email"
-                  value={newEmail}
-                  onChange={(e) => setNewEmail(e.target.value)}
-                  placeholder="novo@email.com"
-                />
-              </div>
-              {emailError && <p className="text-sm font-semibold text-destructive">{emailError}</p>}
-              <Button
-                onClick={changeEmail}
-                disabled={!emailPassword.trim() || !newEmail.trim() || savingEmail}
-              >
-                {savedEmail ? (
-                  <>
-                    <Check /> Salvo
-                  </>
-                ) : savingEmail ? (
-                  "Salvando..."
-                ) : (
-                  "Alterar email"
-                )}
-              </Button>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-border bg-card p-6">
-            <h2 className="flex items-center gap-2 font-bold">
-              <KeyRound className="h-4 w-4 text-primary" /> Alterar senha
-            </h2>
-            <div className="mt-4 space-y-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="current-password">Senha atual</Label>
-                <Input
-                  id="current-password"
-                  type="password"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
+        <div className="min-w-0 max-w-4xl">
+          <TabsContent
+            value="perfil"
+            className="mt-0 data-[state=active]:animate-in data-[state=active]:fade-in data-[state=active]:slide-in-from-bottom-3 data-[state=active]:duration-300"
+          >
+            <SectionHeader id="perfil" />
+            <div className="rounded-2xl border border-border bg-card p-6">
+              <h2 className="font-bold">Seu perfil</h2>
+              <div className="mt-4 space-y-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="new-password">Nova senha</Label>
+                  <Label>Email</Label>
+                  <Input value={email} disabled />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="display-name">Nome de exibição</Label>
                   <Input
-                    id="new-password"
+                    id="display-name"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    placeholder="Como você quer aparecer no painel"
+                  />
+                </div>
+                <Button onClick={saveProfile} disabled={savingProfile}>
+                  {savedProfile ? (
+                    <>
+                      <Check /> Salvo
+                    </>
+                  ) : savingProfile ? (
+                    "Salvando..."
+                  ) : (
+                    "Salvar perfil"
+                  )}
+                </Button>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent
+            value="seguranca"
+            className="mt-0 space-y-4 data-[state=active]:animate-in data-[state=active]:fade-in data-[state=active]:slide-in-from-bottom-3 data-[state=active]:duration-300"
+          >
+            <SectionHeader id="seguranca" />
+            <div className="rounded-2xl border border-border bg-card p-6">
+              <h2 className="flex items-center gap-2 font-bold">
+                <Mail className="h-4 w-4 text-primary" /> Alterar email
+              </h2>
+              <p className="mt-1 text-xs text-muted-foreground">Email atual: {email}</p>
+              <div className="mt-4 space-y-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="email-current-password">Senha atual</Label>
+                  <Input
+                    id="email-current-password"
                     type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Mín. 12 caracteres"
+                    value={emailPassword}
+                    onChange={(e) => setEmailPassword(e.target.value)}
+                    placeholder="Confirme sua senha"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="confirm-password">Confirmar nova senha</Label>
+                  <Label htmlFor="new-email">Novo email</Label>
                   <Input
-                    id="confirm-password"
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    id="new-email"
+                    type="email"
+                    value={newEmail}
+                    onChange={(e) => setNewEmail(e.target.value)}
+                    placeholder="novo@email.com"
                   />
                 </div>
-              </div>
-              {passwordError && (
-                <p className="text-sm font-semibold text-destructive">{passwordError}</p>
-              )}
-              <Button
-                onClick={changePassword}
-                disabled={!currentPassword.trim() || !newPassword.trim() || savingPassword}
-              >
-                {savedPassword ? (
-                  <>
-                    <Check /> Salvo
-                  </>
-                ) : savingPassword ? (
-                  "Salvando..."
-                ) : (
-                  "Alterar senha"
+                {emailError && (
+                  <p className="text-sm font-semibold text-destructive">{emailError}</p>
                 )}
-              </Button>
-              <p className="text-xs text-muted-foreground">
-                Ao trocar a senha, todas as outras sessões abertas são encerradas automaticamente.
-              </p>
-            </div>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="usuarios" className="mt-4">
-          <div className="rounded-2xl border border-border bg-card p-6">
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <h2 className="font-bold">Administradores</h2>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Todos têm acesso completo à área restrita.
-                </p>
-              </div>
-              <Button size="sm" onClick={() => setNewAdminDialogOpen(true)}>
-                <Plus /> Novo administrador
-              </Button>
-            </div>
-
-            {adminsError && (
-              <p className="mt-3 text-sm font-semibold text-destructive">{adminsError}</p>
-            )}
-
-            <div className="mt-4 space-y-2">
-              {admins.length === 0 ? (
-                <EmptyState icon={Users} title="Nenhum administrador encontrado." />
-              ) : (
-                admins.map((a) => (
-                  <div
-                    key={a.id}
-                    className="flex items-center justify-between rounded-lg border border-border px-3 py-2"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate font-semibold">{a.display_name || a.email}</p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {a.email} · desde {new Date(a.created_at).toLocaleDateString("pt-BR")}
-                        {a.id === userId ? " · você" : ""}
-                      </p>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setRemoveTarget(a)}
-                      disabled={a.id === userId}
-                      aria-label="Remover administrador"
-                      className="shrink-0 text-muted-foreground hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="clinica" className="mt-4">
-          <div className="rounded-2xl border border-border bg-card p-6">
-            <h2 className="font-bold">Dados da clínica</h2>
-            <div className="mt-4 space-y-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="clinic-name">Nome da clínica</Label>
-                <Input
-                  id="clinic-name"
-                  value={clinicName}
-                  onChange={(e) => setClinicName(e.target.value)}
-                  placeholder="Dentista do Povo"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="clinic-phone">Telefone</Label>
-                <Input
-                  id="clinic-phone"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="(00) 0000-0000"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="clinic-address">Endereço</Label>
-                <Input
-                  id="clinic-address"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  placeholder="Rua, número, bairro, cidade"
-                />
-              </div>
-
-              <div className="pt-2">
-                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                  Redes sociais (exibidas no site público)
-                </p>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="clinic-instagram" className="flex items-center gap-1.5">
-                  <Instagram className="h-3.5 w-3.5" /> Instagram
-                </Label>
-                <Input
-                  id="clinic-instagram"
-                  value={instagramUrl}
-                  onChange={(e) => setInstagramUrl(e.target.value)}
-                  placeholder="https://instagram.com/seuperfil"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="clinic-facebook" className="flex items-center gap-1.5">
-                  <Facebook className="h-3.5 w-3.5" /> Facebook
-                </Label>
-                <Input
-                  id="clinic-facebook"
-                  value={facebookUrl}
-                  onChange={(e) => setFacebookUrl(e.target.value)}
-                  placeholder="https://facebook.com/suapagina"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="clinic-whatsapp" className="flex items-center gap-1.5">
-                  <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
-                </Label>
-                <Input
-                  id="clinic-whatsapp"
-                  value={whatsappNumber}
-                  onChange={(e) => setWhatsappNumber(e.target.value)}
-                  placeholder="(65) 99999-0000"
-                />
-                <p className="text-xs text-muted-foreground">
-                  O botão de WhatsApp do site abre uma conversa direto com esse número.
-                </p>
-              </div>
-
-              <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-primary" />
-                  <div>
-                    <Label htmlFor="ai-secretary">Atendente virtual (IA) no chat do site</Label>
-                    <p className="text-xs text-muted-foreground">
-                      Responde visitantes automaticamente até um humano assumir a conversa.
-                    </p>
-                  </div>
-                </div>
-                <Switch
-                  id="ai-secretary"
-                  checked={aiSecretaryEnabled}
-                  onCheckedChange={setAiSecretaryEnabled}
-                />
-              </div>
-              <Button onClick={saveClinic} disabled={savingClinic}>
-                {savedClinic ? (
-                  <>
-                    <Check /> Salvo
-                  </>
-                ) : savingClinic ? (
-                  "Salvando..."
-                ) : (
-                  "Salvar dados da clínica"
-                )}
-              </Button>
-            </div>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="ia" className="mt-4">
-          <div className="rounded-2xl border border-border bg-card p-6">
-            <h2 className="font-bold">Provedor de IA</h2>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Usado na secretária virtual, resumos de prontuário e rascunho de receitas e respostas.
-              {aiEnvFallback && !aiHasApiKey && (
-                <> Sem chave configurada aqui, o sistema usa a variável de ambiente do servidor.</>
-              )}
-            </p>
-
-            <div className="mt-4 flex flex-wrap gap-2">
-              {AI_PRESETS.map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => applyAiPreset(p)}
-                  className={`rounded-full border px-3 py-1.5 text-xs font-bold transition-colors ${
-                    aiProvider === p.id
-                      ? "border-primary bg-primary/5 text-primary"
-                      : "border-border text-muted-foreground hover:bg-accent"
-                  }`}
+                <Button
+                  onClick={changeEmail}
+                  disabled={!emailPassword.trim() || !newEmail.trim() || savingEmail}
                 >
-                  {p.label}
-                </button>
-              ))}
+                  {savedEmail ? (
+                    <>
+                      <Check /> Salvo
+                    </>
+                  ) : savingEmail ? (
+                    "Salvando..."
+                  ) : (
+                    "Alterar email"
+                  )}
+                </Button>
+              </div>
             </div>
 
-            <div className="mt-4 space-y-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="ai-base-url">URL base da API</Label>
-                <Input
-                  id="ai-base-url"
-                  value={aiBaseUrl}
-                  onChange={(e) => setAiBaseUrl(e.target.value)}
-                  placeholder="https://openrouter.ai/api/v1"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="ai-model">Modelo</Label>
-                <Input
-                  id="ai-model"
-                  value={aiModel}
-                  onChange={(e) => setAiModel(e.target.value)}
-                  placeholder={
-                    AI_PRESETS.find((p) => p.id === aiProvider)?.modelPlaceholder ??
-                    "openai/gpt-4o-mini"
-                  }
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="ai-api-key">Chave da API</Label>
-                <Input
-                  id="ai-api-key"
-                  type="password"
-                  value={aiApiKeyInput}
-                  onChange={(e) => setAiApiKeyInput(e.target.value)}
-                  placeholder={
-                    aiHasApiKey ? `Configurada (${aiApiKeyPreview})` : "Cole sua chave aqui"
-                  }
-                />
-                <p className="text-xs text-muted-foreground">
-                  {aiHasApiKey
-                    ? "A chave já salva nunca é exibida por segurança — deixe em branco para mantê-la, ou digite uma nova para trocar."
-                    : "Nenhuma chave salva no banco de dados ainda."}
-                </p>
-                {aiHasApiKey && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={clearAiApiKey}
-                    className="text-destructive"
-                  >
-                    Remover chave salva
-                  </Button>
-                )}
-              </div>
-              {aiError && <p className="text-sm font-semibold text-destructive">{aiError}</p>}
-              <Button onClick={saveAiGateway} disabled={savingAi}>
-                {savedAi ? (
-                  <>
-                    <Check /> Salvo
-                  </>
-                ) : savingAi ? (
-                  "Salvando..."
-                ) : (
-                  "Salvar configuração de IA"
-                )}
-              </Button>
-            </div>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="modulos" className="mt-4">
-          <div className="rounded-2xl border border-border bg-card p-6">
-            <h2 className="font-bold">Módulos do sistema</h2>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Desative aqui os módulos que não usa — eles somem do quadro e do menu.
-            </p>
-            <div className="mt-4 space-y-2">
-              {ADMIN_MODULES.map((m) => {
-                const enabled = !disabledModules.includes(m.id);
-                return (
-                  <div
-                    key={m.id}
-                    className="flex items-center justify-between rounded-lg border border-border px-3 py-2"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`flex h-8 w-8 items-center justify-center rounded-lg ${m.iconBg} ${m.iconColor}`}
-                      >
-                        <m.icon className="h-4 w-4" />
-                      </span>
-                      <div>
-                        <Label htmlFor={`mod-${m.id}`}>{m.name}</Label>
-                        <p className="text-xs text-muted-foreground">{m.description}</p>
-                      </div>
-                    </div>
-                    <Switch
-                      id={`mod-${m.id}`}
-                      checked={enabled}
-                      onCheckedChange={(checked) => toggleModule(m.id, checked)}
+            <div className="rounded-2xl border border-border bg-card p-6">
+              <h2 className="flex items-center gap-2 font-bold">
+                <KeyRound className="h-4 w-4 text-primary" /> Alterar senha
+              </h2>
+              <div className="mt-4 space-y-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="current-password">Senha atual</Label>
+                  <Input
+                    id="current-password"
+                    type="password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="new-password">Nova senha</Label>
+                    <Input
+                      id="new-password"
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Mín. 12 caracteres"
                     />
                   </div>
-                );
-              })}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="confirm-password">Confirmar nova senha</Label>
+                    <Input
+                      id="confirm-password"
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                    />
+                  </div>
+                </div>
+                {passwordError && (
+                  <p className="text-sm font-semibold text-destructive">{passwordError}</p>
+                )}
+                <Button
+                  onClick={changePassword}
+                  disabled={!currentPassword.trim() || !newPassword.trim() || savingPassword}
+                >
+                  {savedPassword ? (
+                    <>
+                      <Check /> Salvo
+                    </>
+                  ) : savingPassword ? (
+                    "Salvando..."
+                  ) : (
+                    "Alterar senha"
+                  )}
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  Ao trocar a senha, todas as outras sessões abertas são encerradas automaticamente.
+                </p>
+              </div>
             </div>
-            <Button className="mt-4" onClick={saveModules} disabled={savingModules}>
-              {savedModules ? (
-                <>
-                  <Check /> Salvo
-                </>
-              ) : savingModules ? (
-                "Salvando..."
-              ) : (
-                "Salvar módulos"
+          </TabsContent>
+
+          <TabsContent
+            value="usuarios"
+            className="mt-0 data-[state=active]:animate-in data-[state=active]:fade-in data-[state=active]:slide-in-from-bottom-3 data-[state=active]:duration-300"
+          >
+            <SectionHeader id="usuarios" />
+            <div className="rounded-2xl border border-border bg-card p-6">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <h2 className="font-bold">Administradores</h2>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Todos têm acesso completo à área restrita.
+                  </p>
+                </div>
+                <Button size="sm" onClick={() => setNewAdminDialogOpen(true)}>
+                  <Plus /> Novo administrador
+                </Button>
+              </div>
+
+              {adminsError && (
+                <p className="mt-3 text-sm font-semibold text-destructive">{adminsError}</p>
               )}
-            </Button>
-          </div>
-        </TabsContent>
 
-        <TabsContent value="aparencia" className="mt-4">
-          <p className="mb-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-2.5 text-sm">
-            💾 Tudo o que você muda aqui fica <b>salvo no projeto</b> (banco de dados), não no
-            navegador — vale para todos os administradores, computadores e celulares.
-          </p>
-          <div className="rounded-2xl border border-border bg-card p-6">
-            <h2 className="font-bold">Tema</h2>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Escolha entre claro, escuro ou seguir o sistema. Aplica na hora.
-            </p>
-            <div className="mt-3 grid grid-cols-3 gap-2">
-              {MODE_OPTIONS.map((opt) => (
-                <button
-                  key={opt.id}
-                  type="button"
-                  aria-pressed={themePrefs.mode === opt.id}
-                  onClick={() => updateTheme({ mode: opt.id })}
-                  className={`flex flex-col items-center gap-1.5 rounded-xl border p-3 text-sm font-semibold transition-colors ${
-                    themePrefs.mode === opt.id
-                      ? "border-primary bg-primary/5 text-primary"
-                      : "border-border text-muted-foreground hover:bg-accent"
-                  }`}
-                >
-                  <opt.icon className="h-4 w-4" />
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="mt-4 rounded-2xl border border-border bg-card p-6">
-            <h2 className="font-bold">Cor da interface</h2>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Escolha a cor de destaque dos botões, links e ícones de toda a área restrita. A
-              mudança é imediata e fica salva neste navegador.
-            </p>
-            <div className="mt-4 flex flex-wrap gap-3">
-              {THEME_COLORS.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  aria-pressed={themePrefs.color === c.id}
-                  onClick={() => updateTheme({ color: c.id })}
-                  title={c.name}
-                  aria-label={c.name}
-                  className={`flex h-11 w-11 items-center justify-center rounded-full ring-2 ring-offset-2 ring-offset-card transition-transform hover:scale-110 ${
-                    themePrefs.color === c.id ? "ring-foreground" : "ring-transparent"
-                  }`}
-                >
-                  <span
-                    className="flex h-9 w-9 items-center justify-center rounded-full"
-                    style={{ backgroundColor: c.primary }}
-                  >
-                    {themePrefs.color === c.id && <Check className="h-4 w-4 text-white" />}
-                  </span>
-                </button>
-              ))}
-            </div>
-            <p className="mt-4 text-sm text-muted-foreground" role="status">
-              Cor selecionada: {THEME_COLORS.find((color) => color.id === themePrefs.color)?.name}.
-            </p>
-          </div>
-
-          <div className="mt-4 rounded-2xl border border-border bg-card p-6">
-            <h2 className="font-bold">Zoom</h2>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Ajuste o tamanho de tudo na tela. A área restrita e o site público têm zooms
-              independentes.
-            </p>
-
-            <div className="mt-4 space-y-3">
-              {[
-                { scope: "admin" as const, label: "Área restrita (este painel)", value: adminZoom },
-                { scope: "public" as const, label: "Site público", value: publicZoom },
-              ].map((z) => (
-                <div
-                  key={z.scope}
-                  className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2.5"
-                >
-                  <span className="text-sm font-semibold">{z.label}</span>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => changeZoom(z.scope, z.value - ZOOM_STEP)}
-                      disabled={z.value <= ZOOM_MIN}
-                      aria-label={`Diminuir zoom (${z.label})`}
+              <div className="mt-4 space-y-2">
+                {admins.length === 0 ? (
+                  <EmptyState icon={Users} title="Nenhum administrador encontrado." />
+                ) : (
+                  admins.map((a) => (
+                    <div
+                      key={a.id}
+                      className="flex items-center justify-between rounded-lg border border-border px-3 py-2"
                     >
-                      <Minus className="h-3.5 w-3.5" />
-                    </Button>
-                    <span className="w-12 text-center text-sm font-bold tabular-nums">
-                      {z.value}%
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => changeZoom(z.scope, z.value + ZOOM_STEP)}
-                      disabled={z.value >= ZOOM_MAX}
-                      aria-label={`Aumentar zoom (${z.label})`}
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                    </Button>
-                    {z.value !== ZOOM_DEFAULT && (
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold">{a.display_name || a.email}</p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {a.email} · desde {new Date(a.created_at).toLocaleDateString("pt-BR")}
+                          {a.id === userId ? " · você" : ""}
+                        </p>
+                      </div>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8"
-                        onClick={() => changeZoom(z.scope, ZOOM_DEFAULT)}
-                        aria-label={`Redefinir zoom (${z.label})`}
+                        onClick={() => setRemoveTarget(a)}
+                        disabled={a.id === userId}
+                        aria-label="Remover administrador"
+                        className="shrink-0 text-muted-foreground hover:text-destructive"
                       >
-                        <RotateCcw className="h-3.5 w-3.5" />
+                        <Trash2 className="h-4 w-4" />
                       </Button>
-                    )}
-                  </div>
-                </div>
-              ))}
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
-          </div>
-        </TabsContent>
+          </TabsContent>
 
-        <TabsContent value="transparencia" className="mt-4">
-          <div className="rounded-2xl border border-border bg-card p-6">
-            <h2 className="font-bold">Atividade na área restrita</h2>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Registro de tudo que é criado, alterado ou excluído no sistema, e por quem.
-            </p>
+          <TabsContent
+            value="clinica"
+            className="mt-0 data-[state=active]:animate-in data-[state=active]:fade-in data-[state=active]:slide-in-from-bottom-3 data-[state=active]:duration-300"
+          >
+            <SectionHeader id="clinica" />
+            <div className="rounded-2xl border border-border bg-card p-6">
+              <h2 className="font-bold">Dados da clínica</h2>
+              <div className="mt-4 space-y-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="clinic-name">Nome da clínica</Label>
+                  <Input
+                    id="clinic-name"
+                    value={clinicName}
+                    onChange={(e) => setClinicName(e.target.value)}
+                    placeholder="Dentista do Povo"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="clinic-phone">Telefone</Label>
+                  <Input
+                    id="clinic-phone"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="(00) 0000-0000"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="clinic-address">Endereço</Label>
+                  <Input
+                    id="clinic-address"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="Rua, número, bairro, cidade"
+                  />
+                </div>
 
-            {auditError && (
-              <p className="mt-3 text-sm font-semibold text-destructive">{auditError}</p>
-            )}
+                <div className="pt-2">
+                  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                    Redes sociais (exibidas no site público)
+                  </p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="clinic-instagram" className="flex items-center gap-1.5">
+                    <Instagram className="h-3.5 w-3.5" /> Instagram
+                  </Label>
+                  <Input
+                    id="clinic-instagram"
+                    value={instagramUrl}
+                    onChange={(e) => setInstagramUrl(e.target.value)}
+                    placeholder="https://instagram.com/seuperfil"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="clinic-facebook" className="flex items-center gap-1.5">
+                    <Facebook className="h-3.5 w-3.5" /> Facebook
+                  </Label>
+                  <Input
+                    id="clinic-facebook"
+                    value={facebookUrl}
+                    onChange={(e) => setFacebookUrl(e.target.value)}
+                    placeholder="https://facebook.com/suapagina"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="clinic-whatsapp" className="flex items-center gap-1.5">
+                    <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
+                  </Label>
+                  <Input
+                    id="clinic-whatsapp"
+                    value={whatsappNumber}
+                    onChange={(e) => setWhatsappNumber(e.target.value)}
+                    placeholder="(65) 99999-0000"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    O botão de WhatsApp do site abre uma conversa direto com esse número.
+                  </p>
+                </div>
 
-            <div className="mt-4 max-h-[32rem] space-y-1 overflow-y-auto">
-              {auditLoading ? (
-                <p className="p-8 text-center text-sm text-muted-foreground">Carregando...</p>
-              ) : auditLog.length === 0 ? (
-                <EmptyState icon={History} title="Nenhuma atividade registrada ainda." />
-              ) : (
-                auditLog.map((entry) => (
-                  <div
-                    key={entry.id}
-                    className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2 text-sm"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate">
-                        <span className="font-semibold">{entry.actor_name}</span>{" "}
-                        {AUDIT_ACTION_LABEL[entry.action]}{" "}
-                        <span className="font-semibold">
-                          {AUDIT_TABLE_LABEL[entry.table_name] ?? entry.table_name}
-                        </span>
-                        {entry.record_label ? ` "${entry.record_label}"` : ""}
+                <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    <div>
+                      <Label htmlFor="ai-secretary">Atendente virtual (IA) no chat do site</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Responde visitantes automaticamente até um humano assumir a conversa.
                       </p>
                     </div>
-                    <span className="shrink-0 text-xs text-muted-foreground">
-                      {new Date(entry.created_at).toLocaleString("pt-BR", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
                   </div>
-                ))
-              )}
+                  <Switch
+                    id="ai-secretary"
+                    checked={aiSecretaryEnabled}
+                    onCheckedChange={setAiSecretaryEnabled}
+                  />
+                </div>
+                <Button onClick={saveClinic} disabled={savingClinic}>
+                  {savedClinic ? (
+                    <>
+                      <Check /> Salvo
+                    </>
+                  ) : savingClinic ? (
+                    "Salvando..."
+                  ) : (
+                    "Salvar dados da clínica"
+                  )}
+                </Button>
+              </div>
             </div>
-          </div>
-        </TabsContent>
+          </TabsContent>
+
+          <TabsContent
+            value="ia"
+            className="mt-0 data-[state=active]:animate-in data-[state=active]:fade-in data-[state=active]:slide-in-from-bottom-3 data-[state=active]:duration-300"
+          >
+            <SectionHeader id="ia" />
+            <div className="rounded-2xl border border-border bg-card p-6">
+              <h2 className="font-bold">Provedor de IA</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Usado na secretária virtual, resumos de prontuário e rascunho de receitas e
+                respostas.
+                {aiEnvFallback && !aiHasApiKey && (
+                  <>
+                    {" "}
+                    Sem chave configurada aqui, o sistema usa a variável de ambiente do servidor.
+                  </>
+                )}
+              </p>
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                {AI_PRESETS.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => applyAiPreset(p)}
+                    className={`rounded-full border px-3 py-1.5 text-xs font-bold transition-colors ${
+                      aiProvider === p.id
+                        ? "border-primary bg-primary/5 text-primary"
+                        : "border-border text-muted-foreground hover:bg-accent"
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-4 space-y-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="ai-base-url">URL base da API</Label>
+                  <Input
+                    id="ai-base-url"
+                    value={aiBaseUrl}
+                    onChange={(e) => setAiBaseUrl(e.target.value)}
+                    placeholder="https://openrouter.ai/api/v1"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="ai-model">Modelo</Label>
+                  <Input
+                    id="ai-model"
+                    value={aiModel}
+                    onChange={(e) => setAiModel(e.target.value)}
+                    placeholder={
+                      AI_PRESETS.find((p) => p.id === aiProvider)?.modelPlaceholder ??
+                      "openai/gpt-4o-mini"
+                    }
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="ai-api-key">Chave da API</Label>
+                  <Input
+                    id="ai-api-key"
+                    type="password"
+                    value={aiApiKeyInput}
+                    onChange={(e) => setAiApiKeyInput(e.target.value)}
+                    placeholder={
+                      aiHasApiKey ? `Configurada (${aiApiKeyPreview})` : "Cole sua chave aqui"
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {aiHasApiKey
+                      ? "A chave já salva nunca é exibida por segurança — deixe em branco para mantê-la, ou digite uma nova para trocar."
+                      : "Nenhuma chave salva no banco de dados ainda."}
+                  </p>
+                  {aiHasApiKey && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={clearAiApiKey}
+                      className="text-destructive"
+                    >
+                      Remover chave salva
+                    </Button>
+                  )}
+                </div>
+                {aiError && <p className="text-sm font-semibold text-destructive">{aiError}</p>}
+                <Button onClick={saveAiGateway} disabled={savingAi}>
+                  {savedAi ? (
+                    <>
+                      <Check /> Salvo
+                    </>
+                  ) : savingAi ? (
+                    "Salvando..."
+                  ) : (
+                    "Salvar configuração de IA"
+                  )}
+                </Button>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent
+            value="modulos"
+            className="mt-0 data-[state=active]:animate-in data-[state=active]:fade-in data-[state=active]:slide-in-from-bottom-3 data-[state=active]:duration-300"
+          >
+            <SectionHeader id="modulos" />
+            <div className="rounded-2xl border border-border bg-card p-6">
+              <h2 className="font-bold">Módulos do sistema</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Desative aqui os módulos que não usa — eles somem do quadro e do menu.
+              </p>
+              <div className="mt-4 space-y-2">
+                {ADMIN_MODULES.map((m) => {
+                  const enabled = !disabledModules.includes(m.id);
+                  return (
+                    <div
+                      key={m.id}
+                      className="flex items-center justify-between rounded-lg border border-border px-3 py-2"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`flex h-8 w-8 items-center justify-center rounded-lg ${m.iconBg} ${m.iconColor}`}
+                        >
+                          <m.icon className="h-4 w-4" />
+                        </span>
+                        <div>
+                          <Label htmlFor={`mod-${m.id}`}>{m.name}</Label>
+                          <p className="text-xs text-muted-foreground">{m.description}</p>
+                        </div>
+                      </div>
+                      <Switch
+                        id={`mod-${m.id}`}
+                        checked={enabled}
+                        onCheckedChange={(checked) => toggleModule(m.id, checked)}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+              <Button className="mt-4" onClick={saveModules} disabled={savingModules}>
+                {savedModules ? (
+                  <>
+                    <Check /> Salvo
+                  </>
+                ) : savingModules ? (
+                  "Salvando..."
+                ) : (
+                  "Salvar módulos"
+                )}
+              </Button>
+            </div>
+          </TabsContent>
+
+          <TabsContent
+            value="aparencia"
+            className="mt-0 data-[state=active]:animate-in data-[state=active]:fade-in data-[state=active]:slide-in-from-bottom-3 data-[state=active]:duration-300"
+          >
+            <SectionHeader id="aparencia" />
+            <p className="mb-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-2.5 text-sm">
+              💾 Tudo o que você muda aqui fica <b>salvo no projeto</b> (banco de dados), não no
+              navegador — vale para todos os administradores, computadores e celulares.
+            </p>
+            <div className="rounded-2xl border border-border bg-card p-6">
+              <h2 className="font-bold">Tema</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Escolha entre claro, escuro ou seguir o sistema. Aplica na hora.
+              </p>
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                {MODE_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    aria-pressed={themePrefs.mode === opt.id}
+                    onClick={() => updateTheme({ mode: opt.id })}
+                    className={`flex flex-col items-center gap-1.5 rounded-xl border p-3 text-sm font-semibold transition-colors ${
+                      themePrefs.mode === opt.id
+                        ? "border-primary bg-primary/5 text-primary"
+                        : "border-border text-muted-foreground hover:bg-accent"
+                    }`}
+                  >
+                    <opt.icon className="h-4 w-4" />
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-2xl border border-border bg-card p-6">
+              <h2 className="font-bold">Cor da interface</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Escolha a cor de destaque dos botões, links e ícones de toda a área restrita. A
+                mudança é imediata e fica salva neste navegador.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-3">
+                {THEME_COLORS.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    aria-pressed={themePrefs.color === c.id}
+                    onClick={() => updateTheme({ color: c.id })}
+                    title={c.name}
+                    aria-label={c.name}
+                    className={`flex h-11 w-11 items-center justify-center rounded-full ring-2 ring-offset-2 ring-offset-card transition-transform hover:scale-110 ${
+                      themePrefs.color === c.id ? "ring-foreground" : "ring-transparent"
+                    }`}
+                  >
+                    <span
+                      className="flex h-9 w-9 items-center justify-center rounded-full"
+                      style={{ backgroundColor: c.primary }}
+                    >
+                      {themePrefs.color === c.id && <Check className="h-4 w-4 text-white" />}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <p className="mt-4 text-sm text-muted-foreground" role="status">
+                Cor selecionada: {THEME_COLORS.find((color) => color.id === themePrefs.color)?.name}
+                .
+              </p>
+            </div>
+
+            <div className="mt-4 rounded-2xl border border-border bg-card p-6">
+              <h2 className="font-bold">Zoom</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Ajuste o tamanho de tudo na tela. A área restrita e o site público têm zooms
+                independentes.
+              </p>
+
+              <div className="mt-4 space-y-3">
+                {[
+                  {
+                    scope: "admin" as const,
+                    label: "Área restrita (este painel)",
+                    value: adminZoom,
+                  },
+                  { scope: "public" as const, label: "Site público", value: publicZoom },
+                ].map((z) => (
+                  <div
+                    key={z.scope}
+                    className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2.5"
+                  >
+                    <span className="text-sm font-semibold">{z.label}</span>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => changeZoom(z.scope, z.value - ZOOM_STEP)}
+                        disabled={z.value <= ZOOM_MIN}
+                        aria-label={`Diminuir zoom (${z.label})`}
+                      >
+                        <Minus className="h-3.5 w-3.5" />
+                      </Button>
+                      <span className="w-12 text-center text-sm font-bold tabular-nums">
+                        {z.value}%
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => changeZoom(z.scope, z.value + ZOOM_STEP)}
+                        disabled={z.value >= ZOOM_MAX}
+                        aria-label={`Aumentar zoom (${z.label})`}
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                      </Button>
+                      {z.value !== ZOOM_DEFAULT && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => changeZoom(z.scope, ZOOM_DEFAULT)}
+                          aria-label={`Redefinir zoom (${z.label})`}
+                        >
+                          <RotateCcw className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent
+            value="pagamentos"
+            className="mt-0 data-[state=active]:animate-in data-[state=active]:fade-in data-[state=active]:slide-in-from-bottom-3 data-[state=active]:duration-300"
+          >
+            <SectionHeader id="pagamentos" />
+            <div className="rounded-2xl border border-border bg-card p-6">
+              <p className="text-sm text-muted-foreground">
+                Ative as formas de pagamento que a clínica aceita. Só as ativas aparecem ao lançar
+                pagamentos no Financeiro e em Contas a Pagar/Receber — lançamentos antigos continuam
+                mostrando a forma usada.
+              </p>
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                {PAYMENT_METHODS.map((m, i) => {
+                  const enabled = !disabledPayments.includes(m.id);
+                  return (
+                    <label
+                      key={m.id}
+                      htmlFor={`pay-${m.id}`}
+                      className={`animate-in fade-in slide-in-from-bottom-1 fill-mode-both flex cursor-pointer items-center justify-between gap-3 rounded-xl border px-3 py-2.5 transition-all duration-200 hover:shadow-sm ${
+                        enabled ? "border-primary/40 bg-primary/5" : "border-border opacity-70"
+                      }`}
+                      style={{ animationDelay: `${i * 30}ms` }}
+                    >
+                      <span className="flex items-center gap-3">
+                        <span className="text-xl">{m.emoji}</span>
+                        <span>
+                          <span className="block text-sm font-semibold">{m.label}</span>
+                          <span className="block text-xs text-muted-foreground">
+                            {m.description}
+                            {m.installments ? " · aceita parcelas" : ""}
+                          </span>
+                        </span>
+                      </span>
+                      <Switch
+                        id={`pay-${m.id}`}
+                        checked={enabled}
+                        onCheckedChange={(checked) => togglePayment(m.id, checked)}
+                      />
+                    </label>
+                  );
+                })}
+              </div>
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <Button onClick={savePayments} disabled={savingPayments}>
+                  {savedPayments ? (
+                    <>
+                      <Check /> Salvo
+                    </>
+                  ) : savingPayments ? (
+                    "Salvando..."
+                  ) : (
+                    "Salvar formas de pagamento"
+                  )}
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  {PAYMENT_METHODS.length - disabledPayments.length} de {PAYMENT_METHODS.length}{" "}
+                  ativas
+                </span>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent
+            value="transparencia"
+            className="mt-0 data-[state=active]:animate-in data-[state=active]:fade-in data-[state=active]:slide-in-from-bottom-3 data-[state=active]:duration-300"
+          >
+            <SectionHeader id="transparencia" />
+            <div className="rounded-2xl border border-border bg-card p-6">
+              <h2 className="font-bold">Atividade na área restrita</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Registro de tudo que é criado, alterado ou excluído no sistema, e por quem.
+              </p>
+
+              {auditError && (
+                <p className="mt-3 text-sm font-semibold text-destructive">{auditError}</p>
+              )}
+
+              <div className="mt-4 max-h-[32rem] space-y-1 overflow-y-auto">
+                {auditLoading ? (
+                  <p className="p-8 text-center text-sm text-muted-foreground">Carregando...</p>
+                ) : auditLog.length === 0 ? (
+                  <EmptyState icon={History} title="Nenhuma atividade registrada ainda." />
+                ) : (
+                  auditLog.map((entry) => (
+                    <div
+                      key={entry.id}
+                      className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2 text-sm"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate">
+                          <span className="font-semibold">{entry.actor_name}</span>{" "}
+                          {AUDIT_ACTION_LABEL[entry.action]}{" "}
+                          <span className="font-semibold">
+                            {AUDIT_TABLE_LABEL[entry.table_name] ?? entry.table_name}
+                          </span>
+                          {entry.record_label ? ` "${entry.record_label}"` : ""}
+                        </p>
+                      </div>
+                      <span className="shrink-0 text-xs text-muted-foreground">
+                        {new Date(entry.created_at).toLocaleString("pt-BR", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </TabsContent>
+        </div>
       </Tabs>
 
       <Dialog open={newAdminDialogOpen} onOpenChange={setNewAdminDialogOpen}>

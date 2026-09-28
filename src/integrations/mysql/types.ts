@@ -169,6 +169,8 @@ export type Database = {
           paid_at: string | null;
           patient_id: string | null;
           status: Database["public"]["Enums"]["payment_status"];
+          payment_method: string | null;
+          installments: number | null;
         };
         Insert: {
           amount: number;
@@ -178,6 +180,8 @@ export type Database = {
           paid_at?: string | null;
           patient_id?: string | null;
           status?: Database["public"]["Enums"]["payment_status"];
+          payment_method?: string | null;
+          installments?: number | null;
         };
         Update: {
           amount?: number;
@@ -187,6 +191,8 @@ export type Database = {
           paid_at?: string | null;
           patient_id?: string | null;
           status?: Database["public"]["Enums"]["payment_status"];
+          payment_method?: string | null;
+          installments?: number | null;
         };
         Relationships: [
           {
@@ -471,6 +477,7 @@ export type Database = {
           dentist_cro: string | null;
           clinic_email: string | null;
           clinic_city: string | null;
+          disabled_payment_methods: string[];
         };
         Insert: {
           address?: string | null;
@@ -487,6 +494,7 @@ export type Database = {
           dentist_cro?: string | null;
           clinic_email?: string | null;
           clinic_city?: string | null;
+          disabled_payment_methods?: string[];
         };
         Update: {
           address?: string | null;
@@ -503,6 +511,7 @@ export type Database = {
           dentist_cro?: string | null;
           clinic_email?: string | null;
           clinic_city?: string | null;
+          disabled_payment_methods?: string[];
         };
         Relationships: [];
       };
@@ -874,6 +883,8 @@ export type Database = {
           patient_id: string | null;
           status: Database["public"]["Enums"]["payment_status"];
           type: Database["public"]["Enums"]["finance_entry_type"];
+          payment_method: string | null;
+          installments: number | null;
         };
         Insert: {
           amount: number;
@@ -887,6 +898,8 @@ export type Database = {
           patient_id?: string | null;
           status?: Database["public"]["Enums"]["payment_status"];
           type: Database["public"]["Enums"]["finance_entry_type"];
+          payment_method?: string | null;
+          installments?: number | null;
         };
         Update: {
           amount?: number;
@@ -900,6 +913,8 @@ export type Database = {
           patient_id?: string | null;
           status?: Database["public"]["Enums"]["payment_status"];
           type?: Database["public"]["Enums"]["finance_entry_type"];
+          payment_method?: string | null;
+          installments?: number | null;
         };
         Relationships: [
           {

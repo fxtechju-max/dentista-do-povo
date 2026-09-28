@@ -10,6 +10,13 @@ import {
   type PaymentStatus,
   formatCurrency,
 } from "@/lib/admin/labels";
+import { PaymentMethodFields } from "@/components/admin/PaymentMethodFields";
+import {
+  PAYMENT_METHODS,
+  paymentMethodLabel,
+  parseInstallments,
+  useEnabledPaymentMethods,
+} from "@/lib/payment-methods";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -58,12 +65,20 @@ type Payment = {
   status: PaymentStatus;
   paid_at: string | null;
   created_at: string;
+  payment_method: string | null;
+  installments: number | null;
   patients: { name: string } | null;
 };
 
 type Patient = { id: string; name: string };
 
-const emptyForm = { patient_id: "", amount: "", status: "pendente" as PaymentStatus };
+const emptyForm = {
+  patient_id: "",
+  amount: "",
+  status: "pendente" as PaymentStatus,
+  payment_method: "",
+  installments: "",
+};
 
 function Financeiro() {
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -72,6 +87,8 @@ function Financeiro() {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<PaymentStatus | "todos">("todos");
   const [patientFilter, setPatientFilter] = useState("todos");
+  const [methodFilter, setMethodFilter] = useState("todos");
+  const enabledMethods = useEnabledPaymentMethods();
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -85,7 +102,9 @@ function Financeiro() {
     const [{ data: paymentsData }, { data: patientsData }] = await Promise.all([
       db
         .from("payments")
-        .select("id, patient_id, amount, status, paid_at, created_at, patients(name)")
+        .select(
+          "id, patient_id, amount, status, paid_at, created_at, payment_method, installments, patients(name)",
+        )
         .order("created_at", { ascending: false }),
       db.from("patients").select("id, name").order("name"),
     ]);
@@ -105,18 +124,21 @@ function Financeiro() {
     return payments.filter((p) => {
       if (statusFilter !== "todos" && p.status !== statusFilter) return false;
       if (patientFilter !== "todos" && p.patient_id !== patientFilter) return false;
+      if (methodFilter !== "todos" && (p.payment_method ?? "nao_informada") !== methodFilter)
+        return false;
       const reference = new Date(p.paid_at ?? p.created_at).getTime();
       if (from != null && reference < from) return false;
       if (to != null && reference > to) return false;
       if (q && !p.patients?.name.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [payments, query, statusFilter, patientFilter, dateFrom, dateTo]);
+  }, [payments, query, statusFilter, patientFilter, methodFilter, dateFrom, dateTo]);
 
   const hasActiveFilters =
     !!query.trim() ||
     statusFilter !== "todos" ||
     patientFilter !== "todos" ||
+    methodFilter !== "todos" ||
     !!dateFrom ||
     !!dateTo;
 
@@ -127,7 +149,16 @@ function Financeiro() {
     const pendente = payments
       .filter((p) => p.status === "pendente")
       .reduce((s, p) => s + Number(p.amount), 0);
-    return { pago, pendente };
+    const byMethod = new Map<string, number>();
+    for (const p of payments.filter((p) => p.status === "pago")) {
+      const key = p.payment_method ?? "";
+      byMethod.set(key, (byMethod.get(key) ?? 0) + Number(p.amount));
+    }
+    return {
+      pago,
+      pendente,
+      byMethod: [...byMethod.entries()].sort((a, b) => b[1] - a[1]),
+    };
   }, [payments]);
 
   function openCreate() {
@@ -138,7 +169,13 @@ function Financeiro() {
 
   function openEdit(p: Payment) {
     setEditing(p);
-    setForm({ patient_id: p.patient_id ?? "", amount: String(p.amount), status: p.status });
+    setForm({
+      patient_id: p.patient_id ?? "",
+      amount: String(p.amount),
+      status: p.status,
+      payment_method: p.payment_method ?? "",
+      installments: p.installments ? String(p.installments) : "",
+    });
     setDialogOpen(true);
   }
 
@@ -150,6 +187,8 @@ function Financeiro() {
       amount: Number(form.amount.replace(",", ".")),
       status: form.status,
       paid_at: form.status === "pago" ? new Date().toISOString() : null,
+      payment_method: form.payment_method || null,
+      installments: parseInstallments(form.payment_method, form.installments),
     };
     if (editing) {
       await db.from("payments").update(payload).eq("id", editing.id);
@@ -206,6 +245,29 @@ function Financeiro() {
         </div>
       </div>
 
+      {totals.byMethod.length > 0 && (
+        <div className="mt-4 rounded-2xl border border-border bg-card p-4">
+          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+            Recebido por forma de pagamento
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {totals.byMethod.map(([method, total]) => (
+              <button
+                key={method || "nao_informada"}
+                type="button"
+                onClick={() => setMethodFilter(method || "nao_informada")}
+                className="rounded-xl border border-border px-3 py-2 text-left transition-colors hover:border-primary hover:bg-accent"
+              >
+                <span className="block text-xs text-muted-foreground">
+                  {method ? paymentMethodLabel(method) : "Não informada"}
+                </span>
+                <span className="font-extrabold">{formatCurrency(total)}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <div className="relative w-full max-w-xs">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -245,6 +307,20 @@ function Financeiro() {
             ))}
           </SelectContent>
         </Select>
+        <Select value={methodFilter} onValueChange={setMethodFilter}>
+          <SelectTrigger className="w-48">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todas as formas</SelectItem>
+            <SelectItem value="nao_informada">Não informada</SelectItem>
+            {PAYMENT_METHODS.map((m) => (
+              <SelectItem key={m.id} value={m.id}>
+                {m.emoji} {m.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Input
           type="date"
           value={dateFrom}
@@ -267,6 +343,7 @@ function Financeiro() {
               setQuery("");
               setStatusFilter("todos");
               setPatientFilter("todos");
+              setMethodFilter("todos");
               setDateFrom("");
               setDateTo("");
             }}
@@ -288,6 +365,7 @@ function Financeiro() {
               <TableRow>
                 <TableHead>Paciente</TableHead>
                 <TableHead>Valor</TableHead>
+                <TableHead>Forma</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Data</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
@@ -298,6 +376,9 @@ function Financeiro() {
                 <TableRow key={p.id} className="animate-in fade-in">
                   <TableCell className="font-semibold">{p.patients?.name ?? "—"}</TableCell>
                   <TableCell>{formatCurrency(Number(p.amount))}</TableCell>
+                  <TableCell className="whitespace-nowrap text-sm">
+                    {paymentMethodLabel(p.payment_method, p.installments)}
+                  </TableCell>
                   <TableCell>
                     <Badge variant={STATUS_VARIANT[p.status]}>{STATUS_LABEL[p.status]}</Badge>
                   </TableCell>
@@ -397,6 +478,14 @@ function Financeiro() {
                 </Select>
               </div>
             </div>
+            <PaymentMethodFields
+              methods={enabledMethods}
+              method={form.payment_method}
+              installments={form.installments}
+              onChange={({ method, installments }) =>
+                setForm((f) => ({ ...f, payment_method: method, installments }))
+              }
+            />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>

@@ -45,6 +45,17 @@ export type TutorialUpdate = {
 export const TUTORIAL_UPDATES: TutorialUpdate[] = [
   {
     date: "2026-09-27",
+    title: "Formas de pagamento e Configurações reorganizadas",
+    sections: ["financeiro", "contas", "configuracoes"],
+    items: [
+      "Financeiro e Contas a Pagar/Receber agora registram a forma de pagamento: PIX, dinheiro, cartão de crédito (com parcelas), cartão de débito, boleto, transferência, link de pagamento, cheque, crediário, convênio, depósito e outros.",
+      "Filtro por forma de pagamento e resumo do que foi recebido em cada forma.",
+      "Em Configurações › Formas de pagamento, ative ou desative cada forma.",
+      "Configurações com menu lateral organizado em grupos (Conta, Clínica, Equipe e Sistema) e animações.",
+    ],
+  },
+  {
+    date: "2026-09-27",
     title: "Interface salva no projeto",
     sections: ["configuracoes"],
     items: [
@@ -523,11 +534,15 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
     steps: [
       {
         title: "Lançamento",
-        text: "Registre o valor, o paciente, a data e o status (pendente, pago, cancelado).",
+        text: "Registre o valor, o paciente, o status (pendente, pago, cancelado) e a forma de pagamento. No cartão de crédito, link de pagamento e crediário, informe também as parcelas.",
+      },
+      {
+        title: "Recebido por forma",
+        text: "O quadro Recebido por forma de pagamento mostra quanto entrou em PIX, dinheiro, cartões etc. Clique em uma forma para filtrar a lista.",
       },
       {
         title: "Filtre",
-        text: "Filtre por paciente ou status para conferir o que falta receber.",
+        text: "Filtre por paciente, status, forma de pagamento ou período para conferir o que falta receber.",
       },
     ],
   },
@@ -542,6 +557,10 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
       {
         title: "Nova conta",
         text: "Escolha o tipo (pagar ou receber), descrição, categoria, valor, vencimento e, se quiser, o paciente.",
+      },
+      {
+        title: "Forma de pagamento",
+        text: "Escolha como a conta foi ou será paga (PIX, dinheiro, cartão, boleto...). Use o filtro de forma para ver, por exemplo, só o que é pago no boleto.",
       },
       {
         title: "Dê baixa",
@@ -669,8 +688,16 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
     summary: "Perfil, aparência, dados da clínica, módulos, administradores e IA.",
     steps: [
       {
+        title: "Navegue pelo menu",
+        text: "À esquerda, as configurações estão agrupadas em Conta (perfil e segurança), Clínica (dados, formas de pagamento e módulos), Equipe (administradores) e Sistema (aparência, IA e transparência).",
+      },
+      {
         title: "Seu perfil",
         text: "Altere nome de exibição, email e senha.",
+      },
+      {
+        title: "Formas de pagamento",
+        text: "Ative ou desative PIX, dinheiro, cartões, boleto e as demais formas. Só as ativas aparecem ao lançar pagamentos.",
       },
       {
         title: "Aparência",

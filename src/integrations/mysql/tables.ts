@@ -20,7 +20,17 @@ export const tableColumns = {
     "created_at",
   ],
   appointments: ["id", "patient_id", "treatment", "scheduled_at", "status", "created_at"],
-  payments: ["id", "patient_id", "appointment_id", "status", "paid_at", "created_at", "amount"],
+  payments: [
+    "id",
+    "patient_id",
+    "appointment_id",
+    "status",
+    "paid_at",
+    "created_at",
+    "amount",
+    "payment_method",
+    "installments",
+  ],
   leads: ["id", "name", "phone", "source", "status", "created_at"],
   treatments: ["id", "name", "description", "duration_minutes", "active", "created_at", "price"],
   budgets: ["id", "patient_id", "treatment", "status", "notes", "created_at", "value"],
@@ -44,6 +54,7 @@ export const tableColumns = {
     "updated_at",
     "ai_secretary_enabled",
     "disabled_modules",
+    "disabled_payment_methods",
   ],
   blog_posts: [
     "id",
@@ -142,6 +153,8 @@ export const tableColumns = {
     "patient_id",
     "notes",
     "created_at",
+    "payment_method",
+    "installments",
   ],
 } as const;
 export type TableName = keyof typeof tableColumns;
