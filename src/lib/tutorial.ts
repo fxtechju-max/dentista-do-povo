@@ -45,6 +45,16 @@ export type TutorialUpdate = {
 export const TUTORIAL_UPDATES: TutorialUpdate[] = [
   {
     date: "2026-09-28",
+    title: "Política de Privacidade e Termos de Uso",
+    sections: ["cms-site"],
+    items: [
+      "Novas páginas públicas /privacidade e /termos, com links no rodapé do site.",
+      "Textos prontos seguindo a LGPD e as exigências do Google AdSense (cookies e anúncios).",
+      "Edite tudo em CMS Site › Páginas, com pré-visualização ao lado.",
+    ],
+  },
+  {
+    date: "2026-09-28",
     title: "Anúncios do Google AdSense pela área restrita",
     sections: ["configuracoes"],
     items: [
@@ -724,6 +734,10 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
       {
         title: "Blog",
         text: "Crie posts com título, link (slug), resumo, conteúdo, imagem de capa e categoria. Salve como Rascunho ou Publicado.",
+      },
+      {
+        title: "Política de Privacidade e Termos de Uso",
+        text: "Na aba Páginas, escolha a página, edite o título e o texto (a pré-visualização aparece ao lado) e clique em Salvar e publicar. A data de atualização muda sozinha. Texto padrão restaura o modelo original.",
       },
       {
         title: "Quantos posts eu tenho",

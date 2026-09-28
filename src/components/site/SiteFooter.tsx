@@ -72,6 +72,12 @@ export function SiteFooter() {
           </div>
         )}
 
+        <Link to="/privacidade" className="hover:text-foreground">
+          Política de Privacidade
+        </Link>
+        <Link to="/termos" className="hover:text-foreground">
+          Termos de Uso
+        </Link>
         <Link to="/entrar" className="font-semibold hover:text-foreground">
           Área Restrita
         </Link>

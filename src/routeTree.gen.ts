@@ -15,7 +15,9 @@ import { Route as BlogRouteImport } from './routes/blog'
 import { Route as ContatoRouteImport } from './routes/contato'
 import { Route as EntrarRouteImport } from './routes/entrar'
 import { Route as GaleriaRouteImport } from './routes/galeria'
+import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as ServicosRouteImport } from './routes/servicos'
+import { Route as TermosRouteImport } from './routes/termos'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as AdminAgendaRouteImport } from './routes/admin/agenda'
 import { Route as AdminBackupRouteImport } from './routes/admin/backup'
@@ -71,9 +73,19 @@ const GaleriaRoute = GaleriaRouteImport.update({
   path: '/galeria',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PrivacidadeRoute = PrivacidadeRouteImport.update({
+  id: '/privacidade',
+  path: '/privacidade',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ServicosRoute = ServicosRouteImport.update({
   id: '/servicos',
   path: '/servicos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermosRoute = TermosRouteImport.update({
+  id: '/termos',
+  path: '/termos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
@@ -205,7 +217,9 @@ export interface FileRoutesByFullPath {
   '/contato': typeof ContatoRoute
   '/entrar': typeof EntrarRoute
   '/galeria': typeof GaleriaRoute
+  '/privacidade': typeof PrivacidadeRoute
   '/servicos': typeof ServicosRoute
+  '/termos': typeof TermosRoute
   '/admin/agenda': typeof AdminAgendaRoute
   '/admin/backup': typeof AdminBackupRoute
   '/admin/cms-site': typeof AdminCmsSiteRoute
@@ -237,7 +251,9 @@ export interface FileRoutesByTo {
   '/contato': typeof ContatoRoute
   '/entrar': typeof EntrarRoute
   '/galeria': typeof GaleriaRoute
+  '/privacidade': typeof PrivacidadeRoute
   '/servicos': typeof ServicosRoute
+  '/termos': typeof TermosRoute
   '/admin/agenda': typeof AdminAgendaRoute
   '/admin/backup': typeof AdminBackupRoute
   '/admin/cms-site': typeof AdminCmsSiteRoute
@@ -271,7 +287,9 @@ export interface FileRoutesById {
   '/contato': typeof ContatoRoute
   '/entrar': typeof EntrarRoute
   '/galeria': typeof GaleriaRoute
+  '/privacidade': typeof PrivacidadeRoute
   '/servicos': typeof ServicosRoute
+  '/termos': typeof TermosRoute
   '/admin/agenda': typeof AdminAgendaRoute
   '/admin/backup': typeof AdminBackupRoute
   '/admin/cms-site': typeof AdminCmsSiteRoute
@@ -306,7 +324,9 @@ export interface FileRouteTypes {
     | '/contato'
     | '/entrar'
     | '/galeria'
+    | '/privacidade'
     | '/servicos'
+    | '/termos'
     | '/admin/agenda'
     | '/admin/backup'
     | '/admin/cms-site'
@@ -338,7 +358,9 @@ export interface FileRouteTypes {
     | '/contato'
     | '/entrar'
     | '/galeria'
+    | '/privacidade'
     | '/servicos'
+    | '/termos'
     | '/admin/agenda'
     | '/admin/backup'
     | '/admin/cms-site'
@@ -371,7 +393,9 @@ export interface FileRouteTypes {
     | '/contato'
     | '/entrar'
     | '/galeria'
+    | '/privacidade'
     | '/servicos'
+    | '/termos'
     | '/admin/agenda'
     | '/admin/backup'
     | '/admin/cms-site'
@@ -405,7 +429,9 @@ export interface RootRouteChildren {
   ContatoRoute: typeof ContatoRoute
   EntrarRoute: typeof EntrarRoute
   GaleriaRoute: typeof GaleriaRoute
+  PrivacidadeRoute: typeof PrivacidadeRoute
   ServicosRoute: typeof ServicosRoute
+  TermosRoute: typeof TermosRoute
   BlogSlugRoute: typeof BlogSlugRoute
 }
 
@@ -453,11 +479,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GaleriaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/privacidade': {
+      id: '/privacidade'
+      path: '/privacidade'
+      fullPath: '/privacidade'
+      preLoaderRoute: typeof PrivacidadeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/servicos': {
       id: '/servicos'
       path: '/servicos'
       fullPath: '/servicos'
       preLoaderRoute: typeof ServicosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/termos': {
+      id: '/termos'
+      path: '/termos'
+      fullPath: '/termos'
+      preLoaderRoute: typeof TermosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/': {
@@ -714,7 +754,9 @@ const rootRouteChildren: RootRouteChildren = {
   ContatoRoute: ContatoRoute,
   EntrarRoute: EntrarRoute,
   GaleriaRoute: GaleriaRoute,
+  PrivacidadeRoute: PrivacidadeRoute,
   ServicosRoute: ServicosRoute,
+  TermosRoute: TermosRoute,
   BlogSlugRoute: BlogSlugRoute,
 }
 export const routeTree = rootRouteImport

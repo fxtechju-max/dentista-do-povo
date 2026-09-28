@@ -26,6 +26,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HomeContentTab } from "@/components/admin/cms/HomeContentTab";
+import { LegalPagesTab } from "@/components/admin/cms/LegalPagesTab";
 import {
   Select,
   SelectContent,
@@ -66,6 +67,7 @@ function CmsSite() {
           <TabsTrigger value="servicos">🦷 Serviços</TabsTrigger>
           <TabsTrigger value="blog">📰 Blog</TabsTrigger>
           <TabsTrigger value="galeria">🖼️ Galeria</TabsTrigger>
+          <TabsTrigger value="paginas">📄 Páginas</TabsTrigger>
         </TabsList>
         <TabsContent value="inicio" className="mt-4">
           <HomeContentTab />
@@ -78,6 +80,9 @@ function CmsSite() {
         </TabsContent>
         <TabsContent value="galeria" className="mt-4">
           <GaleriaTab />
+        </TabsContent>
+        <TabsContent value="paginas" className="mt-4">
+          <LegalPagesTab />
         </TabsContent>
       </Tabs>
     </div>
