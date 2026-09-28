@@ -33,10 +33,12 @@ export function refreshPreferences(): Promise<void> {
       values = Object.fromEntries(rows.map((row) => [row.key, row.value]));
       emit();
     })
-    .catch(() => {
+    .catch((error) => {
       if (generation !== current) return;
       request = undefined;
-      toast.error("Não foi possível carregar as preferências da interface.");
+      // Sem aviso na tela: a interface segue com o tema/zoom padrão, e a causa
+      // (ex.: banco não configurado) já aparece no aviso principal dos dados.
+      console.warn("Preferências da interface não carregadas:", error);
     });
   return request;
 }
@@ -54,7 +56,9 @@ export function savePreference(preference: Preference): Promise<void> {
     emit();
   });
   saves = saving.catch(() => {
-    toast.error("Não foi possível salvar a preferência no projeto. Tente novamente.");
+    toast.error("Não foi possível salvar a preferência no projeto. Tente novamente.", {
+      id: "preferences-save",
+    });
     emit();
   });
   return saves;

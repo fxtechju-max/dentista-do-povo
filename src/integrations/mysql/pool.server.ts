@@ -80,7 +80,7 @@ export function getSql() {
     const url = raw.split("?")[0] ?? "";
     if (!url)
       throw new Error(
-        "Banco de dados não configurado. Conecte o Supabase ao projeto na Vercel (variável POSTGRES_URL).",
+        "Banco de dados não configurado. Neste computador, preencha SUPABASE_DB_URL no arquivo .env; na Vercel, conecte o Supabase ao projeto (variável POSTGRES_URL).",
       );
     const local = /@(localhost|127\.0\.0\.1)[:/]/.test(url);
     client = postgres(url, {

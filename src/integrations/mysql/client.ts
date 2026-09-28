@@ -24,11 +24,12 @@ export const db = {
   ...createDataClient(async (query) => {
     try {
       const result = await runQuery({ data: query });
-      if (result.error && typeof window !== "undefined") toast.error(result.error.message);
+      if (result.error && typeof window !== "undefined")
+        toast.error(result.error.message, { id: result.error.message });
       return result;
     } catch {
       const error = { message: "Não foi possível conectar ao servidor. Tente novamente." };
-      if (typeof window !== "undefined") toast.error(error.message);
+      if (typeof window !== "undefined") toast.error(error.message, { id: error.message });
       return { data: null, error, count: null };
     }
   }),
