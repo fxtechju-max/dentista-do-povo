@@ -5,6 +5,7 @@ import { SiteHeader } from "@/components/site/SiteHeader";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { ChatWidget } from "@/components/site/ChatWidget";
 import { AdSlot } from "@/components/site/AdSlot";
+import { BlogContent } from "@/components/site/BlogContent";
 import { db } from "@/integrations/mysql/client";
 
 export const Route = createFileRoute("/blog_/$slug")({
@@ -83,13 +84,7 @@ function BlogPost() {
               )}
             </div>
             <h1 className="mt-2 text-3xl font-extrabold tracking-tight">{post.title}</h1>
-            <div className="mt-6">
-              {post.content.split(/\n\s*\n/).map((paragraph, i) => (
-                <p key={i} className="mb-4 whitespace-pre-line leading-relaxed text-foreground">
-                  {paragraph}
-                </p>
-              ))}
-            </div>
+            <BlogContent content={post.content} />
 
             <div className="mt-8 border-t border-border pt-8">
               <AdSlot slot="0000000002" className="min-h-[100px]" />

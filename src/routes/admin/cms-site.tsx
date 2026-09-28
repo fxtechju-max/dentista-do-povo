@@ -432,8 +432,66 @@ function BlogTab() {
     load();
   }
 
+  const published = posts.filter((p) => p.status === "publicado").length;
+  // Post "detalhado" = texto com pelo menos 300 palavras.
+  const detailed = posts.filter((p) => p.content.trim().split(/\s+/).length >= 300).length;
+
   return (
     <div>
+      {!loading && (
+        <div className="mb-4 space-y-3">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            {[
+              {
+                label: "Total de posts",
+                value: posts.length,
+                onClick: () => setStatusFilter("todos"),
+              },
+              {
+                label: "Publicados",
+                value: published,
+                onClick: () => setStatusFilter("publicado"),
+              },
+              {
+                label: "Rascunhos",
+                value: posts.length - published,
+                onClick: () => setStatusFilter("rascunho"),
+              },
+              { label: "Detalhados (300+ palavras)", value: detailed, onClick: undefined },
+            ].map((card) => (
+              <button
+                key={card.label}
+                type="button"
+                onClick={card.onClick}
+                disabled={!card.onClick}
+                className="rounded-2xl border border-border bg-card p-4 text-left transition-colors enabled:hover:border-primary enabled:hover:bg-accent"
+              >
+                <p className="text-2xl font-extrabold">{card.value}</p>
+                <p className="text-xs text-muted-foreground">{card.label}</p>
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {BLOG_CATEGORIES.map((c) => {
+              const count = posts.filter((p) => p.category === c).length;
+              return (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setCategoryFilter(categoryFilter === c ? "todas" : c)}
+                  className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
+                    categoryFilter === c
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-card hover:bg-accent"
+                  }`}
+                >
+                  {c} · {count}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative w-full max-w-xs">

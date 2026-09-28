@@ -45,6 +45,16 @@ export type TutorialUpdate = {
 export const TUTORIAL_UPDATES: TutorialUpdate[] = [
   {
     date: "2026-09-28",
+    title: "Blog: 20 posts novos e contador de posts",
+    sections: ["cms-site"],
+    items: [
+      "20 novos posts originais e detalhados sobre cárie, limpeza, tártaro, flúor, selante, bebês, diabetes, cigarro, aftas, dentadura, urgências e mais.",
+      "A aba Blog do CMS mostra quantos posts você tem: total, publicados, rascunhos, detalhados e por categoria.",
+      "Os posts agora aceitam subtítulos (linha começando com ## ) e listas (linhas começando com - ).",
+    ],
+  },
+  {
+    date: "2026-09-28",
     title: "Página inicial do site editável e novas seções sobre Cujubim",
     sections: ["cms-site"],
     items: [
@@ -689,6 +699,14 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
       {
         title: "Blog",
         text: "Crie posts com título, link (slug), resumo, conteúdo, imagem de capa e categoria. Salve como Rascunho ou Publicado.",
+      },
+      {
+        title: "Quantos posts eu tenho",
+        text: "No topo da aba Blog aparecem o total de posts, publicados, rascunhos, detalhados (300+ palavras) e a quantidade por categoria. Clique em um número ou categoria para filtrar a lista.",
+      },
+      {
+        title: "Formatar o texto do post",
+        text: "Separe parágrafos com uma linha em branco. Para um subtítulo, comece a linha com ## (ex.: ## Como prevenir). Para uma lista, comece cada linha com - (hífen e espaço).",
       },
       {
         title: "Ler e compartilhar um post",
