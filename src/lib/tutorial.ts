@@ -45,6 +45,16 @@ export type TutorialUpdate = {
 export const TUTORIAL_UPDATES: TutorialUpdate[] = [
   {
     date: "2026-09-27",
+    title: "Interface salva no projeto",
+    sections: ["configuracoes"],
+    items: [
+      "Tema, cor da interface, zoom e modo de visualização dos tratamentos agora ficam salvos no projeto (banco de dados), nunca no navegador.",
+      "A mesma aparência vale para todos os administradores, computadores e celulares.",
+      "Só administradores podem alterar; o site público usa o zoom definido pela clínica.",
+    ],
+  },
+  {
+    date: "2026-09-27",
     title: "Modelos de Documentos: receituário, atestado e declaração",
     sections: ["modelos"],
     items: [
@@ -683,7 +693,10 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
         text: "Informe provedor, URL, modelo e chave para ativar os recursos de IA e o atendente virtual do chat.",
       },
     ],
-    tips: ["As preferências de aparência ficam salvas na sua conta, em qualquer computador."],
+    tips: [
+      "A aparência fica salva no projeto: vale para todos os administradores e aparelhos.",
+      "Nada da interface é guardado no navegador — limpar o histórico não apaga suas escolhas.",
+    ],
   },
   {
     id: "backup",

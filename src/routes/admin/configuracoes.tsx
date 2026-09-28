@@ -882,6 +882,10 @@ function Configuracoes() {
         </TabsContent>
 
         <TabsContent value="aparencia" className="mt-4">
+          <p className="mb-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-2.5 text-sm">
+            💾 Tudo o que você muda aqui fica <b>salvo no projeto</b> (banco de dados), não no
+            navegador — vale para todos os administradores, computadores e celulares.
+          </p>
           <div className="rounded-2xl border border-border bg-card p-6">
             <h2 className="font-bold">Tema</h2>
             <p className="mt-1 text-xs text-muted-foreground">

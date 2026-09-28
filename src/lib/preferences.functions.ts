@@ -15,16 +15,15 @@ const preference = z.discriminatedUnion("key", [
 ]);
 export type Preference = z.infer<typeof preference>;
 
-async function owner() {
-  const { currentUser, ensureVisitor } = await import("@/integrations/mysql/auth.server");
-  const user = await currentUser();
-  return user ? `user:${user.id}` : `visitor:${ensureVisitor()}`;
-}
+// Preferências da interface ficam salvas NO PROJETO (banco), uma só para a
+// clínica: valem para todos os administradores, computadores e navegadores.
+// Todos leem; só administradores alteram.
+const OWNER = "clinic";
 
 export const getPreferences = createServerFn({ method: "POST" }).handler(async () => {
   const { getPool } = await import("@/integrations/mysql/pool.server");
   const [rows] = await getPool().execute("SELECT key,value FROM preferences WHERE owner=?", [
-    await owner(),
+    OWNER,
   ]);
   return rows.flatMap((row) => {
     const parsed = preference.safeParse(row);
@@ -35,11 +34,14 @@ export const getPreferences = createServerFn({ method: "POST" }).handler(async (
 export const setPreference = createServerFn({ method: "POST" })
   .validator((data: unknown) => preference.parse(data))
   .handler(async ({ data }) => {
+    const { requestActor } = await import("@/integrations/mysql/auth.server");
+    if (!(await requestActor()).admin)
+      throw new Error("Apenas administradores alteram a interface.");
     const { getPool } = await import("@/integrations/mysql/pool.server");
     await getPool().execute(
       `INSERT INTO preferences (owner,key,value) VALUES (?,?,?::jsonb)
        ON CONFLICT (owner,key) DO UPDATE SET value=EXCLUDED.value,updated_at=CURRENT_TIMESTAMP`,
-      [await owner(), data.key, JSON.stringify(data.value)],
+      [OWNER, data.key, JSON.stringify(data.value)],
     );
     return { error: null };
   });

@@ -36,7 +36,7 @@ export function refreshPreferences(): Promise<void> {
     .catch(() => {
       if (generation !== current) return;
       request = undefined;
-      toast.error("Não foi possível carregar suas preferências da nuvem.");
+      toast.error("Não foi possível carregar as preferências da interface.");
     });
   return request;
 }
@@ -54,7 +54,7 @@ export function savePreference(preference: Preference): Promise<void> {
     emit();
   });
   saves = saving.catch(() => {
-    toast.error("Não foi possível salvar a preferência na nuvem. Tente novamente.");
+    toast.error("Não foi possível salvar a preferência no projeto. Tente novamente.");
     emit();
   });
   return saves;
