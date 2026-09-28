@@ -1,44 +1,49 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { DollarSign, Plus, Pencil, Trash2, Search, CheckCircle2 } from "lucide-react";
+import { toast } from "sonner";
+import {
+  CheckCircle2,
+  Clock,
+  DollarSign,
+  Pencil,
+  Plus,
+  Receipt,
+  Search,
+  Trash2,
+  TrendingUp,
+  User,
+  Wallet,
+} from "lucide-react";
 import { db } from "@/integrations/mysql/client";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { EmptyState } from "@/components/admin/EmptyState";
-import {
-  PAYMENT_STATUS_LABEL as STATUS_LABEL,
-  PAYMENT_STATUS_VARIANT as STATUS_VARIANT,
-  type PaymentStatus,
-  formatCurrency,
-} from "@/lib/admin/labels";
 import { PaymentMethodFields } from "@/components/admin/PaymentMethodFields";
 import {
+  Initial,
+  MoneyInput,
+  PeriodFilter,
+  RowMenu,
+  Segmented,
+  StatCard,
+  StatusChips,
+  StatusPill,
+} from "@/components/admin/finance/FinanceUI";
+import { formatCurrency, type PaymentStatus } from "@/lib/admin/labels";
+import { inRange, parseMoney, periodRange, type PeriodId } from "@/lib/admin/finance-period";
+import {
   PAYMENT_METHODS,
-  paymentMethodLabel,
   parseInstallments,
+  paymentMethod,
+  paymentMethodLabel,
   useEnabledPaymentMethods,
 } from "@/lib/payment-methods";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -69,36 +74,63 @@ type Payment = {
   installments: number | null;
   patients: { name: string } | null;
 };
-
 type Patient = { id: string; name: string };
+
+const STATUS: Record<PaymentStatus, { label: string; pill: string; dot: string }> = {
+  pendente: {
+    label: "A receber",
+    pill: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
+    dot: "bg-amber-500",
+  },
+  pago: {
+    label: "Recebido",
+    pill: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
+    dot: "bg-emerald-500",
+  },
+  cancelado: {
+    label: "Cancelado",
+    pill: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
+    dot: "bg-slate-400",
+  },
+};
+const STATUS_ORDER: PaymentStatus[] = ["pendente", "pago", "cancelado"];
+
+const today = () => new Date().toLocaleDateString("en-CA");
+const date = (iso: string) => new Date(iso).toLocaleDateString("pt-BR");
 
 const emptyForm = {
   patient_id: "",
   amount: "",
   status: "pendente" as PaymentStatus,
+  paid_on: today(),
   payment_method: "",
   installments: "",
 };
 
 function Financeiro() {
+  const navigate = useNavigate();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<PaymentStatus | "todos">("todos");
+  const [status, setStatus] = useState<PaymentStatus | "todos">("todos");
   const [patientFilter, setPatientFilter] = useState("todos");
   const [methodFilter, setMethodFilter] = useState("todos");
+  const [period, setPeriod] = useState<{ period: PeriodId; from: string; to: string }>({
+    period: "este_mes",
+    from: "",
+    to: "",
+  });
   const enabledMethods = useEnabledPaymentMethods();
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Payment | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [receiving, setReceiving] = useState<Payment | null>(null);
+  const [receiveMethod, setReceiveMethod] = useState({ method: "", installments: "" });
   const [deleteTarget, setDeleteTarget] = useState<Payment | null>(null);
 
   async function load() {
-    setLoading(true);
     const [{ data: paymentsData }, { data: patientsData }] = await Promise.all([
       db
         .from("payments")
@@ -117,53 +149,52 @@ function Financeiro() {
     load();
   }, []);
 
-  const filtered = useMemo(() => {
+  const scoped = useMemo(() => {
+    const range = periodRange(period.period, period.from, period.to);
     const q = query.trim().toLowerCase();
-    const from = dateFrom ? new Date(dateFrom).getTime() : null;
-    const to = dateTo ? new Date(dateTo).setHours(23, 59, 59, 999) : null;
-    return payments.filter((p) => {
-      if (statusFilter !== "todos" && p.status !== statusFilter) return false;
-      if (patientFilter !== "todos" && p.patient_id !== patientFilter) return false;
-      if (methodFilter !== "todos" && (p.payment_method ?? "nao_informada") !== methodFilter)
-        return false;
-      const reference = new Date(p.paid_at ?? p.created_at).getTime();
-      if (from != null && reference < from) return false;
-      if (to != null && reference > to) return false;
-      if (q && !p.patients?.name.toLowerCase().includes(q)) return false;
-      return true;
-    });
-  }, [payments, query, statusFilter, patientFilter, methodFilter, dateFrom, dateTo]);
+    return payments.filter(
+      (p) =>
+        inRange(p.paid_at ?? p.created_at, range) &&
+        (patientFilter === "todos" || p.patient_id === patientFilter) &&
+        (methodFilter === "todos" || (p.payment_method ?? "nao_informada") === methodFilter) &&
+        (!q || p.patients?.name.toLowerCase().includes(q)),
+    );
+  }, [payments, period, patientFilter, methodFilter, query]);
 
-  const hasActiveFilters =
-    !!query.trim() ||
-    statusFilter !== "todos" ||
-    patientFilter !== "todos" ||
-    methodFilter !== "todos" ||
-    !!dateFrom ||
-    !!dateTo;
+  const filtered = status === "todos" ? scoped : scoped.filter((p) => p.status === status);
 
-  const totals = useMemo(() => {
-    const pago = payments
-      .filter((p) => p.status === "pago")
-      .reduce((s, p) => s + Number(p.amount), 0);
-    const pendente = payments
-      .filter((p) => p.status === "pendente")
-      .reduce((s, p) => s + Number(p.amount), 0);
+  const kpi = useMemo(() => {
+    const paid = scoped.filter((p) => p.status === "pago");
+    const pending = scoped.filter((p) => p.status === "pendente");
+    const sum = (list: Payment[]) => list.reduce((s, p) => s + Number(p.amount), 0);
+    const received = sum(paid);
+    const toReceive = sum(pending);
     const byMethod = new Map<string, number>();
-    for (const p of payments.filter((p) => p.status === "pago")) {
-      const key = p.payment_method ?? "";
-      byMethod.set(key, (byMethod.get(key) ?? 0) + Number(p.amount));
+    for (const p of paid) {
+      const k = p.payment_method ?? "nao_informada";
+      byMethod.set(k, (byMethod.get(k) ?? 0) + Number(p.amount));
     }
     return {
-      pago,
-      pendente,
+      received,
+      toReceive,
+      paidCount: paid.length,
+      pendingCount: pending.length,
+      average: paid.length ? received / paid.length : 0,
+      progress: received + toReceive ? (received / (received + toReceive)) * 100 : 0,
       byMethod: [...byMethod.entries()].sort((a, b) => b[1] - a[1]),
     };
-  }, [payments]);
+  }, [scoped]);
+
+  const hasFilters =
+    !!query.trim() ||
+    patientFilter !== "todos" ||
+    methodFilter !== "todos" ||
+    status !== "todos" ||
+    period.period !== "este_mes";
 
   function openCreate() {
     setEditing(null);
-    setForm(emptyForm);
+    setForm({ ...emptyForm, paid_on: today() });
     setDialogOpen(true);
   }
 
@@ -171,54 +202,115 @@ function Financeiro() {
     setEditing(p);
     setForm({
       patient_id: p.patient_id ?? "",
-      amount: String(p.amount),
+      amount: String(p.amount).replace(".", ","),
       status: p.status,
+      paid_on: (p.paid_at ?? new Date().toISOString()).slice(0, 10),
       payment_method: p.payment_method ?? "",
       installments: p.installments ? String(p.installments) : "",
     });
     setDialogOpen(true);
   }
 
+  const amount = parseMoney(form.amount);
+  const formValid = amount > 0;
+
   async function save() {
-    if (!form.amount.trim()) return;
+    if (!formValid) return;
     setSaving(true);
     const payload = {
       patient_id: form.patient_id || null,
-      amount: Number(form.amount.replace(",", ".")),
+      amount,
       status: form.status,
-      paid_at: form.status === "pago" ? new Date().toISOString() : null,
+      paid_at:
+        form.status === "pago"
+          ? new Date(`${form.paid_on || today()}T12:00:00`).toISOString()
+          : null,
       payment_method: form.payment_method || null,
       installments: parseInstallments(form.payment_method, form.installments),
     };
-    if (editing) {
-      await db.from("payments").update(payload).eq("id", editing.id);
-    } else {
-      await db.from("payments").insert(payload);
-    }
+    const { error } = editing
+      ? await db.from("payments").update(payload).eq("id", editing.id)
+      : await db.from("payments").insert(payload);
     setSaving(false);
+    if (error) return;
+    toast.success(editing ? "Lançamento atualizado." : "Lançamento criado.");
     setDialogOpen(false);
     load();
   }
 
-  async function markPaid(p: Payment) {
-    await db
+  function openReceive(p: Payment) {
+    setReceiving(p);
+    setReceiveMethod({
+      method: p.payment_method ?? "",
+      installments: p.installments ? String(p.installments) : "",
+    });
+  }
+
+  async function confirmReceive() {
+    if (!receiving) return;
+    const { error } = await db
       .from("payments")
-      .update({ status: "pago", paid_at: new Date().toISOString() })
-      .eq("id", p.id);
+      .update({
+        status: "pago",
+        paid_at: new Date().toISOString(),
+        payment_method: receiveMethod.method || null,
+        installments: parseInstallments(receiveMethod.method, receiveMethod.installments),
+      })
+      .eq("id", receiving.id);
+    if (error) return;
+    toast.success(`${formatCurrency(Number(receiving.amount))} recebido.`);
+    setReceiving(null);
     load();
   }
 
   async function remove() {
     if (!deleteTarget) return;
-    await db.from("payments").delete().eq("id", deleteTarget.id);
+    const { error } = await db.from("payments").delete().eq("id", deleteTarget.id);
     setDeleteTarget(null);
+    if (!error) toast.success("Lançamento excluído.");
     load();
   }
 
+  function menu(p: Payment) {
+    const patientId = p.patient_id;
+    return (
+      <RowMenu
+        items={[
+          { label: "Editar", icon: Pencil, onClick: () => openEdit(p) },
+          ...(patientId
+            ? [
+                {
+                  label: "Abrir paciente",
+                  icon: User,
+                  onClick: () =>
+                    navigate({ to: "/admin/pacientes/$patientId", params: { patientId } }),
+                },
+              ]
+            : []),
+          { label: "Excluir", icon: Trash2, onClick: () => setDeleteTarget(p), danger: true },
+        ]}
+      />
+    );
+  }
+
+  const receiveButton = (p: Payment) =>
+    p.status === "pendente" ? (
+      <Button
+        size="sm"
+        className="bg-emerald-600 text-white hover:bg-emerald-700"
+        onClick={() => openReceive(p)}
+      >
+        <CheckCircle2 className="h-3.5 w-3.5" /> Receber
+      </Button>
+    ) : null;
+
+  const maxMethod = kpi.byMethod[0]?.[1] ?? 0;
+
   return (
-    <div className="animate-in fade-in duration-300">
+    <div className="animate-in fade-in space-y-5 duration-300">
       <PageHeader
         title="💰 Financeiro"
+        description="Pagamentos dos pacientes: o que já entrou e o que falta receber."
         action={
           <Button onClick={openCreate}>
             <Plus /> Novo lançamento
@@ -226,258 +318,347 @@ function Financeiro() {
         }
       />
 
-      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="rounded-2xl border border-border bg-card p-5">
-          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-            Recebido
-          </p>
-          <p className="mt-1 text-2xl font-extrabold text-emerald-600">
-            {formatCurrency(totals.pago)}
-          </p>
-        </div>
-        <div className="rounded-2xl border border-border bg-card p-5">
-          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-            Pendente
-          </p>
-          <p className="mt-1 text-2xl font-extrabold text-amber-600">
-            {formatCurrency(totals.pendente)}
-          </p>
-        </div>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard
+          icon={TrendingUp}
+          label="Recebido"
+          value={formatCurrency(kpi.received)}
+          hint={`${Math.round(kpi.progress)}% do total previsto`}
+          progress={kpi.progress}
+          tone="green"
+          onClick={() => setStatus("pago")}
+          active={status === "pago"}
+        />
+        <StatCard
+          icon={Clock}
+          label="A receber"
+          value={formatCurrency(kpi.toReceive)}
+          hint={`${kpi.pendingCount} pendente(s)`}
+          tone="amber"
+          onClick={() => setStatus("pendente")}
+          active={status === "pendente"}
+        />
+        <StatCard
+          icon={DollarSign}
+          label="Ticket médio"
+          value={formatCurrency(kpi.average)}
+          hint="Por pagamento recebido"
+          tone="blue"
+        />
+        <StatCard
+          icon={Receipt}
+          label="Lançamentos"
+          value={String(scoped.length)}
+          hint={`${kpi.paidCount} recebido(s)`}
+          tone="slate"
+          onClick={() => setStatus("todos")}
+          active={status === "todos"}
+        />
       </div>
 
-      {totals.byMethod.length > 0 && (
-        <div className="mt-4 rounded-2xl border border-border bg-card p-4">
-          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-            Recebido por forma de pagamento
-          </p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {totals.byMethod.map(([method, total]) => (
-              <button
-                key={method || "nao_informada"}
-                type="button"
-                onClick={() => setMethodFilter(method || "nao_informada")}
-                className="rounded-xl border border-border px-3 py-2 text-left transition-colors hover:border-primary hover:bg-accent"
-              >
-                <span className="block text-xs text-muted-foreground">
-                  {method ? paymentMethodLabel(method) : "Não informada"}
-                </span>
-                <span className="font-extrabold">{formatCurrency(total)}</span>
-              </button>
-            ))}
+      {kpi.byMethod.length > 0 && (
+        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm font-bold">Recebido por forma de pagamento</p>
+            {methodFilter !== "todos" && (
+              <Button variant="ghost" size="sm" onClick={() => setMethodFilter("todos")}>
+                Ver todas
+              </Button>
+            )}
+          </div>
+          <div className="mt-3 space-y-1">
+            {kpi.byMethod.map(([method, total]) => {
+              const active = methodFilter === method;
+              return (
+                <button
+                  key={method}
+                  type="button"
+                  onClick={() => setMethodFilter(active ? "todos" : method)}
+                  className={`block w-full rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-accent ${active ? "bg-accent" : ""}`}
+                >
+                  <div className="flex items-center justify-between gap-2 text-sm">
+                    <span className="font-medium">
+                      {method === "nao_informada" ? "Não informada" : paymentMethodLabel(method)}
+                    </span>
+                    <span className="font-bold">{formatCurrency(total)}</span>
+                  </div>
+                  <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full bg-primary transition-all duration-700"
+                      style={{ width: `${maxMethod ? (total / maxMethod) * 100 : 0}%` }}
+                    />
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <div className="relative w-full max-w-xs">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar paciente..."
-            className="pl-9"
-          />
-        </div>
-        <Select
-          value={statusFilter}
-          onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}
-        >
-          <SelectTrigger className="w-40">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="todos">Todos os status</SelectItem>
-            {Object.entries(STATUS_LABEL).map(([value, label]) => (
-              <SelectItem key={value} value={value}>
-                {label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={patientFilter} onValueChange={setPatientFilter}>
-          <SelectTrigger className="w-44">
-            <SelectValue placeholder="Todos os pacientes" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="todos">Todos os pacientes</SelectItem>
-            {patients.map((p) => (
-              <SelectItem key={p.id} value={p.id}>
-                {p.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={methodFilter} onValueChange={setMethodFilter}>
-          <SelectTrigger className="w-48">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="todos">Todas as formas</SelectItem>
-            <SelectItem value="nao_informada">Não informada</SelectItem>
-            {PAYMENT_METHODS.map((m) => (
-              <SelectItem key={m.id} value={m.id}>
-                {m.emoji} {m.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Input
-          type="date"
-          value={dateFrom}
-          onChange={(e) => setDateFrom(e.target.value)}
-          className="w-40"
-          aria-label="Data inicial"
+      <div className="space-y-3 rounded-2xl border border-border bg-card p-3 shadow-sm sm:p-4">
+        <StatusChips
+          value={status}
+          onChange={setStatus}
+          options={[
+            { id: "todos", label: "Todos", count: scoped.length },
+            ...STATUS_ORDER.map((s) => ({
+              id: s,
+              label: STATUS[s].label,
+              dot: STATUS[s].dot,
+              count: scoped.filter((p) => p.status === s).length,
+            })),
+          ]}
         />
-        <Input
-          type="date"
-          value={dateTo}
-          onChange={(e) => setDateTo(e.target.value)}
-          className="w-40"
-          aria-label="Data final"
-        />
-        {hasActiveFilters && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              setQuery("");
-              setStatusFilter("todos");
-              setPatientFilter("todos");
-              setMethodFilter("todos");
-              setDateFrom("");
-              setDateTo("");
-            }}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative min-w-52 flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Buscar paciente..."
+              className="h-9 pl-9"
+            />
+          </div>
+          <select
+            value={patientFilter}
+            onChange={(e) => setPatientFilter(e.target.value)}
+            className="h-9 max-w-48 rounded-lg border border-border bg-card px-3 text-sm font-medium"
+            aria-label="Paciente"
           >
-            Limpar filtros
-          </Button>
-        )}
-        <span className="text-sm text-muted-foreground">{filtered.length} lançamento(s)</span>
+            <option value="todos">Todos os pacientes</option>
+            {patients.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+          <select
+            value={methodFilter}
+            onChange={(e) => setMethodFilter(e.target.value)}
+            className="h-9 max-w-48 rounded-lg border border-border bg-card px-3 text-sm font-medium"
+            aria-label="Forma de pagamento"
+          >
+            <option value="todos">Todas as formas</option>
+            <option value="nao_informada">Não informada</option>
+            {PAYMENT_METHODS.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.emoji} {m.label}
+              </option>
+            ))}
+          </select>
+          <PeriodFilter
+            value={period.period}
+            from={period.from}
+            to={period.to}
+            onChange={setPeriod}
+          />
+          {hasFilters && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setQuery("");
+                setStatus("todos");
+                setPatientFilter("todos");
+                setMethodFilter("todos");
+                setPeriod({ period: "este_mes", from: "", to: "" });
+              }}
+            >
+              Limpar
+            </Button>
+          )}
+        </div>
       </div>
 
-      <div className="mt-4 rounded-2xl border border-border bg-card">
+      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
         {loading ? (
           <p className="p-8 text-center text-sm text-muted-foreground">Carregando...</p>
         ) : filtered.length === 0 ? (
-          <EmptyState icon={DollarSign} title="Nenhum lançamento encontrado." />
+          <div className="p-2">
+            <EmptyState
+              icon={Wallet}
+              title={
+                payments.length === 0
+                  ? "Nenhum lançamento ainda."
+                  : "Nenhum lançamento nesse período ou filtro."
+              }
+            />
+            <div className="pb-6 text-center">
+              <Button onClick={openCreate} variant={payments.length ? "outline" : "default"}>
+                <Plus /> Novo lançamento
+              </Button>
+            </div>
+          </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Paciente</TableHead>
-                <TableHead>Valor</TableHead>
-                <TableHead>Forma</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Data</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          <>
+            <ul className="divide-y divide-border md:hidden">
               {filtered.map((p) => (
-                <TableRow key={p.id} className="animate-in fade-in">
-                  <TableCell className="font-semibold">{p.patients?.name ?? "—"}</TableCell>
-                  <TableCell>{formatCurrency(Number(p.amount))}</TableCell>
-                  <TableCell className="whitespace-nowrap text-sm">
-                    {paymentMethodLabel(p.payment_method, p.installments)}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={STATUS_VARIANT[p.status]}>{STATUS_LABEL[p.status]}</Badge>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {new Date(p.paid_at ?? p.created_at).toLocaleDateString("pt-BR")}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {p.status === "pendente" && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => markPaid(p)}
-                        aria-label="Marcar como pago"
-                        className="text-muted-foreground hover:text-emerald-600"
-                      >
-                        <CheckCircle2 className="h-4 w-4" />
-                      </Button>
+                <li key={p.id} className="space-y-2.5 p-4">
+                  <div className="flex items-start gap-3">
+                    <Initial name={p.patients?.name ?? "Avulso"} />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-semibold">{p.patients?.name ?? "Sem paciente"}</p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {date(p.paid_at ?? p.created_at)} ·{" "}
+                        {paymentMethod(p.payment_method)
+                          ? paymentMethodLabel(p.payment_method, p.installments)
+                          : "Forma não informada"}
+                      </p>
+                    </div>
+                    {menu(p)}
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-lg font-extrabold">
+                      {formatCurrency(Number(p.amount))}
+                    </span>
+                    {receiveButton(p) ?? (
+                      <StatusPill
+                        label={STATUS[p.status].label}
+                        className={STATUS[p.status].pill}
+                      />
                     )}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => openEdit(p)}
-                      aria-label="Editar"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setDeleteTarget(p)}
-                      aria-label="Excluir"
-                      className="text-muted-foreground hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
+                  </div>
+                </li>
               ))}
-            </TableBody>
-          </Table>
+            </ul>
+            <table className="hidden w-full text-sm md:table">
+              <thead className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                <tr>
+                  <th className="px-4 py-3 font-semibold">Paciente</th>
+                  <th className="px-4 py-3 text-right font-semibold">Valor</th>
+                  <th className="px-4 py-3 font-semibold">Forma</th>
+                  <th className="px-4 py-3 font-semibold">Status</th>
+                  <th className="px-4 py-3 text-right font-semibold">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {filtered.map((p) => (
+                  <tr key={p.id} className="transition-colors hover:bg-muted/30">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <Initial name={p.patients?.name ?? "Avulso"} />
+                        <div className="min-w-0">
+                          <p className="truncate font-semibold">
+                            {p.patients?.name ?? "Sem paciente"}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {p.status === "pago" ? "Recebido em " : "Lançado em "}
+                            {date(p.paid_at ?? p.created_at)}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-right font-bold">
+                      {formatCurrency(Number(p.amount))}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">
+                      {paymentMethodLabel(p.payment_method, p.installments)}
+                    </td>
+                    <td className="px-4 py-3">
+                      <StatusPill
+                        label={STATUS[p.status].label}
+                        className={STATUS[p.status].pill}
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-1.5">
+                        {receiveButton(p)}
+                        {menu(p)}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
         )}
       </div>
 
+      <Dialog open={!!receiving} onOpenChange={(o) => !o && setReceiving(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirmar recebimento</DialogTitle>
+            <DialogDescription>
+              {receiving?.patients?.name ?? "Lançamento"} ·{" "}
+              <b className="text-foreground">{formatCurrency(Number(receiving?.amount ?? 0))}</b>
+            </DialogDescription>
+          </DialogHeader>
+          <PaymentMethodFields
+            methods={enabledMethods}
+            method={receiveMethod.method}
+            installments={receiveMethod.installments}
+            onChange={({ method, installments }) => setReceiveMethod({ method, installments })}
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReceiving(null)}>
+              Cancelar
+            </Button>
+            <Button
+              className="bg-emerald-600 text-white hover:bg-emerald-700"
+              onClick={confirmReceive}
+            >
+              <CheckCircle2 className="h-4 w-4" /> Confirmar recebimento
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-xl">
           <DialogHeader>
             <DialogTitle>{editing ? "Editar lançamento" : "Novo lançamento"}</DialogTitle>
+            <DialogDescription>Registre um pagamento recebido ou a receber.</DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label>Paciente</Label>
-              <Select
-                value={form.patient_id}
-                onValueChange={(patient_id) => setForm((f) => ({ ...f, patient_id }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione (opcional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  {patients.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="p-amount">Valor (R$)</Label>
-                <Input
-                  id="p-amount"
-                  inputMode="decimal"
+                <Label htmlFor="f-amount">Valor</Label>
+                <MoneyInput
+                  id="f-amount"
                   value={form.amount}
-                  onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
-                  placeholder="0,00"
+                  onChange={(v) => setForm((f) => ({ ...f, amount: v }))}
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>Status</Label>
-                <Select
-                  value={form.status}
-                  onValueChange={(status) =>
-                    setForm((f) => ({ ...f, status: status as PaymentStatus }))
-                  }
+                <Label htmlFor="f-patient">Paciente (opcional)</Label>
+                <select
+                  id="f-patient"
+                  value={form.patient_id}
+                  onChange={(e) => setForm((f) => ({ ...f, patient_id: e.target.value }))}
+                  className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm"
                 >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(STATUS_LABEL).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>
-                        {label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  <option value="">Sem paciente</option>
+                  {patients.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
+            <div className="space-y-1.5">
+              <Label>Situação</Label>
+              <Segmented
+                value={form.status}
+                onChange={(s) => setForm((f) => ({ ...f, status: s }))}
+                options={STATUS_ORDER.map((s) => ({
+                  id: s,
+                  label: STATUS[s].label,
+                  dot: STATUS[s].dot,
+                }))}
+              />
+            </div>
+            {form.status === "pago" && (
+              <div className="space-y-1.5">
+                <Label htmlFor="f-paid">Data do recebimento</Label>
+                <Input
+                  id="f-paid"
+                  type="date"
+                  value={form.paid_on}
+                  onChange={(e) => setForm((f) => ({ ...f, paid_on: e.target.value }))}
+                />
+              </div>
+            )}
             <PaymentMethodFields
               methods={enabledMethods}
               method={form.payment_method}
@@ -491,8 +672,8 @@ function Financeiro() {
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={save} disabled={!form.amount.trim() || saving}>
-              {saving ? "Salvando..." : "Salvar"}
+            <Button onClick={save} disabled={!formValid || saving}>
+              {saving ? "Salvando..." : editing ? "Salvar alterações" : "Criar lançamento"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -502,7 +683,11 @@ function Financeiro() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir lançamento?</AlertDialogTitle>
-            <AlertDialogDescription>Essa ação não pode ser desfeita.</AlertDialogDescription>
+            <AlertDialogDescription>
+              {formatCurrency(Number(deleteTarget?.amount ?? 0))}
+              {deleteTarget?.patients?.name ? ` de ${deleteTarget.patients.name}` : ""}. Essa ação
+              não pode ser desfeita.
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>

@@ -45,6 +45,18 @@ export type TutorialUpdate = {
 export const TUTORIAL_UPDATES: TutorialUpdate[] = [
   {
     date: "2026-09-28",
+    title: "Orçamentos, Financeiro e Contas renovados",
+    sections: ["orcamentos", "financeiro", "contas"],
+    items: [
+      "Indicadores no topo com cores e barras de progresso (taxa de aprovação, quanto já foi recebido, contas atrasadas).",
+      "Filtros por botões de status e períodos prontos (Este mês, Mês passado, Próximos 30 dias...).",
+      "Orçamentos: botões Enviar, Aprovar/Recusar e Lançar no Financeiro; o catálogo de tratamentos preenche nome e preço.",
+      "Financeiro: botão Receber com escolha da forma de pagamento e gráfico de recebido por forma.",
+      "Contas: aviso de atrasadas, prazos como Vence em 3 dias, botão Pagar/Receber e Repetir no próximo mês.",
+    ],
+  },
+  {
+    date: "2026-09-28",
     title: "Odontograma no celular",
     sections: ["odontograma"],
     items: [
@@ -625,11 +637,19 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
     emoji: "🧾",
     title: "Orçamentos",
     to: "/admin/orcamentos",
-    summary: "Propostas de tratamento para os pacientes.",
+    summary: "Propostas de tratamento, do rascunho até a aprovação.",
     steps: [
       {
+        title: "Acompanhe pelos indicadores",
+        text: "No topo: total orçado, aprovado (com a taxa de aprovação), aguardando resposta e recusados. Clique em um indicador para filtrar a lista.",
+      },
+      {
+        title: "Avance cada orçamento",
+        text: "Use os botões da própria linha: Enviar (rascunho), Aprovar ou Recusar (aguardando) e Lançar no Financeiro (aprovado). No ⋯ ficam Editar, Abrir paciente, Gerar proposta e Excluir.",
+      },
+      {
         title: "Novo orçamento",
-        text: "Selecione o paciente, descreva o tratamento, o valor e as observações (condições de pagamento).",
+        text: "Clique em Novo orçamento, escolha o paciente e toque em um tratamento do catálogo para preencher nome e preço (ou digite). Defina o status e as observações.",
       },
       {
         title: "Acompanhe",
@@ -651,7 +671,11 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
     steps: [
       {
         title: "Lançamento",
-        text: "Registre o valor, o paciente, o status (pendente, pago, cancelado) e a forma de pagamento. No cartão de crédito, link de pagamento e crediário, informe também as parcelas.",
+        text: "Registre o valor, o paciente, a situação (a receber, recebido, cancelado) e a forma de pagamento. No cartão de crédito, link de pagamento e crediário, informe também as parcelas.",
+      },
+      {
+        title: "Receber um pagamento",
+        text: "Na linha de um valor a receber, clique em Receber, escolha a forma de pagamento (e parcelas) e confirme.",
       },
       {
         title: "Recebido por forma",
@@ -681,7 +705,15 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
       },
       {
         title: "Dê baixa",
-        text: "Ao pagar ou receber, altere o status da conta.",
+        text: "Clique em Pagar ou Receber na linha da conta, escolha a forma de pagamento e confirme.",
+      },
+      {
+        title: "Atrasos e vencimentos",
+        text: "Contas atrasadas aparecem em vermelho e com um aviso no topo. Use os filtros Atrasadas e Vencem em 7 dias para se organizar.",
+      },
+      {
+        title: "Contas fixas",
+        text: "Para aluguel, energia e outras contas mensais, use ⋯ › Repetir no próximo mês.",
       },
     ],
   },
