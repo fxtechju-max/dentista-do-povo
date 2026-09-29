@@ -56,6 +56,9 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export const Route = createFileRoute("/admin/orcamentos")({
+  // ?paciente=<id> abre a lista já filtrada (ex.: vindo do odontograma).
+  validateSearch: (search: Record<string, unknown>): { paciente?: string } =>
+    typeof search["paciente"] === "string" ? { paciente: search["paciente"] } : {},
   component: Orcamentos,
 });
 
@@ -108,13 +111,14 @@ const date = (iso: string) => new Date(iso).toLocaleDateString("pt-BR");
 
 function Orcamentos() {
   const navigate = useNavigate();
+  const { paciente } = Route.useSearch();
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [treatments, setTreatments] = useState<Treatment[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<BudgetStatus | "todos">("todos");
-  const [patientFilter, setPatientFilter] = useState("todos");
+  const [patientFilter, setPatientFilter] = useState(paciente ?? "todos");
   const [period, setPeriod] = useState<{ period: PeriodId; from: string; to: string }>({
     period: "todos",
     from: "",

@@ -107,6 +107,10 @@ export type ToothProcedure = {
   surfaces: Surface[];
   situation: Situation;
   planned_procedure: string | null;
+  /** Valor do procedimento planejado (numeric vem como texto do banco). */
+  price: number | string | null;
+  /** Orçamento gerado pelo Plano de tratamento. */
+  budget_id: string | null;
   status: ProcedureStatus;
   notes: string | null;
   record_date: string;

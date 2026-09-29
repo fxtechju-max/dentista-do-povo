@@ -127,6 +127,8 @@ export const tableColumns = {
     "record_date",
     "dentist",
     "created_at",
+    "price",
+    "budget_id",
   ],
   // image_data never enters this allowlist (see migration 0004).
   tooth_attachments: [

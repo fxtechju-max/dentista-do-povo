@@ -45,6 +45,17 @@ export type TutorialUpdate = {
 export const TUTORIAL_UPDATES: TutorialUpdate[] = [
   {
     date: "2026-09-28",
+    title: "Plano de tratamento no Odontograma",
+    sections: ["odontograma", "orcamentos", "tratamentos"],
+    items: [
+      "Ao escolher o Procedimento planejado de um dente, o valor vem sugerido de Tratamentos e pode ser alterado.",
+      "Novo quadro Plano de tratamento: marque o que vai ser feito, confira os valores e clique em Gerar orçamento.",
+      "Cada procedimento vira um item do orçamento do paciente (rascunho), pronto para a proposta.",
+      "Procedimentos que ainda não existem em Tratamentos são cadastrados lá automaticamente com o valor usado — depois é só ajustar.",
+    ],
+  },
+  {
+    date: "2026-09-28",
     title: "Site mais rápido",
     sections: ["painel", "cms-site"],
     items: [
@@ -487,8 +498,20 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
         text: "Escolha a Situação atual (cárie, restauração, canal, coroa...), o Procedimento planejado, o status em Procedimento realizado (Planejado, Em andamento, Concluído), observações, data e dentista.",
       },
       {
+        title: "Informe o valor",
+        text: "Ao escolher o Procedimento planejado, aparece o campo Valor do procedimento, já preenchido com o preço de Tratamentos. Altere se quiser e clique em Salvar Registro.",
+      },
+      {
         title: "Anexe imagens",
         text: "Em Anexos, clique em Adicionar foto para incluir fotos ou radiografias (JPG/PNG até 10MB). Elas são enviadas ao clicar em Salvar Registro.",
+      },
+      {
+        title: "Gere o orçamento pelo Plano de tratamento",
+        text: "O quadro Plano de tratamento lista tudo o que está planejado. Marque os procedimentos que o paciente vai fazer, confira os valores e clique em Gerar orçamento. Cada item vira um orçamento em rascunho; depois use Abrir orçamentos ou Ver proposta.",
+      },
+      {
+        title: "Tratamentos novos entram no catálogo",
+        text: "Se o procedimento ainda não existe em Tratamentos (ex.: Selante), ele é cadastrado lá com o valor usado — deixe marcado Cadastrar em Tratamentos. Para mudar o preço depois, edite em Tratamentos.",
       },
       {
         title: "Consulte o histórico",

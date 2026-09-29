@@ -33,6 +33,10 @@ import {
   uploadToothAttachment,
 } from "@/lib/tooth-attachments.functions";
 import { SurfaceDiagram, ToothGraphic } from "./ToothGraphic";
+import { TreatmentPlan } from "./TreatmentPlan";
+import { findTreatment, toNumber, type CatalogTreatment } from "@/lib/odontogram-plan";
+import { parseMoney } from "@/lib/admin/finance-period";
+import { formatCurrency } from "@/lib/admin/labels";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
@@ -93,6 +97,7 @@ type FormState = {
   surfaces: Surface[];
   situation: Situation;
   planned_procedure: string;
+  price: string;
   status: ProcedureStatus;
   notes: string;
   record_date: string;
@@ -113,6 +118,7 @@ export function OdontogramModule({
   const [showLegend, setShowLegend] = useState(true);
   const [procedures, setProcedures] = useState<ToothProcedure[]>([]);
   const [attachments, setAttachments] = useState<ToothAttachment[]>([]);
+  const [catalog, setCatalog] = useState<CatalogTreatment[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
   const [form, setForm] = useState<FormState | null>(null);
   const [pendingFiles, setPendingFiles] = useState<{ file: File; preview: string }[]>([]);
@@ -131,7 +137,7 @@ export function OdontogramModule({
   }, []);
 
   async function load() {
-    const [{ data: procs }, { data: files }] = await Promise.all([
+    const [{ data: procs }, { data: files }, { data: treatments }] = await Promise.all([
       db
         .from("tooth_procedures")
         .select("*")
@@ -142,7 +148,9 @@ export function OdontogramModule({
         .select("id, procedure_id, tooth_number, title, created_at")
         .eq("patient_id", patientId)
         .order("created_at", { ascending: false }),
+      db.from("treatments").select("id, name, price, active").order("name"),
     ]);
+    setCatalog((treatments ?? []) as CatalogTreatment[]);
     setProcedures(sortProcedures((procs ?? []) as ToothProcedure[]));
     setAttachments((files ?? []) as ToothAttachment[]);
   }
@@ -185,6 +193,7 @@ export function OdontogramModule({
       surfaces: [],
       situation: currentSituation(n) ?? "saudavel",
       planned_procedure: "",
+      price: "",
       status: "planejado",
       notes: "",
       record_date: today(),
@@ -208,6 +217,7 @@ export function OdontogramModule({
       surfaces: p.surfaces,
       situation: p.situation,
       planned_procedure: p.planned_procedure ?? "",
+      price: toNumber(p.price) == null ? "" : toNumber(p.price)!.toFixed(2).replace(".", ","),
       status: p.status,
       notes: p.notes ?? "",
       record_date: p.record_date.slice(0, 10),
@@ -236,11 +246,17 @@ export function OdontogramModule({
 
   async function save() {
     if (!form || selected == null || saving) return;
+    const price = form.planned_procedure && form.price.trim() ? parseMoney(form.price) : null;
+    if (price != null && !(price >= 0)) {
+      toast.error("Valor inválido. Use o formato 150,00.");
+      return;
+    }
     setSaving(true);
     const values = {
       surfaces: form.surfaces,
       situation: form.situation,
       planned_procedure: form.planned_procedure || null,
+      price,
       status: form.status,
       notes: form.notes.trim() || null,
       record_date: form.record_date || today(),
@@ -454,9 +470,15 @@ export function OdontogramModule({
             <Label>Procedimento planejado</Label>
             <Select
               value={form.planned_procedure || "nenhum"}
-              onValueChange={(v) =>
-                setForm({ ...form, planned_procedure: v === "nenhum" ? "" : v })
-              }
+              onValueChange={(v) => {
+                const id = v === "nenhum" ? "" : v;
+                const catalogPrice = id ? toNumber(findTreatment(id, catalog)?.price) : null;
+                setForm({
+                  ...form,
+                  planned_procedure: id,
+                  price: catalogPrice == null ? "" : catalogPrice.toFixed(2).replace(".", ","),
+                });
+              }}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -471,6 +493,31 @@ export function OdontogramModule({
               </SelectContent>
             </Select>
           </div>
+          {form.planned_procedure && (
+            <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
+              <Label htmlFor="odo-price">Valor do procedimento</Label>
+              <div className="relative">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-muted-foreground">
+                  R$
+                </span>
+                <Input
+                  id="odo-price"
+                  inputMode="decimal"
+                  value={form.price}
+                  onChange={(e) =>
+                    setForm({ ...form, price: e.target.value.replace(/[^\d,.]/g, "") })
+                  }
+                  placeholder="0,00"
+                  className="pl-10 font-semibold"
+                />
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                {findTreatment(form.planned_procedure, catalog)
+                  ? "Sugerido pelo catálogo de Tratamentos. Vai para o Plano de tratamento."
+                  : "Procedimento novo: será cadastrado em Tratamentos ao gerar o orçamento."}
+              </p>
+            </div>
+          )}
           <div className="space-y-1.5">
             <Label>Procedimento realizado</Label>
             <Select
@@ -669,6 +716,14 @@ export function OdontogramModule({
           </div>
         </div>
 
+        <TreatmentPlan
+          patientId={patientId}
+          procedures={procedures}
+          catalog={catalog}
+          onChanged={load}
+          onSelectTooth={selectTooth}
+        />
+
         {showLegend && (
           <div className="rounded-2xl border border-border bg-card p-4">
             <p className="text-sm font-bold">Legenda - Situações e Tratamentos</p>
@@ -718,6 +773,7 @@ export function OdontogramModule({
                     </div>
                     <p className="mt-1 text-xs text-muted-foreground">
                       {procedureLabel(p.planned_procedure)}
+                      {toNumber(p.price) != null ? ` · ${formatCurrency(toNumber(p.price)!)}` : ""}
                       {p.surfaces.length
                         ? ` · ${p.surfaces.map((s) => surfaceLabel(s, p.tooth_number)).join(", ")}`
                         : ""}
@@ -778,7 +834,12 @@ export function OdontogramModule({
                             {situationOf(p.situation).label}
                           </span>
                         </td>
-                        <td className="px-3 py-2">{procedureLabel(p.planned_procedure)}</td>
+                        <td className="px-3 py-2">
+                          {procedureLabel(p.planned_procedure)}
+                          {toNumber(p.price) != null
+                            ? ` · ${formatCurrency(toNumber(p.price)!)}`
+                            : ""}
+                        </td>
                         <td className="px-3 py-2">
                           {p.surfaces.length
                             ? p.surfaces.map((s) => surfaceLabel(s, p.tooth_number)).join(", ")

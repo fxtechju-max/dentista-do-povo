@@ -782,12 +782,14 @@ export type Database = {
       };
       tooth_procedures: {
         Row: {
+          budget_id: string | null;
           created_at: string;
           dentist: string | null;
           id: string;
           notes: string | null;
           patient_id: string;
           planned_procedure: string | null;
+          price: number | null;
           record_date: string;
           situation: string;
           status: string;
@@ -795,12 +797,14 @@ export type Database = {
           tooth_number: number;
         };
         Insert: {
+          budget_id?: string | null;
           created_at?: string;
           dentist?: string | null;
           id?: string;
           notes?: string | null;
           patient_id: string;
           planned_procedure?: string | null;
+          price?: number | null;
           record_date?: string;
           situation: string;
           status?: string;
@@ -808,12 +812,14 @@ export type Database = {
           tooth_number: number;
         };
         Update: {
+          budget_id?: string | null;
           created_at?: string;
           dentist?: string | null;
           id?: string;
           notes?: string | null;
           patient_id?: string;
           planned_procedure?: string | null;
+          price?: number | null;
           record_date?: string;
           situation?: string;
           status?: string;
