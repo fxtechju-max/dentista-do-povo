@@ -10,6 +10,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { EyeOff } from "lucide-react";
 import { formatCurrency } from "@/lib/admin/labels";
 
 export type ChartPayment = {
@@ -101,12 +102,26 @@ function ChartTooltip({
 }
 
 /** Gráfico animado do Financeiro: recebido × a receber no período. */
+export type ChartSize = "pequeno" | "medio" | "grande";
+
+const SIZES: { id: ChartSize; label: string; title: string; height: string }[] = [
+  { id: "pequeno", label: "P", title: "Gráfico pequeno", height: "h-36 sm:h-40" },
+  { id: "medio", label: "M", title: "Gráfico médio", height: "h-60 sm:h-72" },
+  { id: "grande", label: "G", title: "Gráfico grande", height: "h-80 sm:h-[26rem]" },
+];
+
 export default function FinanceChart({
   payments,
   range,
+  size = "medio",
+  onSizeChange,
+  onHide,
 }: {
   payments: ChartPayment[];
   range: [number | null, number | null];
+  size?: ChartSize;
+  onSizeChange?: (size: ChartSize) => void;
+  onHide?: () => void;
 }) {
   const [kind, setKind] = useState<"area" | "barras">("area");
   const data = useMemo(() => buildSeries(payments, range), [payments, range]);
@@ -137,26 +152,62 @@ export default function FinanceChart({
             </span>
           </div>
         </div>
-        <div className="flex gap-1 rounded-lg border border-border bg-background p-0.5">
-          {(
-            [
-              ["area", "Área"],
-              ["barras", "Barras"],
-            ] as const
-          ).map(([id, label]) => (
+        <div className="flex flex-wrap items-center gap-2">
+          <div
+            className="flex gap-1 rounded-lg border border-border bg-background p-0.5"
+            role="group"
+            aria-label="Tamanho do gráfico"
+          >
+            {SIZES.map((o) => (
+              <button
+                key={o.id}
+                type="button"
+                onClick={() => onSizeChange?.(o.id)}
+                title={o.title}
+                aria-label={o.title}
+                aria-pressed={size === o.id}
+                className={`w-8 rounded-md py-1 text-xs font-bold transition-colors ${
+                  size === o.id
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-1 rounded-lg border border-border bg-background p-0.5">
+            {(
+              [
+                ["area", "Área"],
+                ["barras", "Barras"],
+              ] as const
+            ).map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setKind(id)}
+                className={`rounded-md px-3 py-1 text-xs font-bold transition-colors ${
+                  kind === id
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {onHide && (
             <button
-              key={id}
               type="button"
-              onClick={() => setKind(id)}
-              className={`rounded-md px-3 py-1 text-xs font-bold transition-colors ${
-                kind === id
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
+              onClick={onHide}
+              title="Ocultar gráfico"
+              aria-label="Ocultar gráfico"
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
             >
-              {label}
+              <EyeOff className="h-4 w-4" />
             </button>
-          ))}
+          )}
         </div>
       </div>
 
@@ -165,7 +216,11 @@ export default function FinanceChart({
           Sem lançamentos no período para mostrar no gráfico.
         </p>
       ) : (
-        <div className="mt-4 h-60 w-full sm:h-72">
+        <div
+          className={`mt-4 w-full transition-[height] duration-500 ease-out ${
+            (SIZES.find((o) => o.id === size) ?? SIZES[1]!).height
+          }`}
+        >
           <ResponsiveContainer width="100%" height="100%">
             {kind === "area" ? (
               <AreaChart

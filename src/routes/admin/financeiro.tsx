@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
+  BarChart3,
   CheckCircle2,
   Clock,
   DollarSign,
@@ -15,6 +16,13 @@ import {
   Wallet,
 } from "lucide-react";
 import { db } from "@/integrations/mysql/client";
+import type { ChartSize } from "@/components/admin/finance/FinanceChart";
+import {
+  readPreference,
+  refreshPreferences,
+  savePreference,
+  subscribePreferences,
+} from "@/lib/preferences";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { EmptyState } from "@/components/admin/EmptyState";
 import { PaymentMethodFields } from "@/components/admin/PaymentMethodFields";
@@ -60,6 +68,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+
+type ChartPrefs = { visible: boolean; size: ChartSize };
+function loadChartPrefs(): ChartPrefs {
+  return readPreference("financeChart") ?? { visible: true, size: "medio" };
+}
 
 // O gráfico (recharts) carrega à parte para a página abrir rápido.
 const FinanceChart = lazy(() => import("@/components/admin/finance/FinanceChart"));
@@ -131,6 +144,18 @@ function Financeiro() {
     to: "",
   });
   const enabledMethods = useEnabledPaymentMethods();
+  // Gráfico: mostrar/ocultar e tamanho ficam salvos no projeto (vale para todos).
+  const [chart, setChartState] = useState<ChartPrefs>(loadChartPrefs);
+  useEffect(() => {
+    const refresh = () => setChartState(loadChartPrefs());
+    const unsubscribe = subscribePreferences(refresh);
+    void refreshPreferences().then(refresh);
+    return unsubscribe;
+  }, []);
+  function setChart(next: ChartPrefs) {
+    setChartState(next);
+    void savePreference({ key: "financeChart", value: next });
+  }
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Payment | null>(null);
   const [form, setForm] = useState(emptyForm);
@@ -394,11 +419,32 @@ function Financeiro() {
         />
       </div>
 
-      <Suspense
-        fallback={<div className="h-80 animate-pulse rounded-2xl border border-border bg-card" />}
-      >
-        <FinanceChart payments={scoped} range={range} />
-      </Suspense>
+      {chart.visible ? (
+        <Suspense
+          fallback={<div className="h-64 animate-pulse rounded-2xl border border-border bg-card" />}
+        >
+          <FinanceChart
+            payments={scoped}
+            range={range}
+            size={chart.size}
+            onSizeChange={(size) => setChart({ ...chart, size })}
+            onHide={() => {
+              setChart({ ...chart, visible: false });
+              toast("Gráfico oculto.", {
+                action: { label: "Desfazer", onClick: () => setChart({ ...chart, visible: true }) },
+              });
+            }}
+          />
+        </Suspense>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setChart({ ...chart, visible: true })}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-card/60 py-2.5 text-sm font-semibold text-muted-foreground transition-colors animate-in fade-in duration-300 hover:border-primary/50 hover:text-primary"
+        >
+          <BarChart3 className="h-4 w-4" /> Mostrar gráfico
+        </button>
+      )}
 
       {(kpi.discounts > 0 || kpi.surcharges > 0) && (
         <div className="flex flex-wrap gap-2 animate-in fade-in duration-300">

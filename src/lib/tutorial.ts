@@ -45,6 +45,16 @@ export type TutorialUpdate = {
 export const TUTORIAL_UPDATES: TutorialUpdate[] = [
   {
     date: "2026-09-29",
+    title: "Gráfico do Financeiro: tamanho e ocultar",
+    sections: ["financeiro"],
+    items: [
+      "Escolha o tamanho do gráfico: P (pequeno), M (médio) ou G (grande).",
+      "Botão do olho oculta o gráfico; Mostrar gráfico traz de volta.",
+      "A escolha fica salva no projeto e vale em todos os computadores e celulares.",
+    ],
+  },
+  {
+    date: "2026-09-29",
     title: "Menores de idade, suporte flutuante, descontos e apagar por módulo",
     sections: ["pacientes", "odontograma", "suporte", "financeiro", "backup"],
     items: [
@@ -738,7 +748,7 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
       },
       {
         title: "Gráfico do período",
-        text: "O gráfico Evolução no período mostra recebido × a receber, por dia ou por mês. Troque entre Área e Barras e passe o mouse para ver os valores.",
+        text: "O gráfico Evolução no período mostra recebido × a receber, por dia ou por mês. Troque entre Área e Barras e passe o mouse para ver os valores. Use P, M ou G para o tamanho e o botão do olho para ocultar (Mostrar gráfico traz de volta). A escolha fica salva no projeto, para todos.",
       },
       {
         title: "Recebido por forma",
