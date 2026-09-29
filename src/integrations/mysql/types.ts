@@ -5,18 +5,21 @@ export type Database = {
     Tables: {
       conversations: {
         Row: {
+          admin_read_at: string | null;
           created_at: string;
           id: string;
           last_message_at: string;
           visitor_name: string;
         };
         Insert: {
+          admin_read_at?: string | null;
           created_at?: string;
           id?: string;
           last_message_at?: string;
           visitor_name: string;
         };
         Update: {
+          admin_read_at?: string | null;
           created_at?: string;
           id?: string;
           last_message_at?: string;
@@ -162,6 +165,8 @@ export type Database = {
       };
       payments: {
         Row: {
+          discount: number;
+          surcharge: number;
           amount: number;
           appointment_id: string | null;
           created_at: string;
@@ -173,6 +178,8 @@ export type Database = {
           installments: number | null;
         };
         Insert: {
+          discount?: number;
+          surcharge?: number;
           amount: number;
           appointment_id?: string | null;
           created_at?: string;
@@ -184,6 +191,8 @@ export type Database = {
           installments?: number | null;
         };
         Update: {
+          discount?: number;
+          surcharge?: number;
           amount?: number;
           appointment_id?: string | null;
           created_at?: string;

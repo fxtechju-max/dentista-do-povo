@@ -1,7 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { CheckCircle2, ClipboardList, FileText, Receipt, Sparkles, Wallet } from "lucide-react";
+import {
+  CheckCircle2,
+  ClipboardList,
+  Eraser,
+  FileText,
+  Plus,
+  Receipt,
+  Sparkles,
+  Trash2,
+  Wallet,
+} from "lucide-react";
 import { db } from "@/integrations/mysql/client";
 import { formatCurrency } from "@/lib/admin/labels";
 import { parseMoney } from "@/lib/admin/finance-period";
@@ -13,7 +23,15 @@ import {
   toNumber,
   type CatalogTreatment,
 } from "@/lib/odontogram-plan";
-import { procedureLabel, statusOf, surfaceLabel, type ToothProcedure } from "@/lib/odontogram-pro";
+import {
+  PROCEDURES,
+  procedureLabel,
+  statusOf,
+  surfaceLabel,
+  type Situation,
+  type ToothProcedure,
+} from "@/lib/odontogram-pro";
+import { LOWER_TEETH, UPPER_TEETH } from "@/lib/odontogram";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -27,10 +45,37 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const money = (n: number | null) => (n == null ? "" : n.toFixed(2).replace(".", ","));
 
 type Result = { count: number; total: number; created: string[] };
+
+const TEETH_GROUPS = [
+  { label: "Permanentes — superiores", teeth: UPPER_TEETH.permanente },
+  { label: "Permanentes — inferiores", teeth: LOWER_TEETH.permanente },
+  { label: "Decíduos — superiores", teeth: UPPER_TEETH.deciduo },
+  { label: "Decíduos — inferiores", teeth: LOWER_TEETH.deciduo },
+];
+const emptyAdd = { tooth: "", procedure: "", price: "", notes: "" };
 
 /**
  * Procedimentos planejados no odontograma: o doutor marca o que vai ser feito,
@@ -43,12 +88,18 @@ export function TreatmentPlan({
   catalog,
   onChanged,
   onSelectTooth,
+  currentSituation,
+  hasAttachments,
+  defaultDentist,
 }: {
   patientId: string;
   procedures: ToothProcedure[];
   catalog: CatalogTreatment[];
   onChanged: () => Promise<void> | void;
   onSelectTooth: (tooth: number) => void;
+  currentSituation: (tooth: number) => Situation | null;
+  hasAttachments: (procedureId: string) => boolean;
+  defaultDentist: string;
 }) {
   const planned = useMemo(
     () =>
@@ -66,6 +117,11 @@ export function TreatmentPlan({
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const [addForm, setAddForm] = useState(emptyAdd);
+  const [adding, setAdding] = useState(false);
+  const [removeList, setRemoveList] = useState<ToothProcedure[] | null>(null);
+  const [removing, setRemoving] = useState(false);
 
   function suggested(p: ToothProcedure): number | null {
     return (
@@ -196,6 +252,71 @@ export function TreatmentPlan({
 
   const allChecked = planned.length > 0 && selected.length === planned.length;
 
+  function openAdd() {
+    setAddForm(emptyAdd);
+    setAddOpen(true);
+  }
+
+  function pickProcedure(id: string) {
+    const price = toNumber(findTreatment(id, catalog)?.price);
+    setAddForm((f) => ({ ...f, procedure: id, price: money(price) }));
+  }
+
+  const addPrice = addForm.price.trim() ? parseMoney(addForm.price) : null;
+  const addValid =
+    !!addForm.tooth &&
+    !!addForm.procedure &&
+    (addPrice == null || addPrice >= 0) &&
+    (addForm.procedure !== "outro" || !!addForm.notes.trim());
+
+  async function addProcedure() {
+    if (!addValid || adding) return;
+    setAdding(true);
+    const tooth = Number(addForm.tooth);
+    const { error } = await db.from("tooth_procedures").insert({
+      patient_id: patientId,
+      tooth_number: tooth,
+      surfaces: [],
+      situation: currentSituation(tooth) ?? "saudavel",
+      planned_procedure: addForm.procedure,
+      price: addPrice,
+      status: "planejado",
+      notes: addForm.notes.trim() || null,
+      record_date: new Date().toLocaleDateString("en-CA"),
+      dentist: defaultDentist.trim() || null,
+    });
+    setAdding(false);
+    if (error) return;
+    toast.success(`${procedureLabel(addForm.procedure)} no dente ${tooth} adicionado ao plano.`);
+    setAddOpen(false);
+    await onChanged();
+  }
+
+  // Tira do plano. Registro criado só para planejar (sem situação, faces,
+  // observações nem fotos) é apagado; os outros continuam no histórico.
+  async function removeFromPlan() {
+    if (!removeList?.length || removing) return;
+    setRemoving(true);
+    for (const p of removeList) {
+      const onlyPlan =
+        p.situation === "saudavel" && !p.surfaces.length && !p.notes && !hasAttachments(p.id);
+      if (onlyPlan) await db.from("tooth_procedures").delete().eq("id", p.id);
+      else
+        await db
+          .from("tooth_procedures")
+          .update({ planned_procedure: null, price: null })
+          .eq("id", p.id);
+    }
+    setRemoving(false);
+    toast.success(
+      removeList.length === 1
+        ? "Procedimento removido do plano."
+        : `${removeList.length} procedimentos removidos do plano.`,
+    );
+    setRemoveList(null);
+    await onChanged();
+  }
+
   return (
     <div className="rounded-2xl border border-border bg-card p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -211,7 +332,7 @@ export function TreatmentPlan({
           </div>
         </div>
         {planned.length > 0 && (
-          <div className="flex w-full items-center justify-between gap-3 sm:w-auto">
+          <div className="flex w-full flex-wrap items-center justify-between gap-3 sm:w-auto">
             <div className="text-right">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                 {selected.length} de {planned.length} selecionado(s)
@@ -230,18 +351,37 @@ export function TreatmentPlan({
           Nenhum procedimento planejado ainda. Toque em um dente, escolha o{" "}
           <strong className="text-foreground">Procedimento planejado</strong> e salve — ele aparece
           aqui para virar orçamento.
+          <div className="mt-3">
+            <Button variant="outline" size="sm" onClick={openAdd}>
+              <Plus className="h-4 w-4" /> Adicionar procedimento
+            </Button>
+          </div>
         </div>
       ) : (
         <div className="mt-4 overflow-hidden rounded-xl border border-border">
-          <label className="flex cursor-pointer items-center gap-3 border-b border-border bg-muted/50 px-3 py-2 text-xs font-semibold text-muted-foreground">
-            <Checkbox
-              checked={allChecked ? true : selected.length ? "indeterminate" : false}
-              onCheckedChange={(v) =>
-                setChecked(v === true ? new Set(planned.map((p) => p.id)) : new Set())
-              }
-            />
-            Selecionar todos
-          </label>
+          <div className="flex flex-wrap items-center gap-2 border-b border-border bg-muted/50 px-3 py-1.5">
+            <label className="flex flex-1 cursor-pointer items-center gap-3 py-0.5 text-xs font-semibold text-muted-foreground">
+              <Checkbox
+                checked={allChecked ? true : selected.length ? "indeterminate" : false}
+                onCheckedChange={(v) =>
+                  setChecked(v === true ? new Set(planned.map((p) => p.id)) : new Set())
+                }
+              />
+              Selecionar todos
+            </label>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+              disabled={!selected.length}
+              onClick={() => setRemoveList(selected)}
+            >
+              <Eraser className="h-3.5 w-3.5" /> Limpar selecionados
+            </Button>
+            <Button variant="outline" size="sm" className="h-8" onClick={openAdd}>
+              <Plus className="h-3.5 w-3.5" /> Adicionar
+            </Button>
+          </div>
           <ul className="divide-y divide-border">
             {planned.map((p) => {
               const on = checked.has(p.id);
@@ -250,7 +390,7 @@ export function TreatmentPlan({
               return (
                 <li
                   key={p.id}
-                  className={`flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2.5 transition-colors sm:flex-nowrap ${
+                  className={`flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2.5 transition-colors animate-in fade-in slide-in-from-left-1 duration-300 sm:flex-nowrap ${
                     on ? "bg-primary/[0.04]" : ""
                   }`}
                 >
@@ -313,6 +453,16 @@ export function TreatmentPlan({
                       }`}
                     />
                   </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                    onClick={() => setRemoveList([p])}
+                    title="Remover do plano"
+                    aria-label={`Remover ${procedureLabel(p.planned_procedure)} do dente ${p.tooth_number} do plano`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </li>
               );
             })}
@@ -447,6 +597,152 @@ export function TreatmentPlan({
           )}
         </DialogContent>
       </Dialog>
+
+      <Dialog open={addOpen} onOpenChange={(open) => !adding && setAddOpen(open)}>
+        <DialogContent className="max-h-[92dvh] overflow-y-auto sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Adicionar ao plano</DialogTitle>
+            <DialogDescription>
+              Inclua um procedimento no plano de tratamento sem precisar abrir o dente.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-[7.5rem_minmax(0,1fr)] gap-3">
+              <div className="space-y-1.5">
+                <Label>Dente</Label>
+                <Select
+                  value={addForm.tooth}
+                  onValueChange={(v) => setAddForm((f) => ({ ...f, tooth: v }))}
+                >
+                  <SelectTrigger aria-label="Dente">
+                    <SelectValue placeholder="Nº" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {TEETH_GROUPS.map((g) => (
+                      <SelectGroup key={g.label}>
+                        <SelectLabel className="text-[11px]">{g.label}</SelectLabel>
+                        {g.teeth.map((n) => (
+                          <SelectItem key={n} value={String(n)}>
+                            Dente {n}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Procedimento</Label>
+                <Select value={addForm.procedure} onValueChange={pickProcedure}>
+                  <SelectTrigger aria-label="Procedimento">
+                    <SelectValue placeholder="Escolha" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PROCEDURES.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="plan-add-price">Valor</Label>
+              <div className="relative">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-muted-foreground">
+                  R$
+                </span>
+                <Input
+                  id="plan-add-price"
+                  inputMode="decimal"
+                  value={addForm.price}
+                  onChange={(e) =>
+                    setAddForm((f) => ({ ...f, price: e.target.value.replace(/[^\d,.]/g, "") }))
+                  }
+                  placeholder="0,00"
+                  className="pl-10 font-semibold"
+                />
+              </div>
+              {addForm.procedure && (
+                <p className="text-[11px] text-muted-foreground">
+                  {findTreatment(addForm.procedure, catalog)
+                    ? "Valor sugerido pelo catálogo de Tratamentos."
+                    : canCreateInCatalog(addForm.procedure)
+                      ? "Procedimento novo: entra em Tratamentos ao gerar o orçamento."
+                      : "Descreva o procedimento nas observações."}
+                </p>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="plan-add-notes">
+                Observações{addForm.procedure === "outro" ? " (descreva o procedimento)" : ""}
+              </Label>
+              <Textarea
+                id="plan-add-notes"
+                rows={2}
+                value={addForm.notes}
+                onChange={(e) => setAddForm((f) => ({ ...f, notes: e.target.value }))}
+                placeholder="Ex: resina na face oclusal"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="ghost"
+              onClick={() => setAddForm(emptyAdd)}
+              disabled={adding}
+              className="sm:mr-auto"
+            >
+              <Eraser className="h-4 w-4" /> Limpar campos
+            </Button>
+            <Button variant="outline" onClick={() => setAddOpen(false)} disabled={adding}>
+              Cancelar
+            </Button>
+            <Button onClick={addProcedure} disabled={!addValid || adding}>
+              <Plus className="h-4 w-4" /> {adding ? "Adicionando..." : "Adicionar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!removeList} onOpenChange={(open) => !open && setRemoveList(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {removeList?.length === 1
+                ? "Remover este procedimento do plano?"
+                : `Remover ${removeList?.length ?? 0} procedimentos do plano?`}
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <ul className="max-h-40 space-y-1 overflow-y-auto rounded-lg bg-muted/60 p-2 text-sm text-foreground">
+                  {removeList?.map((p) => (
+                    <li key={p.id}>• {budgetItemTitle(p)}</li>
+                  ))}
+                </ul>
+                <p>
+                  Sai do plano de tratamento. O que já foi registrado no dente (situação, faces,
+                  fotos) continua no histórico, e orçamentos já criados não são apagados.
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={removing}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                void removeFromPlan();
+              }}
+              disabled={removing}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {removing ? "Removendo..." : "Remover"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

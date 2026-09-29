@@ -15,6 +15,7 @@ import {
   SITUATIONS,
   STATUSES,
   SURFACES,
+  asSurfaces,
   legacySituation,
   procedureLabel,
   situationOf,
@@ -89,6 +90,8 @@ function toothName(n: number) {
 }
 
 const today = () => new Date().toLocaleDateString("en-CA");
+// Face marcada enquanto a situação é "Saudável" (branco não apareceria).
+const SELECTED_FACE = "color-mix(in srgb, var(--primary) 35%, white)";
 const formatDate = (iso: string) =>
   new Date(`${iso.slice(0, 10)}T12:00:00`).toLocaleDateString("pt-BR");
 
@@ -151,7 +154,14 @@ export function OdontogramModule({
       db.from("treatments").select("id, name, price, active").order("name"),
     ]);
     setCatalog((treatments ?? []) as CatalogTreatment[]);
-    setProcedures(sortProcedures((procs ?? []) as ToothProcedure[]));
+    setProcedures(
+      sortProcedures(
+        ((procs ?? []) as ToothProcedure[]).map((p) => ({
+          ...p,
+          surfaces: asSurfaces(p.surfaces),
+        })),
+      ),
+    );
     setAttachments((files ?? []) as ToothAttachment[]);
   }
 
@@ -408,7 +418,9 @@ export function OdontogramModule({
                 fills={Object.fromEntries(
                   form.surfaces.map((s) => [
                     s,
-                    form.situation === "saudavel" ? "#ffffff" : situationOf(form.situation).color,
+                    form.situation === "saudavel"
+                      ? SELECTED_FACE
+                      : situationOf(form.situation).color,
                   ]),
                 )}
                 selected={form.surfaces}
@@ -442,6 +454,13 @@ export function OdontogramModule({
             </div>
           </div>
 
+          <p className="-mt-2 text-[11px] text-muted-foreground">
+            {form.surfaces.length
+              ? `${form.surfaces.length} face(s) marcada(s): ${form.surfaces
+                  .map((s) => surfaceLabel(s, selected))
+                  .join(", ")}. Escolha a situação para colorir.`
+              : "Toque nas faces do desenho ou nos botões ao lado para marcar."}
+          </p>
           <div className="space-y-1.5">
             <Label>Situação atual</Label>
             <Select
@@ -722,6 +741,9 @@ export function OdontogramModule({
           catalog={catalog}
           onChanged={load}
           onSelectTooth={selectTooth}
+          currentSituation={currentSituation}
+          hasAttachments={(id) => attachments.some((a) => a.procedure_id === id)}
+          defaultDentist={defaultDentist}
         />
 
         {showLegend && (

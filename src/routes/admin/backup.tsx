@@ -1,28 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Download, Upload, AlertTriangle, Check, Database } from "lucide-react";
+import { Download, Upload, Check } from "lucide-react";
 import {
   listBackupTables,
   exportBackup,
   restoreBackup,
-  wipeOperationalData,
   type OperationalTable,
 } from "@/lib/backup.functions";
 import { PageHeader } from "@/components/admin/PageHeader";
+import { DeleteModulesCard } from "@/components/admin/backup/DeleteModulesCard";
 import { AUDIT_TABLE_LABEL } from "@/lib/admin/labels";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 
 export const Route = createFileRoute("/admin/backup")({
   component: Backup,
@@ -50,12 +39,6 @@ function Backup() {
   const [importResult, setImportResult] = useState<string | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
 
-  const [wipeConfirmText, setWipeConfirmText] = useState("");
-  const [wipeDialogOpen, setWipeDialogOpen] = useState(false);
-  const [wiping, setWiping] = useState(false);
-  const [wipeError, setWipeError] = useState<string | null>(null);
-  const [wiped, setWiped] = useState(false);
-
   function toggleTable(t: OperationalTable) {
     setSelected((prev) => {
       const next = new Set(prev);
@@ -65,11 +48,11 @@ function Backup() {
     });
   }
 
-  async function handleExport() {
-    if (selected.size === 0) return;
+  async function handleExport(list: OperationalTable[] = Array.from(selected)) {
+    if (list.length === 0) return;
     setExportError(null);
     setExporting(true);
-    const { data, error } = await exportBackup({ data: { tables: Array.from(selected) } });
+    const { data, error } = await exportBackup({ data: { tables: list } });
     setExporting(false);
     if (error || !data) {
       setExportError(error?.message ?? "Falha ao gerar o backup.");
@@ -106,19 +89,8 @@ function Backup() {
     }
   }
 
-  async function handleWipe() {
-    setWiping(true);
-    setWipeError(null);
-    const { error } = await wipeOperationalData({ data: { confirm: "APAGAR" } });
-    setWiping(false);
-    setWipeDialogOpen(false);
-    setWipeConfirmText("");
-    if (error) setWipeError(error.message);
-    else setWiped(true);
-  }
-
   return (
-    <div className="animate-in fade-in max-w-3xl space-y-4 duration-300">
+    <div className="animate-in fade-in max-w-5xl space-y-4 duration-300">
       <PageHeader
         title="💾 Backup"
         description="Exporte, restaure ou apague os dados operacionais do sistema."
@@ -159,7 +131,7 @@ function Backup() {
           >
             {selected.size === tables.length ? "Desmarcar tudo" : "Selecionar tudo"}
           </Button>
-          <Button onClick={handleExport} disabled={selected.size === 0 || exporting}>
+          <Button onClick={() => handleExport()} disabled={selected.size === 0 || exporting}>
             <Download className="h-4 w-4" /> {exporting ? "Gerando..." : "Baixar backup"}
           </Button>
         </div>
@@ -192,67 +164,7 @@ function Backup() {
         )}
       </div>
 
-      <div className="rounded-2xl border border-destructive/40 bg-destructive/5 p-6">
-        <h2 className="flex items-center gap-2 font-bold text-destructive">
-          <AlertTriangle className="h-4 w-4" /> Apagar dados operacionais
-        </h2>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Apaga permanentemente pacientes, agenda, financeiro, orçamentos, receitas, documentos,
-          blog, CRM e conversas. Sua conta de administrador, outros usuários e as configurações da
-          clínica/IA <strong>não</strong> são afetados — o sistema continua acessível depois.
-          Recomendamos baixar um backup antes.
-        </p>
-        {wiped && (
-          <p className="mt-2 flex items-center gap-1.5 text-sm font-semibold text-emerald-600">
-            <Check className="h-4 w-4" /> Dados operacionais apagados.
-          </p>
-        )}
-        {wipeError && <p className="mt-2 text-sm font-semibold text-destructive">{wipeError}</p>}
-        <div className="mt-4 space-y-2">
-          <Label htmlFor="wipe-confirm">
-            Digite <strong>APAGAR</strong> para habilitar o botão
-          </Label>
-          <Input
-            id="wipe-confirm"
-            value={wipeConfirmText}
-            onChange={(e) => setWipeConfirmText(e.target.value)}
-            placeholder="APAGAR"
-            className="max-w-40"
-          />
-          <div>
-            <Button
-              variant="destructive"
-              disabled={wipeConfirmText !== "APAGAR"}
-              onClick={() => setWipeDialogOpen(true)}
-            >
-              <Database className="h-4 w-4" /> Apagar dados operacionais
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      <AlertDialog open={wipeDialogOpen} onOpenChange={setWipeDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Apagar todos os dados operacionais?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Isso remove permanentemente pacientes, agenda, financeiro, receitas, documentos, blog
-              e conversas. Essa ação não pode ser desfeita. Sua conta de acesso continuará
-              funcionando.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleWipe}
-              disabled={wiping}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {wiping ? "Apagando..." : "Apagar tudo"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteModulesCard onBackup={() => handleExport(tables)} />
     </div>
   );
 }

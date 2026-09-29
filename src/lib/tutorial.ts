@@ -44,6 +44,20 @@ export type TutorialUpdate = {
 // Mais recente primeiro.
 export const TUTORIAL_UPDATES: TutorialUpdate[] = [
   {
+    date: "2026-09-29",
+    title: "Menores de idade, suporte flutuante, descontos e apagar por módulo",
+    sections: ["pacientes", "odontograma", "suporte", "financeiro", "backup"],
+    items: [
+      "Pacientes: chave Paciente menor de idade com nome e telefone do responsável obrigatórios.",
+      "Odontograma: as faces marcadas (Oclusal, Mesial...) agora aparecem destacadas na hora do clique.",
+      "Plano de tratamento: botões Adicionar, lixeira em cada item e Limpar selecionados.",
+      "Painel: botão flutuante com as mensagens do suporte — avisa, mostra quantas faltam responder e permite responder ali mesmo.",
+      "Site: balão “Olá! Como posso ajudar?” ao lado do botão de chat.",
+      "Financeiro: desconto e acréscimo (R$ ou %) e gráfico animado do período.",
+      "Backup: apague só os módulos que escolher, vendo quantos registros cada um tem.",
+    ],
+  },
+  {
     date: "2026-09-28",
     title: "Plano de tratamento no Odontograma",
     sections: ["odontograma", "orcamentos", "tratamentos"],
@@ -420,7 +434,11 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
     steps: [
       {
         title: "Cadastrar",
-        text: "Clique em Novo paciente e preencha nome, sexo, dentista responsável, CPF, nascimento, telefone, email e endereço. Para menores de idade, aparecem os campos do responsável.",
+        text: "Clique em Novo paciente e preencha nome, sexo, dentista responsável, CPF, nascimento, telefone, email e endereço.",
+      },
+      {
+        title: "Paciente menor de idade",
+        text: "A chave Paciente menor de idade liga sozinha quando a data de nascimento indica menos de 18 anos (ou ligue você mesmo). Aparecem os campos do responsável: nome e telefone são obrigatórios; o CPF é opcional.",
       },
       {
         title: "Ver todos os dados",
@@ -508,6 +526,10 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
       {
         title: "Gere o orçamento pelo Plano de tratamento",
         text: "O quadro Plano de tratamento lista tudo o que está planejado. Marque os procedimentos que o paciente vai fazer, confira os valores e clique em Gerar orçamento. Cada item vira um orçamento em rascunho; depois use Abrir orçamentos ou Ver proposta.",
+      },
+      {
+        title: "Adicione ou tire itens do plano",
+        text: "No Plano de tratamento, Adicionar inclui um procedimento escolhendo o dente, sem abrir o desenho. A lixeira de cada linha tira o item do plano; marque vários e use Limpar selecionados para corrigir de uma vez.",
       },
       {
         title: "Tratamentos novos entram no catálogo",
@@ -711,6 +733,14 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
         text: "Na linha de um valor a receber, clique em Receber, escolha a forma de pagamento (e parcelas) e confirme.",
       },
       {
+        title: "Desconto e acréscimo",
+        text: "No lançamento (ou ao Receber, em + Aplicar desconto ou acréscimo), informe o desconto e/ou o acréscimo em R$ ou em %. O Total final é calculado na hora e fica salvo; a lista mostra o desconto e o acréscimo embaixo do valor.",
+      },
+      {
+        title: "Gráfico do período",
+        text: "O gráfico Evolução no período mostra recebido × a receber, por dia ou por mês. Troque entre Área e Barras e passe o mouse para ver os valores.",
+      },
+      {
         title: "Recebido por forma",
         text: "O quadro Recebido por forma de pagamento mostra quanto entrou em PIX, dinheiro, cartões etc. Clique em uma forma para filtrar a lista.",
       },
@@ -789,6 +819,10 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
       {
         title: "Compartilhe",
         text: "Use o botão de link para copiar o endereço direto da conversa.",
+      },
+      {
+        title: "Botão flutuante do painel",
+        text: "Em qualquer tela do painel, o botão redondo no canto inferior direito mostra quantas conversas estão sem resposta e avisa quando chega mensagem nova. Clique para ler e responder ali mesmo (com sugestão da IA) sem sair do que está fazendo.",
       },
     ],
   },
@@ -953,7 +987,7 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
       },
       {
         title: "Apagar dados",
-        text: "Remove os dados operacionais. É preciso digitar APAGAR para confirmar — não pode ser desfeito.",
+        text: "Em Apagar dados, marque só os módulos que quer zerar (ex.: Blog, Histórico da IA). Cada cartão mostra quantos registros tem. Apagar Pacientes leva junto agenda, orçamentos, receitas, odontograma e prontuário. Clique em Apagar selecionados e digite APAGAR — não pode ser desfeito.",
       },
     ],
     tips: ["Contas de acesso e configurações da clínica não entram no backup nem são apagadas."],

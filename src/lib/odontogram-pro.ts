@@ -126,6 +126,21 @@ export type ToothAttachment = {
   created_at: string;
 };
 
+/** Faces vindas do banco: aceita lista ou texto JSON e ignora valores estranhos. */
+export function asSurfaces(value: unknown): Surface[] {
+  let list = value;
+  for (let i = 0; i < 2 && typeof list === "string"; i++) {
+    try {
+      list = JSON.parse(list);
+    } catch {
+      return [];
+    }
+  }
+  return Array.isArray(list)
+    ? list.filter((x): x is Surface => SURFACES.includes(x as Surface))
+    : [];
+}
+
 /** Registros mais recentes primeiro (data do registro, depois criação). */
 export function sortProcedures(list: ToothProcedure[]): ToothProcedure[] {
   return [...list].sort(

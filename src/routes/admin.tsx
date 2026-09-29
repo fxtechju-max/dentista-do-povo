@@ -19,6 +19,7 @@ import {
   sortModules,
 } from "@/lib/modules";
 import { ToothIcon } from "@/components/ToothIcon";
+import { SupportFab } from "@/components/admin/SupportFab";
 import { mountAdminTheme } from "@/lib/theme";
 import { mountAdminZoom } from "@/lib/zoom";
 import {
@@ -212,6 +213,10 @@ function AdminLayout() {
       <main className={`${isLauncher ? "p-6 sm:p-10" : "p-4 sm:p-6"} print:p-0`}>
         <Outlet />
       </main>
+      {/* Mensagens do suporte em qualquer tela (menos no próprio módulo Suporte). */}
+      {!pathname.startsWith("/admin/suporte") && !disabledModules.includes("suporte") && (
+        <SupportFab />
+      )}
     </div>
   );
 }

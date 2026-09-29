@@ -137,10 +137,12 @@ export function SurfaceDiagram({
         <polygon
           key={a.surface}
           points={a.points}
-          fill={fillOf(a.surface)}
+          style={{ fill: fillOf(a.surface) }}
           stroke={isSelected(a.surface) ? "var(--primary)" : "#a8a29e"}
           strokeWidth={isSelected(a.surface) ? 1.6 : 0.7}
-          className={onToggle ? "cursor-pointer hover:opacity-80" : undefined}
+          className={
+            onToggle ? "cursor-pointer transition-[fill] duration-200 hover:opacity-80" : undefined
+          }
           onClick={onToggle ? () => onToggle(a.surface) : undefined}
         />
       ))}
@@ -149,10 +151,12 @@ export function SurfaceDiagram({
         y={7}
         width={10}
         height={10}
-        fill={fillOf("oclusal")}
+        style={{ fill: fillOf("oclusal") }}
         stroke={isSelected("oclusal") ? "var(--primary)" : "#a8a29e"}
         strokeWidth={isSelected("oclusal") ? 1.6 : 0.7}
-        className={onToggle ? "cursor-pointer hover:opacity-80" : undefined}
+        className={
+          onToggle ? "cursor-pointer transition-[fill] duration-200 hover:opacity-80" : undefined
+        }
         onClick={onToggle ? () => onToggle("oclusal") : undefined}
       />
     </svg>

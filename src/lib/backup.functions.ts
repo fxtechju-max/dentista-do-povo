@@ -8,6 +8,8 @@ import { z } from "zod";
 import type { Row as RowDataPacket } from "@/integrations/mysql/pool.server";
 import { tableColumns, type TableName } from "@/integrations/mysql/tables";
 import type { Json } from "@/integrations/mysql/types";
+import { placeholder } from "@/integrations/mysql/json-columns";
+import { DELETE_MODULES, deletePlan, type DeleteModuleId } from "./backup-modules";
 
 // Parent-first order (for export/restore); reversed gives a safe delete order.
 const OPERATIONAL_TABLES = [
@@ -25,6 +27,7 @@ const OPERATIONAL_TABLES = [
   "documents",
   "patient_anamnesis",
   "tooth_records",
+  "tooth_procedures",
   "clinical_notes",
   "conversations",
   "messages",
@@ -136,7 +139,7 @@ export const restoreBackup = createServerFn({ method: "POST" })
           });
           const mutable = keys.filter((k) => k !== pk);
           await conn.execute(
-            `INSERT INTO \`${table}\` (${keys.map((k) => `\`${k}\``).join(",")}) VALUES (${keys.map(() => "?").join(",")})
+            `INSERT INTO \`${table}\` (${keys.map((k) => `\`${k}\``).join(",")}) VALUES (${keys.map(placeholder).join(",")})
              ON CONFLICT (${pk}) ${mutable.length ? "DO UPDATE SET " + mutable.map((k) => `"${k}"=EXCLUDED."${k}"`).join(",") : "DO NOTHING"}`,
             values,
           );
@@ -166,6 +169,8 @@ export const wipeOperationalData = createServerFn({ method: "POST" })
     const conn = await getPool().getConnection();
     try {
       await conn.beginTransaction();
+      // Anexos do odontograma dependem dos pacientes e ficam fora do backup.
+      await conn.execute("DELETE FROM tooth_attachments");
       for (const table of [...OPERATIONAL_TABLES].reverse()) {
         await conn.execute(`DELETE FROM \`${table}\``);
       }
@@ -174,6 +179,58 @@ export const wipeOperationalData = createServerFn({ method: "POST" })
     } catch (error) {
       await conn.rollback();
       return { error: { message: error instanceof Error ? error.message : "Falha ao apagar." } };
+    } finally {
+      conn.release();
+    }
+  });
+
+const moduleIds = DELETE_MODULES.map((m) => m.id) as [DeleteModuleId, ...DeleteModuleId[]];
+const COUNT_TABLES = [...new Set(DELETE_MODULES.flatMap((m) => m.tables))];
+
+/** Quantidade de registros de cada tabela usada pelos módulos. */
+export const getDeleteCounts = createServerFn({ method: "POST" }).handler(async () => {
+  const { getPool } = await import("@/integrations/mysql/pool.server");
+  const { requestActor } = await import("@/integrations/mysql/auth.server");
+  if (!(await requestActor()).admin) return { data: null, error: { message: "Acesso negado." } };
+  const sql = COUNT_TABLES.map((t) => `SELECT '${t}' AS t, count(*)::int AS n FROM "${t}"`).join(
+    " UNION ALL ",
+  );
+  const [rows] = await getPool().execute<RowDataPacket[]>(sql);
+  const counts: Record<string, number> = {};
+  for (const r of rows) counts[String(r["t"])] = Number(r["n"]);
+  return { data: counts, error: null };
+});
+
+/** Apaga só os módulos escolhidos (e o que depende deles), numa transação. */
+export const wipeModules = createServerFn({ method: "POST" })
+  .validator((data: unknown) =>
+    z
+      .object({ modules: z.array(z.enum(moduleIds)).min(1), confirm: z.literal("APAGAR") })
+      .parse(data),
+  )
+  .handler(async ({ data }) => {
+    const { getPool } = await import("@/integrations/mysql/pool.server");
+    const { requestActor } = await import("@/integrations/mysql/auth.server");
+    if (!(await requestActor()).admin) return { error: { message: "Acesso negado." }, deleted: 0 };
+    const conn = await getPool().getConnection();
+    let deleted = 0;
+    try {
+      await conn.beginTransaction();
+      for (const step of deletePlan(data.modules)) {
+        const where = step.where ? ` WHERE ${step.where}` : "";
+        const [rows] = await conn.execute<RowDataPacket[]>(
+          `WITH d AS (DELETE FROM "${step.table}"${where} RETURNING 1) SELECT count(*)::int AS n FROM d`,
+        );
+        deleted += Number(rows[0]?.["n"] ?? 0);
+      }
+      await conn.commit();
+      return { error: null, deleted };
+    } catch (error) {
+      await conn.rollback();
+      return {
+        error: { message: error instanceof Error ? error.message : "Falha ao apagar." },
+        deleted: 0,
+      };
     } finally {
       conn.release();
     }

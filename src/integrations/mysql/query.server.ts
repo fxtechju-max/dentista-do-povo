@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { PoolConnection, Row as RowDataPacket } from "./pool.server";
 import { getPool } from "./pool.server";
 import { tableColumns } from "./tables";
+import { placeholder } from "./json-columns";
 import {
   authorize,
   columnName,
@@ -216,7 +217,7 @@ export async function executeQuery(
             : "DO NOTHING");
       }
       await conn.execute(
-        `INSERT INTO \`${q.table}\` (${keys.map((k) => `\`${k}\``).join(",")}) VALUES (${keys.map(() => "?").join(",")})${suffix}`,
+        `INSERT INTO \`${q.table}\` (${keys.map((k) => `\`${k}\``).join(",")}) VALUES (${keys.map(placeholder).join(",")})${suffix}`,
         keys.map((k) => sqlValue(k, values[k])),
       );
       if (q.table === "messages")
@@ -238,7 +239,7 @@ export async function executeQuery(
       else {
         const keys = Object.keys(values);
         await conn.execute(
-          `UPDATE \`${q.table}\` t SET ${keys.map((k) => `${columnName(q.table, k)}=?`).join(",")}${where.sql}`,
+          `UPDATE \`${q.table}\` t SET ${keys.map((k) => `${columnName(q.table, k)}=${placeholder(k)}`).join(",")}${where.sql}`,
           [...keys.map((k) => sqlValue(k, values[k])), ...where.values],
         );
       }

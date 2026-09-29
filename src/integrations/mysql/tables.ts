@@ -1,7 +1,7 @@
 // Public application columns. Credentials and visitor tokens never enter this allowlist.
 export const tableColumns = {
   user_roles: ["id", "user_id", "role"],
-  conversations: ["id", "visitor_name", "created_at", "last_message_at"],
+  conversations: ["id", "visitor_name", "created_at", "last_message_at", "admin_read_at"],
   messages: ["id", "conversation_id", "sender", "content", "created_at"],
   patients: [
     "id",
@@ -30,6 +30,8 @@ export const tableColumns = {
     "amount",
     "payment_method",
     "installments",
+    "discount",
+    "surcharge",
   ],
   leads: ["id", "name", "phone", "source", "status", "created_at"],
   treatments: ["id", "name", "description", "duration_minutes", "active", "created_at", "price"],

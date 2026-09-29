@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
   CheckCircle2,
@@ -18,6 +18,8 @@ import { db } from "@/integrations/mysql/client";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { EmptyState } from "@/components/admin/EmptyState";
 import { PaymentMethodFields } from "@/components/admin/PaymentMethodFields";
+import { AdjustmentFields } from "@/components/admin/finance/AdjustmentFields";
+import { baseOf, computeTotal, moneyText, noAdjust, type Adjust } from "@/lib/admin/finance-adjust";
 import {
   Initial,
   MoneyInput,
@@ -59,6 +61,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+// O gráfico (recharts) carrega à parte para a página abrir rápido.
+const FinanceChart = lazy(() => import("@/components/admin/finance/FinanceChart"));
+
 export const Route = createFileRoute("/admin/financeiro")({
   component: Financeiro,
 });
@@ -72,6 +77,8 @@ type Payment = {
   created_at: string;
   payment_method: string | null;
   installments: number | null;
+  discount: number | string | null;
+  surcharge: number | string | null;
   patients: { name: string } | null;
 };
 type Patient = { id: string; name: string };
@@ -105,6 +112,8 @@ const emptyForm = {
   paid_on: today(),
   payment_method: "",
   installments: "",
+  discount: noAdjust as Adjust,
+  surcharge: noAdjust as Adjust,
 };
 
 function Financeiro() {
@@ -128,6 +137,11 @@ function Financeiro() {
   const [saving, setSaving] = useState(false);
   const [receiving, setReceiving] = useState<Payment | null>(null);
   const [receiveMethod, setReceiveMethod] = useState({ method: "", installments: "" });
+  const [receiveAdjust, setReceiveAdjust] = useState<{ discount: Adjust; surcharge: Adjust }>({
+    discount: noAdjust,
+    surcharge: noAdjust,
+  });
+  const [receiveAdjustOpen, setReceiveAdjustOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Payment | null>(null);
 
   async function load() {
@@ -135,7 +149,7 @@ function Financeiro() {
       db
         .from("payments")
         .select(
-          "id, patient_id, amount, status, paid_at, created_at, payment_method, installments, patients(name)",
+          "id, patient_id, amount, status, paid_at, created_at, payment_method, installments, discount, surcharge, patients(name)",
         )
         .order("created_at", { ascending: false }),
       db.from("patients").select("id, name").order("name"),
@@ -149,8 +163,12 @@ function Financeiro() {
     load();
   }, []);
 
+  const range = useMemo(
+    () => periodRange(period.period, period.from, period.to),
+    [period.period, period.from, period.to],
+  );
+
   const scoped = useMemo(() => {
-    const range = periodRange(period.period, period.from, period.to);
     const q = query.trim().toLowerCase();
     return payments.filter(
       (p) =>
@@ -159,7 +177,7 @@ function Financeiro() {
         (methodFilter === "todos" || (p.payment_method ?? "nao_informada") === methodFilter) &&
         (!q || p.patients?.name.toLowerCase().includes(q)),
     );
-  }, [payments, period, patientFilter, methodFilter, query]);
+  }, [payments, range, patientFilter, methodFilter, query]);
 
   const filtered = status === "todos" ? scoped : scoped.filter((p) => p.status === status);
 
@@ -174,7 +192,10 @@ function Financeiro() {
       const k = p.payment_method ?? "nao_informada";
       byMethod.set(k, (byMethod.get(k) ?? 0) + Number(p.amount));
     }
+    const active = scoped.filter((p) => p.status !== "cancelado");
     return {
+      discounts: active.reduce((s, p) => s + Number(p.discount ?? 0), 0),
+      surcharges: active.reduce((s, p) => s + Number(p.surcharge ?? 0), 0),
       received,
       toReceive,
       paidCount: paid.length,
@@ -202,24 +223,29 @@ function Financeiro() {
     setEditing(p);
     setForm({
       patient_id: p.patient_id ?? "",
-      amount: String(p.amount).replace(".", ","),
+      amount: moneyText(baseOf(p)),
       status: p.status,
       paid_on: (p.paid_at ?? new Date().toISOString()).slice(0, 10),
       payment_method: p.payment_method ?? "",
       installments: p.installments ? String(p.installments) : "",
+      discount: { mode: "valor", value: moneyText(Number(p.discount ?? 0)) },
+      surcharge: { mode: "valor", value: moneyText(Number(p.surcharge ?? 0)) },
     });
     setDialogOpen(true);
   }
 
   const amount = parseMoney(form.amount);
-  const formValid = amount > 0;
+  const adjusted = computeTotal(amount > 0 ? amount : 0, form.discount, form.surcharge);
+  const formValid = amount > 0 && adjusted.total > 0;
 
   async function save() {
     if (!formValid) return;
     setSaving(true);
     const payload = {
       patient_id: form.patient_id || null,
-      amount,
+      amount: adjusted.total,
+      discount: adjusted.discount,
+      surcharge: adjusted.surcharge,
       status: form.status,
       paid_at:
         form.status === "pago"
@@ -244,7 +270,16 @@ function Financeiro() {
       method: p.payment_method ?? "",
       installments: p.installments ? String(p.installments) : "",
     });
+    const hasAdjust = Number(p.discount ?? 0) > 0 || Number(p.surcharge ?? 0) > 0;
+    setReceiveAdjust({
+      discount: { mode: "valor", value: moneyText(Number(p.discount ?? 0)) },
+      surcharge: { mode: "valor", value: moneyText(Number(p.surcharge ?? 0)) },
+    });
+    setReceiveAdjustOpen(hasAdjust);
   }
+
+  const receiveBase = receiving ? baseOf(receiving) : 0;
+  const receiveTotal = computeTotal(receiveBase, receiveAdjust.discount, receiveAdjust.surcharge);
 
   async function confirmReceive() {
     if (!receiving) return;
@@ -253,12 +288,15 @@ function Financeiro() {
       .update({
         status: "pago",
         paid_at: new Date().toISOString(),
+        amount: receiveTotal.total,
+        discount: receiveTotal.discount,
+        surcharge: receiveTotal.surcharge,
         payment_method: receiveMethod.method || null,
         installments: parseInstallments(receiveMethod.method, receiveMethod.installments),
       })
       .eq("id", receiving.id);
     if (error) return;
-    toast.success(`${formatCurrency(Number(receiving.amount))} recebido.`);
+    toast.success(`${formatCurrency(receiveTotal.total)} recebido.`);
     setReceiving(null);
     load();
   }
@@ -355,6 +393,27 @@ function Financeiro() {
           active={status === "todos"}
         />
       </div>
+
+      <Suspense
+        fallback={<div className="h-80 animate-pulse rounded-2xl border border-border bg-card" />}
+      >
+        <FinanceChart payments={scoped} range={range} />
+      </Suspense>
+
+      {(kpi.discounts > 0 || kpi.surcharges > 0) && (
+        <div className="flex flex-wrap gap-2 animate-in fade-in duration-300">
+          {kpi.discounts > 0 && (
+            <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+              Descontos concedidos: {formatCurrency(kpi.discounts)}
+            </span>
+          )}
+          {kpi.surcharges > 0 && (
+            <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+              Acréscimos cobrados: {formatCurrency(kpi.surcharges)}
+            </span>
+          )}
+        </div>
+      )}
 
       {kpi.byMethod.length > 0 && (
         <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
@@ -508,8 +567,11 @@ function Financeiro() {
                     {menu(p)}
                   </div>
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-lg font-extrabold">
-                      {formatCurrency(Number(p.amount))}
+                    <span>
+                      <span className="block text-lg font-extrabold">
+                        {formatCurrency(Number(p.amount))}
+                      </span>
+                      <AdjustNote p={p} />
                     </span>
                     {receiveButton(p) ?? (
                       <StatusPill
@@ -550,6 +612,7 @@ function Financeiro() {
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-right font-bold">
                       {formatCurrency(Number(p.amount))}
+                      <AdjustNote p={p} />
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">
                       {paymentMethodLabel(p.payment_method, p.installments)}
@@ -575,14 +638,31 @@ function Financeiro() {
       </div>
 
       <Dialog open={!!receiving} onOpenChange={(o) => !o && setReceiving(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-h-[92dvh] max-w-md overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Confirmar recebimento</DialogTitle>
             <DialogDescription>
               {receiving?.patients?.name ?? "Lançamento"} ·{" "}
-              <b className="text-foreground">{formatCurrency(Number(receiving?.amount ?? 0))}</b>
+              <b className="text-foreground">{formatCurrency(receiveTotal.total)}</b>
             </DialogDescription>
           </DialogHeader>
+          {receiveAdjustOpen ? (
+            <AdjustmentFields
+              idPrefix="rcv"
+              base={receiveBase}
+              discount={receiveAdjust.discount}
+              surcharge={receiveAdjust.surcharge}
+              onChange={setReceiveAdjust}
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setReceiveAdjustOpen(true)}
+              className="w-full rounded-xl border border-dashed border-border px-3 py-2.5 text-sm font-semibold text-primary transition-colors hover:bg-primary/5"
+            >
+              + Aplicar desconto ou acréscimo
+            </button>
+          )}
           <PaymentMethodFields
             methods={enabledMethods}
             method={receiveMethod.method}
@@ -597,14 +677,14 @@ function Financeiro() {
               className="bg-emerald-600 text-white hover:bg-emerald-700"
               onClick={confirmReceive}
             >
-              <CheckCircle2 className="h-4 w-4" /> Confirmar recebimento
+              <CheckCircle2 className="h-4 w-4" /> Receber {formatCurrency(receiveTotal.total)}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-xl">
+        <DialogContent className="max-h-[92dvh] max-w-xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editing ? "Editar lançamento" : "Novo lançamento"}</DialogTitle>
             <DialogDescription>Registre um pagamento recebido ou a receber.</DialogDescription>
@@ -612,7 +692,7 @@ function Financeiro() {
           <div className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="f-amount">Valor</Label>
+                <Label htmlFor="f-amount">Valor do serviço</Label>
                 <MoneyInput
                   id="f-amount"
                   value={form.amount}
@@ -667,13 +747,22 @@ function Financeiro() {
                 setForm((f) => ({ ...f, payment_method: method, installments }))
               }
             />
+            <AdjustmentFields
+              idPrefix="f"
+              base={amount > 0 ? amount : 0}
+              discount={form.discount}
+              surcharge={form.surcharge}
+              onChange={(adj) => setForm((f) => ({ ...f, ...adj }))}
+            />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               Cancelar
             </Button>
             <Button onClick={save} disabled={!formValid || saving}>
-              {saving ? "Salvando..." : editing ? "Salvar alterações" : "Criar lançamento"}
+              {saving
+                ? "Salvando..."
+                : `${editing ? "Salvar" : "Lançar"} ${formatCurrency(adjusted.total)}`}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -696,5 +785,21 @@ function Financeiro() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+/** "− R$ 10,00 desc. · + R$ 5,00 acrésc." embaixo do valor. */
+function AdjustNote({ p }: { p: Payment }) {
+  const d = Number(p.discount ?? 0);
+  const a = Number(p.surcharge ?? 0);
+  if (!d && !a) return null;
+  return (
+    <span className="block text-[11px] font-medium">
+      {d > 0 && <span className="text-emerald-600">− {formatCurrency(d)} desc.</span>}
+      {d > 0 && a > 0 && <span className="text-muted-foreground"> · </span>}
+      {a > 0 && (
+        <span className="text-amber-700 dark:text-amber-300">+ {formatCurrency(a)} acrésc.</span>
+      )}
+    </span>
   );
 }

@@ -97,7 +97,8 @@ export const AUDIT_TABLE_LABEL: Record<string, string> = {
   gallery_photos: "Foto da galeria",
   whatsapp_contacts: "Contato WhatsApp",
   patient_anamnesis: "Anamnese",
-  tooth_records: "Odontograma",
+  tooth_records: "Odontograma (antigo)",
+  tooth_procedures: "Odontograma",
   clinical_notes: "Evolução clínica",
   clinic_settings: "Configurações da clínica",
   profiles: "Perfil",
@@ -118,6 +119,15 @@ export function formatCPF(value: string) {
     .replace(/(\d{3})(\d)/, "$1.$2")
     .replace(/(\d{3})(\d)/, "$1.$2")
     .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+}
+
+/** Telefone brasileiro: (69) 98492-0788 ou (69) 3333-4444. */
+export function formatPhone(value: string) {
+  const d = value.replace(/D/g, "").slice(0, 11);
+  if (d.length <= 2) return d.length ? `(${d}` : "";
+  if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+  if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
 }
 
 export function calculateAge(birthDate: string): number | null {

@@ -149,3 +149,22 @@
   color: var(--primary);
   background-color: var(--accent);
 }
+
+/* Balão "Como posso ajudar?" do chat do site: flutua de leve. */
+@keyframes chat-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+.animate-chat-float {
+  animation: chat-float 3.2s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-chat-float {
+    animation: none;
+  }
+}

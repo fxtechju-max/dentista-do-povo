@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Send, MessageCircle, Trash2, Sparkles, Link2, Check } from "lucide-react";
 import { db } from "@/integrations/mysql/client";
 import { draftSupportReply } from "@/lib/admin/functions";
+import { markSupportRead } from "@/lib/support-inbox.functions";
 
 export const Route = createFileRoute("/admin/suporte")({
   validateSearch: (search: Record<string, unknown>) => {
@@ -162,6 +163,11 @@ function Suporte() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Conversa aberta conta como lida (o botão flutuante deixa de avisar).
+  useEffect(() => {
+    if (activeId) void markSupportRead({ data: { id: activeId } }).catch(() => {});
+  }, [activeId, messages.length]);
 
   async function reply() {
     const content = draft.trim();

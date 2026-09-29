@@ -19,6 +19,13 @@ export function ChatWidget() {
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  // Balão de convite: aparece alguns segundos depois de abrir a página.
+  const [invite, setInvite] = useState(false);
+  const [inviteClosed, setInviteClosed] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setInvite(true), 2500);
+    return () => clearTimeout(t);
+  }, []);
 
   // Resolve ownership on the server using the opaque visitor cookie.
   useEffect(() => {
@@ -98,17 +105,59 @@ export function ChatWidget() {
 
   return (
     <>
+      {/* Balão "Como posso ajudar?" */}
+      {invite && !inviteClosed && !open && (
+        <div className="fixed bottom-[5.25rem] right-5 z-50 animate-in fade-in slide-in-from-bottom-3 zoom-in-95 duration-500">
+          <div className="animate-chat-float relative">
+            <button
+              type="button"
+              onClick={() => setOpen(true)}
+              className="relative block w-60 rounded-3xl rounded-br-md border border-border bg-card px-4 py-3 pr-8 text-left shadow-xl shadow-black/10 transition-shadow hover:shadow-2xl"
+            >
+              <span className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                </span>
+                Online agora
+              </span>
+              <span className="mt-1 block text-[15px] font-extrabold leading-snug text-foreground">
+                👋 Olá! Como posso ajudar?
+              </span>
+              <span className="mt-0.5 block text-xs font-semibold text-primary">
+                Clique aqui e fale com a gente →
+              </span>
+              {/* "rabinho" da nuvem apontando para o botão */}
+              <span className="absolute -bottom-[7px] right-5 h-3.5 w-3.5 rotate-45 border-b border-r border-border bg-card" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setInviteClosed(true)}
+              aria-label="Fechar aviso"
+              className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Floating button */}
       <button
         onClick={() => setOpen((v) => !v)}
         aria-label={open ? "Fechar chat" : "Abrir chat de suporte"}
-        className="fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 transition-transform hover:scale-105"
+        className="group fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 transition-transform duration-200 hover:scale-110 active:scale-95"
       >
-        {open ? <X className="h-6 w-6" /> : <MessageCircle className="h-6 w-6" />}
+        {!open && (
+          <span className="absolute inset-0 animate-ping rounded-full bg-primary/30 [animation-duration:2.5s]" />
+        )}
+        <span className="relative transition-transform duration-300 group-hover:rotate-12">
+          {open ? <X className="h-6 w-6" /> : <MessageCircle className="h-6 w-6" />}
+        </span>
       </button>
 
       {open && (
-        <div className="fixed bottom-24 right-5 z-50 flex h-[28rem] w-[22rem] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
+        <div className="fixed bottom-24 right-5 z-50 flex h-[28rem] w-[22rem] max-w-[calc(100vw-2.5rem)] origin-bottom-right flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl animate-in fade-in zoom-in-95 slide-in-from-bottom-2 duration-200">
           {/* Header */}
           <div className="bg-primary px-4 py-3 text-primary-foreground">
             <p className="font-bold">💬 Suporte online</p>
