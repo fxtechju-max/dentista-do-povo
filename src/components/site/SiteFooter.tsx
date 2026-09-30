@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Instagram, Facebook, MessageCircle } from "lucide-react";
 import { db } from "@/integrations/mysql/client";
+import { whatsappLink } from "@/lib/whatsapp-link";
 
 type SocialLinks = {
   instagram_url: string | null;
@@ -20,12 +21,7 @@ export function SiteFooter() {
       .then(({ data }) => setSocial(data as SocialLinks | null));
   }, []);
 
-  const whatsappDigits = social?.whatsapp_number?.replace(/\D/g, "");
-  const whatsappHref = whatsappDigits
-    ? `https://wa.me/${whatsappDigits}?text=${encodeURIComponent(
-        "Olá! Vim pelo site da Dentista do Povo e gostaria de mais informações.",
-      )}`
-    : null;
+  const whatsappHref = whatsappLink(social?.whatsapp_number);
 
   const hasSocial = social?.instagram_url || social?.facebook_url || whatsappHref;
 

@@ -45,6 +45,16 @@ export type TutorialUpdate = {
 export const TUTORIAL_UPDATES: TutorialUpdate[] = [
   {
     date: "2026-09-30",
+    title: "Contato: cartão abre o WhatsApp",
+    sections: ["cms-site", "configuracoes"],
+    items: [
+      "Na página Contato do site, o cartão “Fale no WhatsApp” abre direto a conversa com a clínica, já com uma mensagem de saudação.",
+      "O número usado é o WhatsApp de Configurações; se estiver vazio, vale o telefone da clínica.",
+      "O link do WhatsApp no rodapé também passou a incluir o código do Brasil (55) automaticamente.",
+    ],
+  },
+  {
+    date: "2026-09-30",
     title: "Odontograma: duplo clique nas faces corrigido",
     sections: ["odontograma"],
     items: [
