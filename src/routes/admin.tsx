@@ -153,7 +153,11 @@ function AdminLayout() {
   const currentModule = allModules.find((m) => pathname.startsWith(m.to));
 
   return (
-    <div className="min-h-screen bg-[var(--admin-surface,var(--muted))] print:bg-white">
+    // O painel já está em português: o tradutor do navegador não deve mexer nele.
+    <div
+      translate="no"
+      className="notranslate min-h-screen bg-[var(--admin-surface,var(--muted))] print:bg-white"
+    >
       {/* Anúncios nunca aparecem no painel, mesmo vindo do site público. */}
       <style>
         {"ins.adsbygoogle,.google-auto-placed,.adsbygoogle-noablate{display:none!important}"}

@@ -442,12 +442,17 @@ export function OdontogramModule({
                         : "border-border bg-background hover:bg-accent"
                     }`}
                   >
-                    {on ? (
-                      <Check className="h-3 w-3" />
-                    ) : (
-                      <span className="h-3 w-3 rounded-sm border" />
-                    )}
-                    {surfaceLabel(s, selected)}
+                    {/* Sempre os mesmos elementos (só muda a aparência): trocar
+                        peças a cada clique quebrava a tela quando o tradutor do
+                        navegador tinha mexido no texto. */}
+                    <span
+                      className={`flex h-3 w-3 items-center justify-center rounded-sm border ${
+                        on ? "border-transparent" : ""
+                      }`}
+                    >
+                      <Check className={`h-3 w-3 ${on ? "" : "invisible"}`} />
+                    </span>
+                    <span>{surfaceLabel(s, selected)}</span>
                   </button>
                 );
               })}

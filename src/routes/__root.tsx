@@ -15,6 +15,10 @@ import { Toaster } from "../components/ui/sonner";
 import { refreshPreferences } from "../lib/preferences";
 import { clearLegacyStorage } from "../lib/clear-legacy-storage";
 import { ADSENSE_OFF, loadAdsense } from "../lib/adsense";
+import { installDomGuard } from "../lib/dom-guard";
+
+// Antes do React montar: extensões do navegador não derrubam mais a tela.
+if (typeof window !== "undefined") installDomGuard();
 
 function NotFoundComponent() {
   return (

@@ -44,6 +44,16 @@ export type TutorialUpdate = {
 // Mais recente primeiro.
 export const TUTORIAL_UPDATES: TutorialUpdate[] = [
   {
+    date: "2026-09-30",
+    title: "Odontograma: duplo clique nas faces corrigido",
+    sections: ["odontograma"],
+    items: [
+      "Clicar duas vezes em Oclusal, Mesial, Distal, Vestibular ou Palatina não derruba mais a tela.",
+      "O painel avisa ao navegador para não traduzir as páginas (já estão em português) — o tradutor era o que causava o erro.",
+      "Proteção geral: extensões do navegador que mexem no texto não fazem mais o sistema parar.",
+    ],
+  },
+  {
     date: "2026-09-29",
     title: "Gráfico do Financeiro: tamanho e ocultar",
     sections: ["financeiro"],
