@@ -4,6 +4,7 @@ export type InboxConversation = {
   id: string;
   visitor_name: string;
   last_message_at: string;
+  created_at: string;
   last_sender: "visitor" | "admin" | null;
   last_content: string | null;
   unread: boolean;
@@ -16,7 +17,7 @@ export const getSupportInbox = createServerFn({ method: "POST" }).handler(async 
   if (!(await requestActor()).admin) return { data: [] as InboxConversation[], unread: 0 };
   const { getPool } = await import("@/integrations/mysql/pool.server");
   const [rows] = await getPool().execute(
-    `SELECT c.id, c.visitor_name, c.last_message_at, m.sender AS last_sender,
+    `SELECT c.id, c.visitor_name, c.last_message_at, c.created_at, m.sender AS last_sender,
             left(m.content, 160) AS last_content,
             (m.sender = 'visitor' AND (c.admin_read_at IS NULL OR c.admin_read_at < m.created_at)) AS unread
        FROM conversations c
@@ -25,15 +26,14 @@ export const getSupportInbox = createServerFn({ method: "POST" }).handler(async 
           WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1
        ) m ON true
       ORDER BY c.last_message_at DESC
-      LIMIT 30`,
+      LIMIT 200`,
   );
+  const iso = (v: unknown) => (v instanceof Date ? v.toISOString() : String(v));
   const data = rows.map((r) => ({
     id: String(r["id"]),
     visitor_name: String(r["visitor_name"]),
-    last_message_at:
-      r["last_message_at"] instanceof Date
-        ? r["last_message_at"].toISOString()
-        : String(r["last_message_at"]),
+    last_message_at: iso(r["last_message_at"]),
+    created_at: iso(r["created_at"]),
     last_sender: (r["last_sender"] as InboxConversation["last_sender"]) ?? null,
     last_content: (r["last_content"] as string | null) ?? null,
     unread: Boolean(r["unread"]),

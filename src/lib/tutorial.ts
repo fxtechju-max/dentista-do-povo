@@ -45,6 +45,18 @@ export type TutorialUpdate = {
 export const TUTORIAL_UPDATES: TutorialUpdate[] = [
   {
     date: "2026-09-30",
+    title: "Suporte com visual novo",
+    sections: ["suporte"],
+    items: [
+      "Resumo no topo: conversas, sem resposta, respondidas e ativas hoje.",
+      "Lista com busca, abas Todas / Sem resposta / Respondidas, prévia da última mensagem e aviso de não lida.",
+      "Conversa no estilo de aplicativo de mensagens: separação por dia, horário e ✓✓ nas respostas.",
+      "Respostas rápidas prontas, sugestão da IA e Enter para enviar.",
+      "No celular, a lista e a conversa ocupam a tela inteira, com botão para voltar.",
+    ],
+  },
+  {
+    date: "2026-09-30",
     title: "Contato: cartão abre o WhatsApp",
     sections: ["cms-site", "configuracoes"],
     items: [
@@ -839,16 +851,20 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
     summary: "Responder as conversas iniciadas pelos visitantes do site.",
     steps: [
       {
-        title: "Abra a conversa",
-        text: "Selecione uma conversa na lista à esquerda.",
+        title: "Veja o resumo",
+        text: "No topo aparecem Conversas, Sem resposta, Respondidas e Ativas hoje. Clique em Sem resposta ou Respondidas para filtrar a lista.",
+      },
+      {
+        title: "Encontre a conversa",
+        text: "Busque pelo nome ou por um trecho da mensagem e use as abas Todas, Sem resposta e Respondidas. Bolinha vermelha = mensagem não lida; etiqueta Aguardando = o visitante espera resposta.",
       },
       {
         title: "Responda",
-        text: "Digite a resposta ou use o botão de IA para redigir um rascunho a partir da conversa.",
+        text: "Digite e aperte Enter para enviar (Shift + Enter quebra a linha). Use as Respostas rápidas ou o botão ✨ para a IA sugerir uma resposta. No celular, a seta volta para a lista.",
       },
       {
-        title: "Compartilhe",
-        text: "Use o botão de link para copiar o endereço direto da conversa.",
+        title: "Compartilhe ou exclua",
+        text: "No topo da conversa, o botão de link copia o endereço direto dela e a lixeira exclui a conversa (pede confirmação).",
       },
       {
         title: "Botão flutuante do painel",
