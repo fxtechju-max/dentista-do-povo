@@ -1,6 +1,9 @@
 import { Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { ArrowRight, CheckCircle2, Lightbulb, Search, Sparkles } from "lucide-react";
+import { ArrowRight, CheckCircle2, GraduationCap, Lightbulb, Search, Sparkles } from "lucide-react";
+import { TRAININGS } from "@/lib/training";
+import { TrainingView } from "@/components/admin/TrainingView";
+import { trainingPercent, useTrainingProgress } from "@/lib/training-progress";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -56,6 +59,8 @@ export function TutorialView({
     [query],
   );
   const section = TUTORIAL_SECTIONS.find((s) => s.id === active);
+  const training = TRAININGS.find((t) => t.id === active);
+  const [progress] = useTrainingProgress();
 
   function open(id: string) {
     setNavOpen(false);
@@ -70,7 +75,7 @@ export function TutorialView({
         description="Explicações de cada módulo, passo a passo, e as novidades de cada atualização."
       />
 
-      <div className="mt-5 grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)]">
+      <div className="mt-5 grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[280px_minmax(0,1fr)]">
         <aside className="space-y-3 lg:sticky lg:top-4 lg:self-start">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -89,7 +94,11 @@ export function TutorialView({
             className="flex w-full items-center justify-between rounded-2xl border border-border bg-card px-4 py-3 text-left text-sm font-semibold lg:hidden"
           >
             <span className="truncate">
-              {section ? `${section.emoji} ${section.title}` : "✨ Novidades"}
+              {training
+                ? `${training.emoji} ${training.title}`
+                : section
+                  ? `${section.emoji} ${section.title}`
+                  : "✨ Novidades"}
             </span>
             <span className="text-xs text-primary">
               {navOpen ? "Fechar ▲" : "Todas as seções ▼"}
@@ -98,6 +107,44 @@ export function TutorialView({
           <nav
             className={`${navOpen || query.trim() ? "block" : "hidden"} rounded-2xl border border-border bg-card p-2 lg:block`}
           >
+            <p className="flex items-center gap-1.5 px-3 pb-1 pt-1 text-[11px] font-bold uppercase tracking-widest text-primary">
+              <GraduationCap className="h-3.5 w-3.5" /> Trilhas e treinamentos
+            </p>
+            {TRAININGS.map((t) => {
+              const pct = trainingPercent(t, progress);
+              const on = active === t.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => open(t.id)}
+                  className={`mb-1 w-full rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                    on
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-primary/[0.06] hover:bg-primary/10"
+                  }`}
+                >
+                  <span className="flex items-start gap-2 font-semibold leading-snug">
+                    <span>{t.emoji}</span>
+                    <span>
+                      {t.id === "trilha-inicio" ? "Do início ao fim" : "Treinamento: Levantamento"}
+                    </span>
+                  </span>
+                  <span className="mt-1.5 flex items-center gap-2">
+                    <span
+                      className={`h-1.5 flex-1 overflow-hidden rounded-full ${on ? "bg-primary-foreground/30" : "bg-muted"}`}
+                    >
+                      <span
+                        className={`block h-full rounded-full transition-all duration-500 ${on ? "bg-primary-foreground" : "bg-primary"}`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </span>
+                    <span className="text-[10px] font-bold tabular-nums opacity-80">{pct}%</span>
+                  </span>
+                </button>
+              );
+            })}
+            <div className="my-2 border-t border-border" />
             <button
               type="button"
               onClick={() => open(NOVIDADES)}
@@ -155,7 +202,13 @@ export function TutorialView({
         </aside>
 
         <main className="min-w-0">
-          {section ? <SectionView section={section} onOpen={open} /> : <Updates onOpen={open} />}
+          {training ? (
+            <TrainingView key={training.id} training={training} />
+          ) : section ? (
+            <SectionView section={section} onOpen={open} />
+          ) : (
+            <Updates onOpen={open} />
+          )}
         </main>
       </div>
     </div>
@@ -165,6 +218,29 @@ export function TutorialView({
 function Updates({ onOpen }: { onOpen: (id: string) => void }) {
   return (
     <div className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-2">
+        {TRAININGS.map((t, i) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => onOpen(t.id)}
+            className="group rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 to-transparent p-5 text-left transition-all duration-200 animate-in fade-in slide-in-from-bottom-2 fill-mode-both hover:-translate-y-0.5 hover:shadow-md"
+            style={{ animationDelay: `${i * 80}ms` }}
+          >
+            <p className="text-[11px] font-bold uppercase tracking-widest text-primary">
+              {i === 0 ? "Novo por aqui? Comece aqui" : "Treinamento da equipe"}
+            </p>
+            <p className="mt-1 font-extrabold leading-snug">
+              {t.emoji} {t.title}
+            </p>
+            <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{t.summary}</p>
+            <span className="mt-3 inline-flex items-center gap-1 text-sm font-bold text-primary">
+              Abrir trilha{" "}
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+            </span>
+          </button>
+        ))}
+      </div>
       <div className="rounded-2xl border border-border bg-card p-5">
         <h2 className="flex items-center gap-2 text-lg font-extrabold">
           <Sparkles className="h-5 w-5 text-primary" /> Novidades do sistema

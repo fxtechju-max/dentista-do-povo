@@ -45,6 +45,17 @@ export type TutorialUpdate = {
 export const TUTORIAL_UPDATES: TutorialUpdate[] = [
   {
     date: "2026-09-30",
+    title: "Trilhas guiadas e treinamento da equipe",
+    sections: ["tutorial", "odontograma", "orcamentos", "financeiro"],
+    items: [
+      "Nova trilha “Do início ao fim”: do primeiro acesso até receber o pagamento, com o exemplo de uma restauração.",
+      "Novo “Treinamento: Levantamento”: do exame no odontograma ao orçamento aprovado, com teste rápido no final.",
+      "Cada passo tem o botão para abrir o módulo e “Deu certo se” para conferir.",
+      "Marque os passos como feitos: o progresso fica salvo no projeto e aparece no menu do Tutorial.",
+    ],
+  },
+  {
+    date: "2026-09-30",
     title: "Blog: 30 posts novos agendados, um por dia",
     sections: ["cms-site"],
     items: [
@@ -435,6 +446,14 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
     to: "/admin/tutorial",
     summary: "Onde encontrar explicações e as novidades de cada atualização.",
     steps: [
+      {
+        title: "Comece pelas trilhas",
+        text: "No topo do menu, em Trilhas e treinamentos: “Do início ao fim” mostra o atendimento completo, do primeiro acesso ao pagamento (exemplo: restauração); “Treinamento: Levantamento” ensina o odontograma até o orçamento e tem um teste no final.",
+      },
+      {
+        title: "Marque o progresso",
+        text: "Em cada passo, use Abrir para ir ao módulo e Feito quando terminar. A barra mostra quanto falta; Continuar de onde parei leva ao próximo passo e Recomeçar zera para treinar outra pessoa.",
+      },
       {
         title: "Navegue pelos grupos",
         text: "À esquerda, as explicações estão separadas por grupo (Atendimento, Clínico, Financeiro...). Clique em um item para abrir.",

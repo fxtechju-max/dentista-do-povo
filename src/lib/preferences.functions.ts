@@ -9,6 +9,10 @@ const preference = z.discriminatedUnion("key", [
   z.object({ key: z.literal("adminZoom"), value: z.number().int().min(80).max(150) }),
   z.object({ key: z.literal("publicZoom"), value: z.number().int().min(80).max(150) }),
   z.object({
+    key: z.literal("trainingProgress"),
+    value: z.record(z.string().max(40), z.array(z.string().max(80)).max(300)),
+  }),
+  z.object({
     key: z.literal("financeChart"),
     value: z.object({ visible: z.boolean(), size: z.enum(["pequeno", "medio", "grande"]) }),
   }),

@@ -24,6 +24,8 @@ no mesmo commit:
 2. Atualize a seção do módulo em `TUTORIAL_SECTIONS` (passo a passo e dicas).
    Módulo novo = seção nova, no grupo certo (`TUTORIAL_GROUPS`).
 3. Escreva em português simples, para a equipe da clínica (não para programadores).
+4. Se o fluxo mudar (nome de botão, aba, etapa), revise também as trilhas guiadas
+   em `src/lib/training.ts` ("Do início ao fim" e "Treinamento: Levantamento").
 
 ### Antes de commitar
 
