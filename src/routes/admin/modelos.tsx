@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
+  ChevronDown,
   Copy,
   FileDown,
   FileText,
@@ -17,15 +18,20 @@ import { db } from "@/integrations/mysql/client";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { DocumentPage } from "@/components/admin/documents/DocumentPage";
 import { PAGE_HEIGHT, PAGE_WIDTH } from "@/lib/document-page";
+import { FillFieldsForm } from "@/components/admin/documents/FillFieldsForm";
 import {
   DOCUMENT_LAYOUTS,
   PLACEHOLDERS,
+  blanksToFields,
   clinicFromRow,
   fileName,
   fillTemplate,
   placeholderValues,
+  templateAutoKeys,
+  templateFields,
   type ClinicInfo,
   type DocumentLayout,
+  type FieldType,
   type DocumentPatient,
   type DocumentTemplate,
 } from "@/lib/document-templates";
@@ -213,21 +219,38 @@ function Generate({
   const [patientQuery, setPatientQuery] = useState("");
   const [layout, setLayout] = useState<DocumentLayout>("classico");
   const [title, setTitle] = useState("");
-  const [body, setBody] = useState("");
+  // Dados digitados no formulário e, se o doutor quiser, o texto editado à mão.
+  const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
+  const [overrides, setOverrides] = useState<Record<string, string>>({});
+  const [manualBody, setManualBody] = useState<string | null>(null);
+  const [freeEdit, setFreeEdit] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const pageRef = useRef<HTMLDivElement>(null);
 
   const template = templates.find((t) => t.id === templateId) ?? templates[0] ?? null;
   const patient = patients.find((p) => p.id === patientId) ?? null;
 
-  // Recria o texto quando muda o modelo, o paciente ou os dados da clínica.
+  // Novo modelo: começa do zero.
   useEffect(() => {
     if (!template) return;
-    const values = placeholderValues(clinic, patient);
     setTitle(template.title);
-    setBody(fillTemplate(template.body, values));
     setLayout(template.layout);
-  }, [template, patient, clinic]);
+    setFieldValues({});
+    setManualBody(null);
+    setFreeEdit(false);
+  }, [template]);
+  useEffect(() => setOverrides({}), [patientId]);
+
+  const autoValues = useMemo(() => placeholderValues(clinic, patient), [clinic, patient]);
+  const fields = useMemo(() => (template ? templateFields(template.body) : []), [template]);
+  const autoKeys = useMemo(() => (template ? templateAutoKeys(template.body) : []), [template]);
+  const generated = useMemo(() => {
+    if (!template) return "";
+    const merged = { ...autoValues };
+    for (const [k, v] of Object.entries(overrides)) if (v.trim()) merged[k] = v.trim();
+    return fillTemplate(template.body, merged, fieldValues);
+  }, [template, autoValues, overrides, fieldValues]);
+  const body = manualBody ?? generated;
 
   const matches = useMemo(() => {
     const q = patientQuery.trim().toLowerCase();
@@ -331,37 +354,93 @@ function Generate({
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-4">
-          <Label>3. Layout</Label>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <Label>3. Preencha os dados</Label>
+            {manualBody != null && (
+              <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-semibold text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                Texto editado à mão — o formulário não altera mais o documento
+              </span>
+            )}
+          </div>
+          <FillFieldsForm
+            fields={fields}
+            values={fieldValues}
+            onChange={(key, value) => {
+              setManualBody(null);
+              setFieldValues((prev) => ({ ...prev, [key]: value }));
+            }}
+            autoKeys={autoKeys}
+            autoValues={autoValues}
+            overrides={overrides}
+            onOverride={(key, value) => {
+              setManualBody(null);
+              setOverrides((prev) => ({ ...prev, [key]: value }));
+            }}
+          />
+        </div>
+
+        <div className="rounded-2xl border border-border bg-card p-4">
+          <Label>4. Layout</Label>
           <div className="mt-2">
             <LayoutPicker value={layout} onChange={setLayout} />
           </div>
         </div>
 
-        <div className="rounded-2xl border border-border bg-card p-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <Label>4. Revise e edite o texto</Label>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                if (!template) return;
-                setTitle(template.title);
-                setBody(fillTemplate(template.body, placeholderValues(clinic, patient)));
-              }}
-            >
-              <RotateCcw className="h-3.5 w-3.5" /> Recarregar do modelo
-            </Button>
-          </div>
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} className="mt-2" />
-          <Textarea
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            rows={12}
-            className="mt-2 font-mono text-sm"
-          />
-          <p className="mt-1 text-xs text-muted-foreground">
-            As mudanças aqui valem só para este documento. Para mudar o modelo, use a aba Modelos.
-          </p>
+        <div className="rounded-2xl border border-border bg-card">
+          <button
+            type="button"
+            onClick={() => setFreeEdit((v) => !v)}
+            className="flex w-full items-center justify-between gap-2 p-4 text-left"
+            aria-expanded={freeEdit}
+          >
+            <span>
+              <span className="block text-sm font-medium">5. Ajustes finos (opcional)</span>
+              <span className="block text-xs text-muted-foreground">
+                Mude o título ou edite o texto livremente só neste documento.
+              </span>
+            </span>
+            <ChevronDown
+              className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${freeEdit ? "rotate-180" : ""}`}
+            />
+          </button>
+          {freeEdit && (
+            <div className="space-y-2 border-t border-border p-4 animate-in fade-in slide-in-from-top-1 duration-200">
+              <div className="space-y-1.5">
+                <Label htmlFor="doc-title" className="text-xs">
+                  Título
+                </Label>
+                <Input id="doc-title" value={title} onChange={(e) => setTitle(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="doc-body" className="text-xs">
+                  Texto do documento
+                </Label>
+                <Textarea
+                  id="doc-body"
+                  value={body}
+                  onChange={(e) => setManualBody(e.target.value)}
+                  rows={10}
+                  className="text-sm leading-relaxed"
+                />
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs text-muted-foreground">
+                  Vale só para este documento. Para mudar o modelo, use a aba Modelos.
+                </p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={manualBody == null && title === template?.title}
+                  onClick={() => {
+                    setManualBody(null);
+                    if (template) setTitle(template.title);
+                  }}
+                >
+                  <RotateCcw className="h-3.5 w-3.5" /> Voltar ao formulário
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -413,6 +492,19 @@ function TemplateEditor({
   useEffect(() => {
     setDraft(current ? { ...current } : null);
   }, [current]);
+
+  const [newField, setNewField] = useState("");
+  const [newFieldType, setNewFieldType] = useState<FieldType | "auto">("auto");
+  const draftFields = useMemo(() => (draft ? templateFields(draft.body) : []), [draft]);
+  const hasBlanks = !!draft && /_{3,}/.test(draft.body);
+
+  function insertField(label: string, type: FieldType | "auto" = "auto") {
+    const clean = label.replace(/[{}|]/g, "").trim();
+    if (!clean) return;
+    insert(`campo:${clean}${type === "auto" ? "" : `|${type}`}`);
+    setNewField("");
+    setNewFieldType("auto");
+  }
 
   function insert(key: string) {
     if (!draft) return;
@@ -477,7 +569,14 @@ function TemplateEditor({
     await onChanged();
   }
 
-  const preview = draft ? fillTemplate(draft.body, placeholderValues(clinic, SAMPLE_PATIENT)) : "";
+  // Prévia: campos para preencher aparecem como [Nome do campo].
+  const preview = draft
+    ? fillTemplate(
+        draft.body,
+        placeholderValues(clinic, SAMPLE_PATIENT),
+        Object.fromEntries(draftFields.map((f) => [f.key, "[" + f.label + "]"])),
+      )
+    : "";
 
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[220px_minmax(0,1fr)_auto]">
@@ -555,6 +654,89 @@ function TemplateEditor({
                 </button>
               ))}
             </div>
+          </div>
+          <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/[0.03] p-3">
+            <div>
+              <p className="text-sm font-semibold">Campos para preencher</p>
+              <p className="text-xs text-muted-foreground">
+                Em vez de linhas “____”, crie campos (ex.: Hora de início, CID). Ao gerar o
+                documento, eles aparecem como um formulário para digitar.
+              </p>
+            </div>
+            {hasBlanks && (
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-amber-100/70 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+                Este modelo ainda tem linhas “____”.
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 bg-background text-xs"
+                  onClick={() => setDraft({ ...draft, body: blanksToFields(draft.body) })}
+                >
+                  Converter linhas em campos
+                </Button>
+              </div>
+            )}
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                "Hora de início",
+                "Hora de término",
+                "Dias de repouso",
+                "CID",
+                "Medicamento",
+                "Como usar",
+                "Observações",
+                "Data do retorno",
+              ].map((label) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => insertField(label)}
+                  className="rounded-md border border-dashed border-primary/40 bg-background px-2 py-1 text-[11px] font-semibold text-primary hover:bg-primary/10"
+                >
+                  + {label}
+                </button>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Input
+                value={newField}
+                onChange={(e) => setNewField(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    insertField(newField, newFieldType);
+                  }
+                }}
+                placeholder="Nome do campo (ex.: Dente tratado)"
+                className="h-9 min-w-48 flex-1 bg-background"
+              />
+              <select
+                value={newFieldType}
+                onChange={(e) => setNewFieldType(e.target.value as FieldType | "auto")}
+                className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+                aria-label="Tipo do campo"
+              >
+                <option value="auto">Tipo automático</option>
+                <option value="texto">Texto curto</option>
+                <option value="longo">Texto longo</option>
+                <option value="hora">Hora</option>
+                <option value="data">Data</option>
+                <option value="numero">Número</option>
+              </select>
+              <Button
+                size="sm"
+                className="h-9"
+                disabled={!newField.trim()}
+                onClick={() => insertField(newField, newFieldType)}
+              >
+                <Plus className="h-4 w-4" /> Inserir campo
+              </Button>
+            </div>
+            {draftFields.length > 0 && (
+              <p className="text-[11px] text-muted-foreground">
+                Campos neste modelo: {draftFields.map((f) => f.label).join(" · ")}
+              </p>
+            )}
           </div>
           <div className="flex flex-wrap gap-2 border-t border-border pt-3">
             <Button onClick={save} disabled={saving}>

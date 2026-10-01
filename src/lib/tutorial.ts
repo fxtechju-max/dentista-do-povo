@@ -45,6 +45,17 @@ export type TutorialUpdate = {
 export const TUTORIAL_UPDATES: TutorialUpdate[] = [
   {
     date: "2026-09-30",
+    title: "Modelos de Documentos com formulário",
+    sections: ["modelos"],
+    items: [
+      "Chega de linhas “____” no texto: horário, dias de repouso, CID e medicamentos agora são campos de formulário.",
+      "Hora com relógio, dias com número, texto longo para orientações — e a pré-visualização atualiza na hora.",
+      "Dados do cadastro aparecem em verde; o que falta (ex.: CPF) dá para digitar sem sair da tela.",
+      "Na aba Modelos, crie seus próprios campos com um clique ou converta as linhas antigas em campos.",
+    ],
+  },
+  {
+    date: "2026-09-30",
     title: "Suporte com visual novo",
     sections: ["suporte"],
     items: [
@@ -682,8 +693,12 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
         text: "Clássico (faixa azul lateral), Moderno (cabeçalho centralizado e contatos no rodapé) ou Elegante (marca d'água e rodapé escuro). Todos em preto, azul e branco.",
       },
       {
-        title: "Revise e edite",
-        text: "Complete os campos em branco (horários, dias, CID, medicamentos) direto no texto. A pré-visualização A4 mostra como vai sair.",
+        title: "Preencha os dados",
+        text: "Em Preencha os dados aparecem os campos do modelo (Hora de início, Dias de repouso, CID, Medicamento...) — é só digitar. O que veio do cadastro aparece em verde; o que falta no cadastro (ex.: CPF) dá para digitar ali. A pré-visualização A4 atualiza na hora.",
+      },
+      {
+        title: "Ajustes finos",
+        text: "Para mudar o título ou alguma frase só neste documento, abra Ajustes finos. Voltar ao formulário desfaz as mudanças feitas à mão.",
       },
       {
         title: "Imprima ou exporte",
@@ -694,12 +709,16 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
         text: "Na aba Modelos, altere nome, título, texto e layout padrão. Clique nos campos automáticos (Nome do paciente, CPF, Data...) para inserir no texto. Use Novo modelo ou Duplicar para criar outros.",
       },
       {
+        title: "Campos para preencher",
+        text: "Ainda na aba Modelos, em Campos para preencher, clique em + Hora de início, + CID etc. ou digite um nome (ex.: Dente tratado) e Inserir campo. Modelos com linhas “____” têm o botão Converter linhas em campos.",
+      },
+      {
         title: "Dados da clínica",
         text: "Na aba Dados da clínica, confira nome do dentista, CRO, telefone, endereço e cidade — eles aparecem em todos os documentos.",
       },
     ],
     tips: [
-      "Campos sem informação no cadastro saem como linha em branco para preencher à mão.",
+      "Campo deixado vazio sai com espaço para escrever à mão; itens de lista vazios (ex.: Medicamento 3) não aparecem.",
       "As mudanças feitas em Gerar documento valem só para aquele documento; o modelo continua igual.",
       "Na impressão, escolha papel A4 e desative “cabeçalhos e rodapés” do navegador, se aparecerem.",
     ],

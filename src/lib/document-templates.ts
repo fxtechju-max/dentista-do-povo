@@ -116,12 +116,103 @@ export function placeholderValues(
   };
 }
 
-/** Troca {{campo}} pelo valor; campos sem valor viram uma linha para preencher à mão. */
-export function fillTemplate(text: string, values: Record<string, string>) {
-  return text.replace(/\{\{\s*([a-z_]+)\s*\}\}/g, (match, key: string) =>
-    key in values ? values[key] || BLANK : match,
-  );
+// ── Campos para preencher ────────────────────────────────────────────────
+// No texto do modelo: {{campo:Hora de início}} (o tipo vem do nome) ou
+// {{campo:Observações|longo}}. Na hora de gerar, cada um vira um campo do
+// formulário — sem precisar editar o texto nem deixar linhas.
+
+export type FieldType = "texto" | "hora" | "numero" | "data" | "longo";
+export type FillField = { key: string; label: string; type: FieldType };
+
+const FIELD_RE = /\{\{\s*campo\s*:\s*([^}|]+?)\s*(?:\|\s*(texto|hora|numero|data|longo)\s*)?\}\}/g;
+const AUTO_RE = /\{\{\s*([a-z_]+)\s*\}\}/g;
+
+export function fieldKey(label: string) {
+  return label
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_|_$/g, "");
 }
+
+function inferType(label: string): FieldType {
+  const l = label.toLowerCase();
+  if (l.startsWith("hora")) return "hora";
+  if (l.startsWith("data")) return "data";
+  if (/\bdias?\b|quantidade|n[úu]mero de/.test(l)) return "numero";
+  if (/observa|como usar|orienta|posologia|descri/.test(l)) return "longo";
+  return "texto";
+}
+
+/** Campos para preencher do modelo, na ordem em que aparecem (sem repetir). */
+export function templateFields(text: string): FillField[] {
+  const out = new Map<string, FillField>();
+  for (const m of text.matchAll(FIELD_RE)) {
+    const label = m[1]!.trim();
+    const key = fieldKey(label);
+    if (key && !out.has(key))
+      out.set(key, { key, label, type: (m[2] as FieldType | undefined) ?? inferType(label) });
+  }
+  return [...out.values()];
+}
+
+/** Campos automáticos ({{paciente_nome}}...) usados no modelo. */
+export function templateAutoKeys(text: string): string[] {
+  const keys = new Set<string>();
+  for (const m of text.matchAll(AUTO_RE)) keys.add(m[1]!);
+  return PLACEHOLDERS.map((p) => p.key).filter((k) => keys.has(k));
+}
+
+/** Valor como sai no documento (data em dd/mm/aaaa). */
+export function formatFieldValue(type: FieldType, raw: string) {
+  const v = raw.trim();
+  if (type === "data" && /^\d{4}-\d{2}-\d{2}$/.test(v)) return v.split("-").reverse().join("/");
+  return v;
+}
+
+/** Converte as linhas "____" de modelos antigos em campos para preencher. */
+export function blanksToFields(text: string) {
+  let n = 0;
+  return text.replace(/_{3,}/g, () => `{{campo:Campo ${++n}}}`);
+}
+
+/**
+ * Monta o texto final. Campos automáticos sem valor viram uma linha curta
+ * (para escrever à mão). Campos para preencher vazios: a linha some quando só
+ * tinha campos vazios (ex.: "2. {{campo:Medicamento 2}}" ou "CID: {{campo:CID}}");
+ * no meio de uma frase, viram uma linha curta.
+ */
+export function fillTemplate(
+  text: string,
+  values: Record<string, string>,
+  fields: Record<string, string> = {},
+) {
+  const lines = text.split("\n").flatMap((line) => {
+    const used = [...line.matchAll(FIELD_RE)];
+    if (used.length) {
+      const allEmpty = used.every((m) => !(fields[fieldKey(m[1]!)] ?? "").trim());
+      const rest = line.replace(FIELD_RE, "").replace(AUTO_RE, "").trim();
+      if (allEmpty && (/^[\d.)\-–•*\s]*$/.test(rest) || /^[\p{L}\s]{1,24}:$/u.test(rest)))
+        return [];
+    }
+    return [
+      line
+        .replace(FIELD_RE, (_m, label: string, type?: FieldType) => {
+          const l = label.trim();
+          const v = formatFieldValue(type ?? inferType(l), fields[fieldKey(l)] ?? "");
+          return v || SHORT_BLANK;
+        })
+        .replace(AUTO_RE, (match, key: string) => (key in values ? values[key] || BLANK : match)),
+    ];
+  });
+  return lines
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+const SHORT_BLANK = "________";
 
 export function fileName(title: string, patientName: string | null) {
   const base = [title, patientName].filter(Boolean).join(" - ");
