@@ -2,7 +2,9 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
+  Ban,
   BarChart3,
+  FileText,
   CheckCircle2,
   Clock,
   DollarSign,
@@ -27,6 +29,7 @@ import { PageHeader } from "@/components/admin/PageHeader";
 import { EmptyState } from "@/components/admin/EmptyState";
 import { PaymentMethodFields } from "@/components/admin/PaymentMethodFields";
 import { AdjustmentFields } from "@/components/admin/finance/AdjustmentFields";
+import { CancelDetailsDialog, CancelPaymentDialog } from "@/components/admin/finance/CancelPayment";
 import { baseOf, computeTotal, moneyText, noAdjust, type Adjust } from "@/lib/admin/finance-adjust";
 import {
   Initial,
@@ -92,6 +95,10 @@ type Payment = {
   installments: number | null;
   discount: number | string | null;
   surcharge: number | string | null;
+  cancel_reason: string | null;
+  refund_amount: number | string | null;
+  cancelled_at: string | null;
+  cancelled_by: string | null;
   patients: { name: string } | null;
 };
 type Patient = { id: string; name: string };
@@ -168,13 +175,15 @@ function Financeiro() {
   });
   const [receiveAdjustOpen, setReceiveAdjustOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Payment | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<Payment | null>(null);
+  const [cancelDetails, setCancelDetails] = useState<Payment | null>(null);
 
   async function load() {
     const [{ data: paymentsData }, { data: patientsData }] = await Promise.all([
       db
         .from("payments")
         .select(
-          "id, patient_id, amount, status, paid_at, created_at, payment_method, installments, discount, surcharge, patients(name)",
+          "id, patient_id, amount, status, paid_at, created_at, payment_method, installments, discount, surcharge, cancel_reason, refund_amount, cancelled_at, cancelled_by, patients(name)",
         )
         .order("created_at", { ascending: false }),
       db.from("patients").select("id, name").order("name"),
@@ -220,6 +229,8 @@ function Financeiro() {
     const active = scoped.filter((p) => p.status !== "cancelado");
     return {
       discounts: active.reduce((s, p) => s + Number(p.discount ?? 0), 0),
+      refunds: scoped.reduce((s, p) => s + Number(p.refund_amount ?? 0), 0),
+      cancelledCount: scoped.filter((p) => p.status === "cancelado").length,
       surcharges: active.reduce((s, p) => s + Number(p.surcharge ?? 0), 0),
       received,
       toReceive,
@@ -339,7 +350,12 @@ function Financeiro() {
     return (
       <RowMenu
         items={[
-          { label: "Editar", icon: Pencil, onClick: () => openEdit(p) },
+          ...(p.status === "cancelado"
+            ? [{ label: "Ver justificativa", icon: FileText, onClick: () => setCancelDetails(p) }]
+            : [
+                { label: "Editar", icon: Pencil, onClick: () => openEdit(p) },
+                { label: "Cancelar lançamento", icon: Ban, onClick: () => setCancelTarget(p) },
+              ]),
           ...(patientId
             ? [
                 {
@@ -446,8 +462,18 @@ function Financeiro() {
         </button>
       )}
 
-      {(kpi.discounts > 0 || kpi.surcharges > 0) && (
+      {(kpi.discounts > 0 || kpi.surcharges > 0 || kpi.cancelledCount > 0) && (
         <div className="flex flex-wrap gap-2 animate-in fade-in duration-300">
+          {kpi.cancelledCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setStatus("cancelado")}
+              className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200"
+            >
+              {kpi.cancelledCount} cancelado(s)
+              {kpi.refunds > 0 ? ` · devolvido ${formatCurrency(kpi.refunds)}` : ""}
+            </button>
+          )}
           {kpi.discounts > 0 && (
             <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
               Descontos concedidos: {formatCurrency(kpi.discounts)}
@@ -615,7 +641,13 @@ function Financeiro() {
                   <div className="flex items-center justify-between gap-2">
                     <span>
                       <span className="block text-lg font-extrabold">
-                        {formatCurrency(Number(p.amount))}
+                        <span
+                          className={
+                            p.status === "cancelado" ? "text-muted-foreground line-through" : ""
+                          }
+                        >
+                          {formatCurrency(Number(p.amount))}
+                        </span>
                       </span>
                       <AdjustNote p={p} />
                     </span>
@@ -767,7 +799,8 @@ function Financeiro() {
               <Segmented
                 value={form.status}
                 onChange={(s) => setForm((f) => ({ ...f, status: s }))}
-                options={STATUS_ORDER.map((s) => ({
+                // Cancelar só pelo menu ⋯ › Cancelar lançamento (pede a senha).
+                options={STATUS_ORDER.filter((s) => s !== "cancelado").map((s) => ({
                   id: s,
                   label: STATUS[s].label,
                   dot: STATUS[s].dot,
@@ -814,6 +847,13 @@ function Financeiro() {
         </DialogContent>
       </Dialog>
 
+      <CancelPaymentDialog
+        payment={cancelTarget}
+        onClose={() => setCancelTarget(null)}
+        onCancelled={load}
+      />
+      <CancelDetailsDialog payment={cancelDetails} onClose={() => setCancelDetails(null)} />
+
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -838,6 +878,20 @@ function Financeiro() {
 function AdjustNote({ p }: { p: Payment }) {
   const d = Number(p.discount ?? 0);
   const a = Number(p.surcharge ?? 0);
+  if (p.status === "cancelado") {
+    const refund = Number(p.refund_amount ?? 0);
+    return (
+      <span className="block text-[11px] font-medium text-muted-foreground">
+        {refund > 0 ? (
+          <span className="text-amber-700 dark:text-amber-300">
+            Devolvido {formatCurrency(refund)}
+          </span>
+        ) : (
+          "Sem devolução"
+        )}
+      </span>
+    );
+  }
   if (!d && !a) return null;
   return (
     <span className="block text-[11px] font-medium">

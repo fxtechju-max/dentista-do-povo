@@ -170,6 +170,14 @@ export async function executeQuery(
     await conn.beginTransaction();
     const values: Record<string, unknown> = { ...q.values };
     if (q.action !== "delete" && !Object.keys(values).length) throw new Error("Dados vazios.");
+    // Cancelar pagamento só pelo fluxo com senha do administrador (cancelPayment).
+    if (
+      q.table === "payments" &&
+      q.action !== "delete" &&
+      (values["status"] === "cancelado" ||
+        ["cancel_reason", "refund_amount", "cancelled_at", "cancelled_by"].some((k) => k in values))
+    )
+      throw new Error("Para cancelar, use Cancelar lançamento (pede a senha do administrador).");
     if (["insert", "upsert"].includes(q.action)) {
       const pk = q.table === "patient_anamnesis" ? "patient_id" : "id";
       if (!values[pk]) values[pk] = q.table === "clinic_settings" ? "default" : randomUUID();

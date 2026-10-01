@@ -45,6 +45,17 @@ export type TutorialUpdate = {
 export const TUTORIAL_UPDATES: TutorialUpdate[] = [
   {
     date: "2026-09-30",
+    title: "Financeiro: cancelar com justificativa e senha",
+    sections: ["financeiro"],
+    items: [
+      "Novo ⋯ › Cancelar lançamento: justificativa obrigatória e valor devolvido ao paciente (total ou parcial).",
+      "O cancelamento só é confirmado com a senha do administrador.",
+      "Lançamento cancelado aparece riscado, com o valor devolvido; ⋯ › Ver justificativa mostra motivo, data e quem cancelou.",
+      "No topo, o resumo mostra quantos foram cancelados e o total devolvido.",
+    ],
+  },
+  {
+    date: "2026-09-30",
     title: "Modelos de Documentos com formulário",
     sections: ["modelos"],
     items: [
@@ -796,6 +807,10 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
       {
         title: "Desconto e acréscimo",
         text: "No lançamento (ou ao Receber, em + Aplicar desconto ou acréscimo), informe o desconto e/ou o acréscimo em R$ ou em %. O Total final é calculado na hora e fica salvo; a lista mostra o desconto e o acréscimo embaixo do valor.",
+      },
+      {
+        title: "Cancelar um lançamento",
+        text: "No ⋯ da linha, clique em Cancelar lançamento. Escolha ou escreva a justificativa, informe quanto foi devolvido ao paciente (se já tinha recebido) e confirme com a senha do administrador. Depois, ⋯ › Ver justificativa mostra o motivo, o valor devolvido, a data e quem cancelou.",
       },
       {
         title: "Gráfico do período",
