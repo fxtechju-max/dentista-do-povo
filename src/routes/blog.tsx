@@ -45,6 +45,7 @@ function Blog() {
     db.from("blog_posts")
       .select("id, title, slug, excerpt, cover_image_url, category, published_at")
       .eq("status", "publicado")
+      .lte("published_at", new Date().toISOString())
       .order("published_at", { ascending: false })
       .then(({ data }) => {
         setPosts((data ?? []) as Post[]);

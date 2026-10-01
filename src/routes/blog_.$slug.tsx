@@ -36,6 +36,7 @@ function BlogPost() {
       .select("id, title, content, cover_image_url, category, published_at")
       .eq("slug", slug)
       .eq("status", "publicado")
+      .lte("published_at", new Date().toISOString())
       .maybeSingle()
       .then(({ data }) => {
         setPost((data as Post) ?? null);

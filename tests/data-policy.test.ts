@@ -34,7 +34,12 @@ test("public content is filtered on the server even if a visitor asks for drafts
     query("blog_posts", "select", { filters: [{ column: "status", op: "eq", value: "rascunho" }] }),
     guest,
   );
-  assert.deepEqual(result.filters.at(-1), { column: "status", op: "eq", value: "publicado" });
+  assert.deepEqual(result.filters.at(-2), { column: "status", op: "eq", value: "publicado" });
+  // Posts agendados (data de publicação no futuro) também ficam escondidos.
+  const scheduled = result.filters.at(-1);
+  assert.equal(scheduled?.column, "published_at");
+  assert.equal(scheduled?.op, "lte");
+  assert.ok(Math.abs(new Date(String(scheduled?.value)).getTime() - Date.now()) < 5000);
   // Visitantes veem só contatos e a configuração pública do AdSense (o ID já
   // aparece no código da página); chaves de IA e linhas extras do ads.txt, não.
   const publicColumns = authorize(query("clinic_settings"), guest).columns;

@@ -343,7 +343,19 @@ const emptyPostForm = {
   cover_image_url: "",
   category: BLOG_CATEGORIES[0] as string,
   status: "rascunho" as PostStatus,
+  publish_at: "",
 };
+
+/** ISO → valor do campo datetime-local (hora local). */
+function toLocalInput(iso: string | null) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+const isScheduled = (p: { status: string; published_at: string | null }) =>
+  p.status === "publicado" && !!p.published_at && new Date(p.published_at).getTime() > Date.now();
 
 function BlogTab() {
   const [posts, setPosts] = useState<Post[]>([]);
@@ -401,6 +413,7 @@ function BlogTab() {
       cover_image_url: p.cover_image_url ?? "",
       category: p.category,
       status: p.status,
+      publish_at: toLocalInput(p.published_at),
     });
     setSlugTouched(true);
     setDialogOpen(true);
@@ -418,7 +431,11 @@ function BlogTab() {
       category: form.category,
       status: form.status,
       published_at:
-        form.status === "publicado" ? (editing?.published_at ?? new Date().toISOString()) : null,
+        form.status === "publicado"
+          ? form.publish_at
+            ? new Date(form.publish_at).toISOString()
+            : (editing?.published_at ?? new Date().toISOString())
+          : null,
     };
     if (editing) {
       await db.from("blog_posts").update(payload).eq("id", editing.id);
@@ -438,6 +455,10 @@ function BlogTab() {
   }
 
   const published = posts.filter((p) => p.status === "publicado").length;
+  const scheduled = posts.filter(isScheduled);
+  const nextScheduled = [...scheduled].sort((a, b) =>
+    (a.published_at ?? "").localeCompare(b.published_at ?? ""),
+  )[0];
   // Post "detalhado" = texto com pelo menos 300 palavras.
   const detailed = posts.filter((p) => p.content.trim().split(/\s+/).length >= 300).length;
 
@@ -445,7 +466,7 @@ function BlogTab() {
     <div>
       {!loading && (
         <div className="mb-4 space-y-3">
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
             {[
               {
                 label: "Total de posts",
@@ -463,6 +484,13 @@ function BlogTab() {
                 onClick: () => setStatusFilter("rascunho"),
               },
               { label: "Detalhados (300+ palavras)", value: detailed, onClick: undefined },
+              {
+                label: nextScheduled?.published_at
+                  ? `Agendados · próximo ${new Date(nextScheduled.published_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}`
+                  : "Agendados",
+                value: scheduled.length,
+                onClick: undefined,
+              },
             ].map((card) => (
               <button
                 key={card.label}
@@ -558,15 +586,23 @@ function BlogTab() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <p className="font-semibold">{p.title}</p>
-                  <Badge variant={p.status === "publicado" ? "default" : "secondary"}>
-                    {p.status === "publicado" ? "Publicado" : "Rascunho"}
-                  </Badge>
+                  {isScheduled(p) ? (
+                    <Badge className="border-transparent bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-950 dark:text-amber-300">
+                      Agendado
+                    </Badge>
+                  ) : (
+                    <Badge variant={p.status === "publicado" ? "default" : "secondary"}>
+                      {p.status === "publicado" ? "Publicado" : "Rascunho"}
+                    </Badge>
+                  )}
                   <Badge variant="outline">{p.category}</Badge>
                 </div>
                 <p className="text-xs text-muted-foreground">
                   /blog/{p.slug} ·{" "}
                   {p.published_at
-                    ? new Date(p.published_at).toLocaleDateString("pt-BR")
+                    ? isScheduled(p)
+                      ? `vai ao ar em ${new Date(p.published_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}`
+                      : new Date(p.published_at).toLocaleDateString("pt-BR")
                     : "ainda não publicado"}
                 </p>
               </div>
@@ -688,6 +724,21 @@ function BlogTab() {
                 </SelectContent>
               </Select>
             </div>
+            {form.status === "publicado" && (
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="post-publish-at">Data e hora de publicação</Label>
+                <Input
+                  id="post-publish-at"
+                  type="datetime-local"
+                  value={form.publish_at}
+                  onChange={(e) => setForm((f) => ({ ...f, publish_at: e.target.value }))}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Vazio = publica agora. Data no futuro = o post fica agendado e aparece no site
+                  sozinho nesse dia.
+                </p>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>

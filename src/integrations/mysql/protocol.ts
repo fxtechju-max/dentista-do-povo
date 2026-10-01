@@ -74,6 +74,8 @@ export function authorize(query: Query, actor: Actor): Query {
   }
   if (q.action === "select" && q.table === "blog_posts") {
     filter("status", "publicado");
+    // Posts agendados só aparecem a partir da data de publicação.
+    q.filters.push({ column: "published_at", op: "lte", value: new Date().toISOString() });
     return q;
   }
   if (q.action === "select" && q.table === "services") {

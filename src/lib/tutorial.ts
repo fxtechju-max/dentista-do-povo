@@ -45,6 +45,17 @@ export type TutorialUpdate = {
 export const TUTORIAL_UPDATES: TutorialUpdate[] = [
   {
     date: "2026-09-30",
+    title: "Blog: 30 posts novos agendados, um por dia",
+    sections: ["cms-site"],
+    items: [
+      "30 artigos novos e originais sobre saúde bucal, escritos para o Dentista do Povo.",
+      "Publicação automática: um post por dia, às 8h, a partir do dia seguinte à atualização.",
+      "No CMS › Blog, os posts futuros aparecem como Agendado, com a data em que vão ao ar.",
+      "Qualquer post pode ser agendado no campo Data e hora de publicação.",
+    ],
+  },
+  {
+    date: "2026-09-30",
     title: "Financeiro: cancelar com justificativa e senha",
     sections: ["financeiro"],
     items: [
@@ -981,7 +992,11 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
       },
       {
         title: "Quantos posts eu tenho",
-        text: "No topo da aba Blog aparecem o total de posts, publicados, rascunhos, detalhados (300+ palavras) e a quantidade por categoria. Clique em um número ou categoria para filtrar a lista.",
+        text: "No topo da aba Blog aparecem o total de posts, publicados, rascunhos, detalhados (300+ palavras), agendados (com a data do próximo) e a quantidade por categoria. Clique em um número ou categoria para filtrar a lista.",
+      },
+      {
+        title: "Agendar um post",
+        text: "Ao salvar como Publicado, preencha Data e hora de publicação. Data no futuro = o post fica com a etiqueta Agendado e aparece no site sozinho nesse dia e horário. Deixe vazio para publicar agora. Para antecipar ou adiar, é só mudar a data.",
       },
       {
         title: "Formatar o texto do post",
