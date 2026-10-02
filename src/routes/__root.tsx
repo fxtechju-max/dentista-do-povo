@@ -6,6 +6,7 @@ import {
   useRouter,
   HeadContent,
   Scripts,
+  type ErrorComponentProps,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 
@@ -14,7 +15,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "../components/ui/sonner";
 import { refreshPreferences } from "../lib/preferences";
 import { clearLegacyStorage } from "../lib/clear-legacy-storage";
-import { ADSENSE_OFF, loadAdsense } from "../lib/adsense";
+import { ADSENSE_OFF, loadAdsense, type AdsenseSettings } from "../lib/adsense";
 import { installDomGuard } from "../lib/dom-guard";
 
 // Antes do React montar: extensões do navegador não derrubam mais a tela.
@@ -42,7 +43,7 @@ function NotFoundComponent() {
   );
 }
 
-function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+function ErrorComponent({ error, reset }: ErrorComponentProps) {
   console.error(error);
   const router = useRouter();
   useEffect(() => {
@@ -82,7 +83,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   // AdSense (Configurações › Anúncios): só no site público, nunca no painel/login.
-  loader: ({ location }) =>
+  loader: async ({ location }): Promise<AdsenseSettings> =>
     /^\/(admin|entrar)(\/|$)/.test(location.pathname) ? ADSENSE_OFF : loadAdsense(),
   staleTime: 5 * 60_000,
   head: ({ loaderData }) => {
