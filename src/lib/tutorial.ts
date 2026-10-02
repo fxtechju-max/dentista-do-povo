@@ -44,6 +44,17 @@ export type TutorialUpdate = {
 // Mais recente primeiro.
 export const TUTORIAL_UPDATES: TutorialUpdate[] = [
   {
+    date: "2026-10-01",
+    title: "Nova janela de orçamento",
+    sections: ["orcamentos"],
+    items: [
+      "Janela grande: catálogo de tratamentos à esquerda e o orçamento sendo montado à direita.",
+      "Busca de tratamentos por nome ou descrição, com preço e duração; Enter adiciona o primeiro resultado.",
+      "Vários tratamentos no mesmo orçamento, cada um com valor e dente/observação, e o total sempre visível.",
+      "Busca de paciente pelo nome e item personalizado para o que não está no catálogo.",
+    ],
+  },
+  {
     date: "2026-09-30",
     title: "Trilhas guiadas e treinamento da equipe",
     sections: ["tutorial", "odontograma", "orcamentos", "financeiro"],
@@ -806,7 +817,11 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
       },
       {
         title: "Novo orçamento",
-        text: "Clique em Novo orçamento, escolha o paciente e toque em um tratamento do catálogo para preencher nome e preço (ou digite). Defina o status e as observações.",
+        text: "Clique em Novo orçamento. A janela grande tem o catálogo de tratamentos à esquerda e o orçamento à direita. Busque o paciente pelo nome, depois busque os tratamentos (ex.: “canal”) e clique para adicionar — Enter adiciona o primeiro da lista. Dá para colocar vários itens de uma vez.",
+      },
+      {
+        title: "Ajuste os itens",
+        text: "Em cada item, altere o nome ou o valor e, se quiser, informe o dente ou uma observação (ex.: Dente 36). A lixeira remove o item. Para algo fora do catálogo, digite na busca e clique em Adicionar “…” (item personalizado). O total aparece embaixo; escolha a situação e clique em Criar.",
       },
       {
         title: "Acompanhe",

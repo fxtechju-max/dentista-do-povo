@@ -18,32 +18,21 @@ import {
   XCircle,
 } from "lucide-react";
 import { db } from "@/integrations/mysql/client";
+import { BudgetDialog } from "@/components/admin/finance/BudgetDialog";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { EmptyState } from "@/components/admin/EmptyState";
 import {
   Initial,
-  MoneyInput,
   PeriodFilter,
   RowMenu,
-  Segmented,
   StatCard,
   StatusChips,
   StatusPill,
 } from "@/components/admin/finance/FinanceUI";
 import { formatCurrency, type BudgetStatus } from "@/lib/admin/labels";
-import { inRange, parseMoney, periodRange, type PeriodId } from "@/lib/admin/finance-period";
+import { inRange, periodRange, type PeriodId } from "@/lib/admin/finance-period";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -73,7 +62,13 @@ type Budget = {
   patients: { name: string } | null;
 };
 type Patient = { id: string; name: string };
-type Treatment = { id: string; name: string; price: number | null };
+type Treatment = {
+  id: string;
+  name: string;
+  price: number | null;
+  description: string | null;
+  duration_minutes: number | null;
+};
 
 const STATUS: Record<BudgetStatus, { label: string; pill: string; dot: string }> = {
   rascunho: {
@@ -99,14 +94,6 @@ const STATUS: Record<BudgetStatus, { label: string; pill: string; dot: string }>
 };
 const STATUS_ORDER: BudgetStatus[] = ["rascunho", "enviado", "aprovado", "recusado"];
 
-const emptyForm = {
-  patient_id: "",
-  treatment: "",
-  value: "",
-  status: "rascunho" as BudgetStatus,
-  notes: "",
-};
-
 const date = (iso: string) => new Date(iso).toLocaleDateString("pt-BR");
 
 function Orcamentos() {
@@ -126,8 +113,6 @@ function Orcamentos() {
   });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Budget | null>(null);
-  const [form, setForm] = useState(emptyForm);
-  const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Budget | null>(null);
 
   async function load() {
@@ -138,7 +123,11 @@ function Orcamentos() {
           .select("id, patient_id, treatment, value, status, notes, created_at, patients(name)")
           .order("created_at", { ascending: false }),
         db.from("patients").select("id, name").order("name"),
-        db.from("treatments").select("id, name, price").eq("active", true).order("name"),
+        db
+          .from("treatments")
+          .select("id, name, price, description, duration_minutes")
+          .eq("active", true)
+          .order("name"),
       ]);
     setBudgets((budgetsData ?? []) as unknown as Budget[]);
     setPatients((patientsData ?? []) as Patient[]);
@@ -186,43 +175,12 @@ function Orcamentos() {
 
   function openCreate() {
     setEditing(null);
-    setForm({ ...emptyForm, patient_id: patientFilter !== "todos" ? patientFilter : "" });
     setDialogOpen(true);
   }
 
   function openEdit(b: Budget) {
     setEditing(b);
-    setForm({
-      patient_id: b.patient_id,
-      treatment: b.treatment,
-      value: String(b.value).replace(".", ","),
-      status: b.status,
-      notes: b.notes ?? "",
-    });
     setDialogOpen(true);
-  }
-
-  const value = parseMoney(form.value);
-  const formValid = !!form.patient_id && !!form.treatment.trim() && value >= 0;
-
-  async function save() {
-    if (!formValid) return;
-    setSaving(true);
-    const payload = {
-      patient_id: form.patient_id,
-      treatment: form.treatment.trim(),
-      value,
-      status: form.status,
-      notes: form.notes.trim() || null,
-    };
-    const { error } = editing
-      ? await db.from("budgets").update(payload).eq("id", editing.id)
-      : await db.from("budgets").insert(payload);
-    setSaving(false);
-    if (error) return;
-    toast.success(editing ? "Orçamento atualizado." : "Orçamento criado.");
-    setDialogOpen(false);
-    load();
   }
 
   async function setBudgetStatus(b: Budget, next: BudgetStatus) {
@@ -533,109 +491,20 @@ function Orcamentos() {
         )}
       </div>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-xl">
-          <DialogHeader>
-            <DialogTitle>{editing ? "Editar orçamento" : "Novo orçamento"}</DialogTitle>
-            <DialogDescription>
-              Escolha o paciente, o tratamento e o valor. Você pode começar como rascunho.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="o-patient">Paciente</Label>
-              <select
-                id="o-patient"
-                value={form.patient_id}
-                onChange={(e) => setForm((f) => ({ ...f, patient_id: e.target.value }))}
-                className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm"
-              >
-                <option value="">Selecione o paciente</option>
-                {patients.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="o-treatment">Tratamento</Label>
-              <Input
-                id="o-treatment"
-                value={form.treatment}
-                onChange={(e) => setForm((f) => ({ ...f, treatment: e.target.value }))}
-                placeholder="Ex.: Implante + coroa"
-              />
-              {treatments.length > 0 && (
-                <div className="flex max-h-24 flex-wrap gap-1.5 overflow-y-auto pt-1">
-                  {treatments.map((t) => (
-                    <button
-                      key={t.id}
-                      type="button"
-                      onClick={() =>
-                        setForm((f) => ({
-                          ...f,
-                          treatment: t.name,
-                          value: t.price != null ? String(t.price).replace(".", ",") : f.value,
-                        }))
-                      }
-                      className="rounded-full border border-border px-2.5 py-1 text-xs hover:border-primary hover:text-primary"
-                    >
-                      {t.name}
-                      {t.price != null && (
-                        <span className="text-muted-foreground">
-                          {" "}
-                          · {formatCurrency(Number(t.price))}
-                        </span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="o-value">Valor</Label>
-                <MoneyInput
-                  id="o-value"
-                  value={form.value}
-                  onChange={(v) => setForm((f) => ({ ...f, value: v }))}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Status</Label>
-                <Segmented
-                  value={form.status}
-                  onChange={(s) => setForm((f) => ({ ...f, status: s }))}
-                  options={STATUS_ORDER.map((s) => ({
-                    id: s,
-                    label: STATUS[s].label,
-                    dot: STATUS[s].dot,
-                  }))}
-                />
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="o-notes">Observações</Label>
-              <Textarea
-                id="o-notes"
-                value={form.notes}
-                onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-                placeholder="Condições de pagamento, validade, detalhes..."
-                rows={3}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={save} disabled={!formValid || saving}>
-              {saving ? "Salvando..." : editing ? "Salvar alterações" : "Criar orçamento"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <BudgetDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        editing={editing}
+        patients={patients}
+        treatments={treatments}
+        statusOptions={STATUS_ORDER.map((s) => ({
+          id: s,
+          label: STATUS[s].label,
+          dot: STATUS[s].dot,
+        }))}
+        defaultPatientId={patientFilter !== "todos" ? patientFilter : ""}
+        onSaved={load}
+      />
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>
