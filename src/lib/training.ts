@@ -249,7 +249,7 @@ export const TRAININGS: Training[] = [
           {
             id: "caixa",
             title: "Ou cobre direto no Caixa (PDV)",
-            text: "Pagamento na hora, sem orçamento? No Financeiro › Caixa (PDV), busque “Restauração”, escolha a Ana como cliente, clique em Finalizar venda (F2), escolha a forma e confirme. Em dinheiro, informe o valor recebido para ver o troco.",
+            text: "Pagamento na hora, sem orçamento? No Financeiro › Caixa (PDV), abra o caixa do dia (se ainda estiver fechado), busque “Restauração”, escolha a Ana como cliente, clique em Finalizar venda (F2), escolha a forma e confirme. Em dinheiro, informe o valor recebido para ver o troco.",
             to: "/admin/financeiro",
             toLabel: "Abrir o Caixa",
             check:

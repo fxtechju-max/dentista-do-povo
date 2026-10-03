@@ -21,6 +21,8 @@ const OPERATIONAL_TABLES = [
   "blog_posts",
   "appointments",
   "budgets",
+  "cash_sessions",
+  "cash_movements",
   "payments",
   "finance_entries",
   "prescriptions",

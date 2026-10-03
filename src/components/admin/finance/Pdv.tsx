@@ -100,7 +100,16 @@ const SHORTCUTS = [
  * As vendas abertas ficam só na tela (nada no navegador); ao finalizar, viram
  * um lançamento no Financeiro.
  */
-export function Pdv({ patients, onFinished }: { patients: Patient[]; onFinished: () => void }) {
+export function Pdv({
+  patients,
+  onFinished,
+  cashSessionId,
+}: {
+  patients: Patient[];
+  onFinished: () => void;
+  /** Caixa do dia aberto: as vendas ficam ligadas a ele para o fechamento. */
+  cashSessionId: string;
+}) {
   const [treatments, setTreatments] = useState<Treatment[]>([]);
   const [clinic, setClinic] = useState<{ name: string; phone: string; address: string }>({
     name: "Dentista do Povo",
@@ -821,6 +830,7 @@ export function Pdv({ patients, onFinished }: { patients: Patient[]; onFinished:
         open={finishOpen}
         onOpenChange={setFinishOpen}
         sale={sale}
+        cashSessionId={cashSessionId}
         patientName={patient?.name ?? null}
         totals={totals}
         onPrint={printReceipt}
@@ -1076,6 +1086,7 @@ function FinishDialog({
   open,
   onOpenChange,
   sale,
+  cashSessionId,
   patientName,
   totals,
   onPrint,
@@ -1084,6 +1095,7 @@ function FinishDialog({
   open: boolean;
   onOpenChange: (o: boolean) => void;
   sale: Sale;
+  cashSessionId: string;
   patientName: string | null;
   totals: ReturnType<typeof saleTotals>;
   onPrint: (r: Receipt) => void;
@@ -1127,6 +1139,7 @@ function FinishDialog({
       payment_method: method || null,
       installments: parseInstallments(method, installments),
       description: saleDescription(sale.items),
+      cash_session_id: cashSessionId,
     });
     setSaving(false);
     if (error) return;

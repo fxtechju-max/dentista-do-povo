@@ -45,6 +45,17 @@ export type TutorialUpdate = {
 export const TUTORIAL_UPDATES: TutorialUpdate[] = [
   {
     date: "2026-10-03",
+    title: "Abertura e fechamento do caixa do dia",
+    sections: ["financeiro"],
+    items: [
+      "Para vender, abra o caixa do dia informando o fundo de troco.",
+      "Sangria (retirada) e suprimento (reforço) com motivo, e a barra mostra o dinheiro esperado na gaveta.",
+      "Fechamento com o recebido por forma de pagamento, valor contado e diferença (confere, sobra ou falta), com relatório para imprimir.",
+      "Histórico dos últimos caixas e botão Ajustar tela (Tela toda, Centralizado ou Compacto) só para o Caixa (PDV).",
+    ],
+  },
+  {
+    date: "2026-10-03",
     title: "Financeiro com Caixa (PDV) e calculadora",
     sections: ["financeiro", "tutorial"],
     items: [
@@ -853,6 +864,22 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
     to: "/admin/financeiro",
     summary: "Caixa (PDV) para cobrar na hora, pagamentos e recebimentos dos pacientes.",
     steps: [
+      {
+        title: "Abra o caixa do dia",
+        text: "Antes da primeira venda, a aba Caixa (PDV) mostra Caixa fechado. Clique em Abrir caixa do dia e informe o fundo de troco (o dinheiro que já está na gaveta). Só existe um caixa aberto por vez.",
+      },
+      {
+        title: "Sangria e suprimento",
+        text: "Com o caixa aberto, a barra verde mostra desde que horas, o fundo, as vendas recebidas e o dinheiro que deve estar na gaveta. Sangria = tirar dinheiro (ex.: depósito no banco). Suprimento = colocar mais troco. Informe sempre o motivo.",
+      },
+      {
+        title: "Feche o caixa",
+        text: "No fim do dia, clique em Fechar caixa: confira o recebido por forma de pagamento, conte o dinheiro da gaveta e digite o valor contado. O sistema mostra se Confere, Sobra ou Falta. Feche e imprima o relatório. Os últimos caixas ficam listados na tela de caixa fechado, com o botão Relatório.",
+      },
+      {
+        title: "Ajuste a largura do caixa",
+        text: "No botão Ajustar tela (acima do caixa), escolha Tela toda, Centralizado ou Compacto para deixar o caixa mais no meio da tela. A escolha fica salva para todos.",
+      },
       {
         title: "Caixa (PDV): monte a venda",
         text: "O Financeiro abre na aba Caixa (PDV). Busque o tratamento e aperte Enter (ou clique). Ajuste a quantidade (aceita 1,5), use Observação ou Alterar preço no item e escolha o paciente em Cliente à vista. Nova venda abre outra venda ao mesmo tempo (Venda 01, 02...).",

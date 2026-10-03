@@ -88,6 +88,8 @@ export const AUDIT_TABLE_LABEL: Record<string, string> = {
   treatments: "Tratamento",
   budgets: "Orçamento",
   payments: "Financeiro",
+  cash_sessions: "Caixa do dia",
+  cash_movements: "Sangria/suprimento",
   finance_entries: "Contas a pagar/receber",
   leads: "CRM (lead)",
   prescriptions: "Receita",

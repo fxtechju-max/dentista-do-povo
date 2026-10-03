@@ -19,7 +19,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { db } from "@/integrations/mysql/client";
-import { Pdv } from "@/components/admin/finance/Pdv";
+import { CaixaTab } from "@/components/admin/finance/CaixaTab";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ChartSize } from "@/components/admin/finance/FinanceChart";
 import {
@@ -415,7 +415,7 @@ function Financeiro() {
           </TabsTrigger>
         </TabsList>
         <TabsContent value="caixa" className="mt-4">
-          <Pdv patients={patients} onFinished={load} />
+          <CaixaTab patients={patients} onSale={load} />
         </TabsContent>
         <TabsContent value="lancamentos" className="mt-4 space-y-5">
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">

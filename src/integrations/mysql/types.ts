@@ -3,6 +3,87 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export type Database = {
   public: {
     Tables: {
+      cash_sessions: {
+        Row: {
+          id: string;
+          status: string;
+          opened_at: string;
+          opened_by: string | null;
+          opening_amount: number;
+          opening_notes: string | null;
+          closed_at: string | null;
+          closed_by: string | null;
+          expected_cash: number | null;
+          counted_cash: number | null;
+          difference: number | null;
+          total_sales: number | null;
+          closing_notes: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          status?: string;
+          opened_at?: string;
+          opened_by?: string | null;
+          opening_amount?: number;
+          opening_notes?: string | null;
+          closed_at?: string | null;
+          closed_by?: string | null;
+          expected_cash?: number | null;
+          counted_cash?: number | null;
+          difference?: number | null;
+          total_sales?: number | null;
+          closing_notes?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          status?: string;
+          opened_at?: string;
+          opened_by?: string | null;
+          opening_amount?: number;
+          opening_notes?: string | null;
+          closed_at?: string | null;
+          closed_by?: string | null;
+          expected_cash?: number | null;
+          counted_cash?: number | null;
+          difference?: number | null;
+          total_sales?: number | null;
+          closing_notes?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      cash_movements: {
+        Row: {
+          id: string;
+          session_id: string;
+          type: string;
+          amount: number;
+          reason: string | null;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          session_id: string;
+          type: string;
+          amount: number;
+          reason?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          session_id?: string;
+          type?: string;
+          amount?: number;
+          reason?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       conversations: {
         Row: {
           admin_read_at: string | null;
@@ -165,6 +246,7 @@ export type Database = {
       };
       payments: {
         Row: {
+          cash_session_id: string | null;
           description: string | null;
           cancel_reason: string | null;
           refund_amount: number | null;
@@ -183,6 +265,7 @@ export type Database = {
           installments: number | null;
         };
         Insert: {
+          cash_session_id?: string | null;
           description?: string | null;
           cancel_reason?: string | null;
           refund_amount?: number | null;
@@ -201,6 +284,7 @@ export type Database = {
           installments?: number | null;
         };
         Update: {
+          cash_session_id?: string | null;
           description?: string | null;
           cancel_reason?: string | null;
           refund_amount?: number | null;
