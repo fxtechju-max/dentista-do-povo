@@ -36,6 +36,7 @@ export const tableColumns = {
     "refund_amount",
     "cancelled_at",
     "cancelled_by",
+    "description",
   ],
   leads: ["id", "name", "phone", "source", "status", "created_at"],
   treatments: ["id", "name", "description", "duration_minutes", "active", "created_at", "price"],

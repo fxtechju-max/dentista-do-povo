@@ -165,6 +165,7 @@ export type Database = {
       };
       payments: {
         Row: {
+          description: string | null;
           cancel_reason: string | null;
           refund_amount: number | null;
           cancelled_at: string | null;
@@ -182,6 +183,7 @@ export type Database = {
           installments: number | null;
         };
         Insert: {
+          description?: string | null;
           cancel_reason?: string | null;
           refund_amount?: number | null;
           cancelled_at?: string | null;
@@ -199,6 +201,7 @@ export type Database = {
           installments?: number | null;
         };
         Update: {
+          description?: string | null;
           cancel_reason?: string | null;
           refund_amount?: number | null;
           cancelled_at?: string | null;

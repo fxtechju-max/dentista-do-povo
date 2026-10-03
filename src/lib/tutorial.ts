@@ -44,6 +44,18 @@ export type TutorialUpdate = {
 // Mais recente primeiro.
 export const TUTORIAL_UPDATES: TutorialUpdate[] = [
   {
+    date: "2026-10-03",
+    title: "Financeiro com Caixa (PDV) e calculadora",
+    sections: ["financeiro", "tutorial"],
+    items: [
+      "O Financeiro abre no Caixa (PDV): busque o tratamento, monte o carrinho e finalize a venda.",
+      "Várias vendas abertas ao mesmo tempo, quantidade com vírgula, observação e alterar preço por item.",
+      "Desconto, acréscimo, orçamento, recibo impresso e troco para pagamento em dinheiro.",
+      "Calculadora (F3) com modo Livre e Margem de lucro; atalhos de teclado F2 a F9 e tela cheia.",
+      "A lista de antes continua na aba Lançamentos, agora mostrando o que foi vendido em cada lançamento.",
+    ],
+  },
+  {
     date: "2026-10-01",
     title: "Nova janela de orçamento",
     sections: ["orcamentos"],
@@ -839,8 +851,28 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
     emoji: "💰",
     title: "Financeiro",
     to: "/admin/financeiro",
-    summary: "Pagamentos e recebimentos dos pacientes.",
+    summary: "Caixa (PDV) para cobrar na hora, pagamentos e recebimentos dos pacientes.",
     steps: [
+      {
+        title: "Caixa (PDV): monte a venda",
+        text: "O Financeiro abre na aba Caixa (PDV). Busque o tratamento e aperte Enter (ou clique). Ajuste a quantidade (aceita 1,5), use Observação ou Alterar preço no item e escolha o paciente em Cliente à vista. Nova venda abre outra venda ao mesmo tempo (Venda 01, 02...).",
+      },
+      {
+        title: "Caixa: desconto, acréscimo, orçamento e recibo",
+        text: "No Resumo da venda: Desconto (F4) e Acréscimo (F7) em % ou R$; Orçamento (F6) transforma o carrinho em orçamento do paciente; Imprimir (F8) imprime o comprovante; Limpar (F9) esvazia o carrinho; Calculadora (F3).",
+      },
+      {
+        title: "Caixa: finalize",
+        text: "Finalizar venda (F2): escolha a forma de pagamento (e parcelas). Em dinheiro, digite o valor recebido para ver o troco. Marque Fica a receber se o paciente vai pagar depois. Ao concluir, dá para imprimir o recibo; a venda entra em Lançamentos com os itens vendidos.",
+      },
+      {
+        title: "Calculadora",
+        text: "Botão Calculadora (F3). Livre: contas normais, também pelo teclado (números, + − * / , Enter). Margem de lucro: escolha o que quer descobrir (preço de venda, margem % ou custo) e preencha os outros dois — mostra também o lucro e o markup.",
+      },
+      {
+        title: "Tela cheia",
+        text: "Na barra de atalhos, Tela cheia deixa o caixa ocupando o monitor todo. Aperte Esc ou o mesmo botão para sair.",
+      },
       {
         title: "Lançamento",
         text: "Registre o valor, o paciente, a situação (a receber, recebido, cancelado) e a forma de pagamento. No cartão de crédito, link de pagamento e crediário, informe também as parcelas.",

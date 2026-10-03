@@ -12,12 +12,15 @@ import {
   Plus,
   Receipt,
   Search,
+  ShoppingCart,
   Trash2,
   TrendingUp,
   User,
   Wallet,
 } from "lucide-react";
 import { db } from "@/integrations/mysql/client";
+import { Pdv } from "@/components/admin/finance/Pdv";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ChartSize } from "@/components/admin/finance/FinanceChart";
 import {
   readPreference,
@@ -99,6 +102,7 @@ type Payment = {
   refund_amount: number | string | null;
   cancelled_at: string | null;
   cancelled_by: string | null;
+  description: string | null;
   patients: { name: string } | null;
 };
 type Patient = { id: string; name: string };
@@ -175,6 +179,8 @@ function Financeiro() {
   });
   const [receiveAdjustOpen, setReceiveAdjustOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Payment | null>(null);
+  // O Financeiro abre no Caixa (PDV); Lançamentos traz a lista, o gráfico e os filtros.
+  const [tab, setTab] = useState<"caixa" | "lancamentos">("caixa");
   const [cancelTarget, setCancelTarget] = useState<Payment | null>(null);
   const [cancelDetails, setCancelDetails] = useState<Payment | null>(null);
 
@@ -183,7 +189,7 @@ function Financeiro() {
       db
         .from("payments")
         .select(
-          "id, patient_id, amount, status, paid_at, created_at, payment_method, installments, discount, surcharge, cancel_reason, refund_amount, cancelled_at, cancelled_by, patients(name)",
+          "id, patient_id, amount, status, paid_at, created_at, payment_method, installments, discount, surcharge, cancel_reason, refund_amount, cancelled_at, cancelled_by, description, patients(name)",
         )
         .order("created_at", { ascending: false }),
       db.from("patients").select("id, name").order("name"),
@@ -391,329 +397,366 @@ function Financeiro() {
         title="💰 Financeiro"
         description="Pagamentos dos pacientes: o que já entrou e o que falta receber."
         action={
-          <Button onClick={openCreate}>
-            <Plus /> Novo lançamento
-          </Button>
+          tab === "lancamentos" ? (
+            <Button onClick={openCreate}>
+              <Plus /> Novo lançamento
+            </Button>
+          ) : undefined
         }
       />
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard
-          icon={TrendingUp}
-          label="Recebido"
-          value={formatCurrency(kpi.received)}
-          hint={`${Math.round(kpi.progress)}% do total previsto`}
-          progress={kpi.progress}
-          tone="green"
-          onClick={() => setStatus("pago")}
-          active={status === "pago"}
-        />
-        <StatCard
-          icon={Clock}
-          label="A receber"
-          value={formatCurrency(kpi.toReceive)}
-          hint={`${kpi.pendingCount} pendente(s)`}
-          tone="amber"
-          onClick={() => setStatus("pendente")}
-          active={status === "pendente"}
-        />
-        <StatCard
-          icon={DollarSign}
-          label="Ticket médio"
-          value={formatCurrency(kpi.average)}
-          hint="Por pagamento recebido"
-          tone="blue"
-        />
-        <StatCard
-          icon={Receipt}
-          label="Lançamentos"
-          value={String(scoped.length)}
-          hint={`${kpi.paidCount} recebido(s)`}
-          tone="slate"
-          onClick={() => setStatus("todos")}
-          active={status === "todos"}
-        />
-      </div>
+      <Tabs value={tab} onValueChange={(v) => setTab(v as "caixa" | "lancamentos")}>
+        <TabsList className="h-11">
+          <TabsTrigger value="caixa" className="gap-1.5 px-4">
+            <ShoppingCart className="h-4 w-4" /> Caixa (PDV)
+          </TabsTrigger>
+          <TabsTrigger value="lancamentos" className="gap-1.5 px-4">
+            <Receipt className="h-4 w-4" /> Lançamentos
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="caixa" className="mt-4">
+          <Pdv patients={patients} onFinished={load} />
+        </TabsContent>
+        <TabsContent value="lancamentos" className="mt-4 space-y-5">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <StatCard
+              icon={TrendingUp}
+              label="Recebido"
+              value={formatCurrency(kpi.received)}
+              hint={`${Math.round(kpi.progress)}% do total previsto`}
+              progress={kpi.progress}
+              tone="green"
+              onClick={() => setStatus("pago")}
+              active={status === "pago"}
+            />
+            <StatCard
+              icon={Clock}
+              label="A receber"
+              value={formatCurrency(kpi.toReceive)}
+              hint={`${kpi.pendingCount} pendente(s)`}
+              tone="amber"
+              onClick={() => setStatus("pendente")}
+              active={status === "pendente"}
+            />
+            <StatCard
+              icon={DollarSign}
+              label="Ticket médio"
+              value={formatCurrency(kpi.average)}
+              hint="Por pagamento recebido"
+              tone="blue"
+            />
+            <StatCard
+              icon={Receipt}
+              label="Lançamentos"
+              value={String(scoped.length)}
+              hint={`${kpi.paidCount} recebido(s)`}
+              tone="slate"
+              onClick={() => setStatus("todos")}
+              active={status === "todos"}
+            />
+          </div>
 
-      {chart.visible ? (
-        <Suspense
-          fallback={<div className="h-64 animate-pulse rounded-2xl border border-border bg-card" />}
-        >
-          <FinanceChart
-            payments={scoped}
-            range={range}
-            size={chart.size}
-            onSizeChange={(size) => setChart({ ...chart, size })}
-            onHide={() => {
-              setChart({ ...chart, visible: false });
-              toast("Gráfico oculto.", {
-                action: { label: "Desfazer", onClick: () => setChart({ ...chart, visible: true }) },
-              });
-            }}
-          />
-        </Suspense>
-      ) : (
-        <button
-          type="button"
-          onClick={() => setChart({ ...chart, visible: true })}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-card/60 py-2.5 text-sm font-semibold text-muted-foreground transition-colors animate-in fade-in duration-300 hover:border-primary/50 hover:text-primary"
-        >
-          <BarChart3 className="h-4 w-4" /> Mostrar gráfico
-        </button>
-      )}
-
-      {(kpi.discounts > 0 || kpi.surcharges > 0 || kpi.cancelledCount > 0) && (
-        <div className="flex flex-wrap gap-2 animate-in fade-in duration-300">
-          {kpi.cancelledCount > 0 && (
+          {chart.visible ? (
+            <Suspense
+              fallback={
+                <div className="h-64 animate-pulse rounded-2xl border border-border bg-card" />
+              }
+            >
+              <FinanceChart
+                payments={scoped}
+                range={range}
+                size={chart.size}
+                onSizeChange={(size) => setChart({ ...chart, size })}
+                onHide={() => {
+                  setChart({ ...chart, visible: false });
+                  toast("Gráfico oculto.", {
+                    action: {
+                      label: "Desfazer",
+                      onClick: () => setChart({ ...chart, visible: true }),
+                    },
+                  });
+                }}
+              />
+            </Suspense>
+          ) : (
             <button
               type="button"
-              onClick={() => setStatus("cancelado")}
-              className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200"
+              onClick={() => setChart({ ...chart, visible: true })}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-card/60 py-2.5 text-sm font-semibold text-muted-foreground transition-colors animate-in fade-in duration-300 hover:border-primary/50 hover:text-primary"
             >
-              {kpi.cancelledCount} cancelado(s)
-              {kpi.refunds > 0 ? ` · devolvido ${formatCurrency(kpi.refunds)}` : ""}
+              <BarChart3 className="h-4 w-4" /> Mostrar gráfico
             </button>
           )}
-          {kpi.discounts > 0 && (
-            <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
-              Descontos concedidos: {formatCurrency(kpi.discounts)}
-            </span>
-          )}
-          {kpi.surcharges > 0 && (
-            <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800 dark:bg-amber-950 dark:text-amber-300">
-              Acréscimos cobrados: {formatCurrency(kpi.surcharges)}
-            </span>
-          )}
-        </div>
-      )}
 
-      {kpi.byMethod.length > 0 && (
-        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-sm font-bold">Recebido por forma de pagamento</p>
-            {methodFilter !== "todos" && (
-              <Button variant="ghost" size="sm" onClick={() => setMethodFilter("todos")}>
-                Ver todas
-              </Button>
-            )}
-          </div>
-          <div className="mt-3 space-y-1">
-            {kpi.byMethod.map(([method, total]) => {
-              const active = methodFilter === method;
-              return (
+          {(kpi.discounts > 0 || kpi.surcharges > 0 || kpi.cancelledCount > 0) && (
+            <div className="flex flex-wrap gap-2 animate-in fade-in duration-300">
+              {kpi.cancelledCount > 0 && (
                 <button
-                  key={method}
                   type="button"
-                  onClick={() => setMethodFilter(active ? "todos" : method)}
-                  className={`block w-full rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-accent ${active ? "bg-accent" : ""}`}
+                  onClick={() => setStatus("cancelado")}
+                  className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200"
                 >
-                  <div className="flex items-center justify-between gap-2 text-sm">
-                    <span className="font-medium">
-                      {method === "nao_informada" ? "Não informada" : paymentMethodLabel(method)}
-                    </span>
-                    <span className="font-bold">{formatCurrency(total)}</span>
-                  </div>
-                  <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-muted">
-                    <div
-                      className="h-full rounded-full bg-primary transition-all duration-700"
-                      style={{ width: `${maxMethod ? (total / maxMethod) * 100 : 0}%` }}
-                    />
-                  </div>
+                  {kpi.cancelledCount} cancelado(s)
+                  {kpi.refunds > 0 ? ` · devolvido ${formatCurrency(kpi.refunds)}` : ""}
                 </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      <div className="space-y-3 rounded-2xl border border-border bg-card p-3 shadow-sm sm:p-4">
-        <StatusChips
-          value={status}
-          onChange={setStatus}
-          options={[
-            { id: "todos", label: "Todos", count: scoped.length },
-            ...STATUS_ORDER.map((s) => ({
-              id: s,
-              label: STATUS[s].label,
-              dot: STATUS[s].dot,
-              count: scoped.filter((p) => p.status === s).length,
-            })),
-          ]}
-        />
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative min-w-52 flex-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Buscar paciente..."
-              className="h-9 pl-9"
-            />
-          </div>
-          <select
-            value={patientFilter}
-            onChange={(e) => setPatientFilter(e.target.value)}
-            className="h-9 max-w-48 rounded-lg border border-border bg-card px-3 text-sm font-medium"
-            aria-label="Paciente"
-          >
-            <option value="todos">Todos os pacientes</option>
-            {patients.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-          <select
-            value={methodFilter}
-            onChange={(e) => setMethodFilter(e.target.value)}
-            className="h-9 max-w-48 rounded-lg border border-border bg-card px-3 text-sm font-medium"
-            aria-label="Forma de pagamento"
-          >
-            <option value="todos">Todas as formas</option>
-            <option value="nao_informada">Não informada</option>
-            {PAYMENT_METHODS.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.emoji} {m.label}
-              </option>
-            ))}
-          </select>
-          <PeriodFilter
-            value={period.period}
-            from={period.from}
-            to={period.to}
-            onChange={setPeriod}
-          />
-          {hasFilters && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setQuery("");
-                setStatus("todos");
-                setPatientFilter("todos");
-                setMethodFilter("todos");
-                setPeriod({ period: "este_mes", from: "", to: "" });
-              }}
-            >
-              Limpar
-            </Button>
+              )}
+              {kpi.discounts > 0 && (
+                <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                  Descontos concedidos: {formatCurrency(kpi.discounts)}
+                </span>
+              )}
+              {kpi.surcharges > 0 && (
+                <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                  Acréscimos cobrados: {formatCurrency(kpi.surcharges)}
+                </span>
+              )}
+            </div>
           )}
-        </div>
-      </div>
 
-      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-        {loading ? (
-          <p className="p-8 text-center text-sm text-muted-foreground">Carregando...</p>
-        ) : filtered.length === 0 ? (
-          <div className="p-2">
-            <EmptyState
-              icon={Wallet}
-              title={
-                payments.length === 0
-                  ? "Nenhum lançamento ainda."
-                  : "Nenhum lançamento nesse período ou filtro."
-              }
+          {kpi.byMethod.length > 0 && (
+            <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-bold">Recebido por forma de pagamento</p>
+                {methodFilter !== "todos" && (
+                  <Button variant="ghost" size="sm" onClick={() => setMethodFilter("todos")}>
+                    Ver todas
+                  </Button>
+                )}
+              </div>
+              <div className="mt-3 space-y-1">
+                {kpi.byMethod.map(([method, total]) => {
+                  const active = methodFilter === method;
+                  return (
+                    <button
+                      key={method}
+                      type="button"
+                      onClick={() => setMethodFilter(active ? "todos" : method)}
+                      className={`block w-full rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-accent ${active ? "bg-accent" : ""}`}
+                    >
+                      <div className="flex items-center justify-between gap-2 text-sm">
+                        <span className="font-medium">
+                          {method === "nao_informada"
+                            ? "Não informada"
+                            : paymentMethodLabel(method)}
+                        </span>
+                        <span className="font-bold">{formatCurrency(total)}</span>
+                      </div>
+                      <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-muted">
+                        <div
+                          className="h-full rounded-full bg-primary transition-all duration-700"
+                          style={{ width: `${maxMethod ? (total / maxMethod) * 100 : 0}%` }}
+                        />
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-3 rounded-2xl border border-border bg-card p-3 shadow-sm sm:p-4">
+            <StatusChips
+              value={status}
+              onChange={setStatus}
+              options={[
+                { id: "todos", label: "Todos", count: scoped.length },
+                ...STATUS_ORDER.map((s) => ({
+                  id: s,
+                  label: STATUS[s].label,
+                  dot: STATUS[s].dot,
+                  count: scoped.filter((p) => p.status === s).length,
+                })),
+              ]}
             />
-            <div className="pb-6 text-center">
-              <Button onClick={openCreate} variant={payments.length ? "outline" : "default"}>
-                <Plus /> Novo lançamento
-              </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative min-w-52 flex-1">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Buscar paciente..."
+                  className="h-9 pl-9"
+                />
+              </div>
+              <select
+                value={patientFilter}
+                onChange={(e) => setPatientFilter(e.target.value)}
+                className="h-9 max-w-48 rounded-lg border border-border bg-card px-3 text-sm font-medium"
+                aria-label="Paciente"
+              >
+                <option value="todos">Todos os pacientes</option>
+                {patients.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={methodFilter}
+                onChange={(e) => setMethodFilter(e.target.value)}
+                className="h-9 max-w-48 rounded-lg border border-border bg-card px-3 text-sm font-medium"
+                aria-label="Forma de pagamento"
+              >
+                <option value="todos">Todas as formas</option>
+                <option value="nao_informada">Não informada</option>
+                {PAYMENT_METHODS.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.emoji} {m.label}
+                  </option>
+                ))}
+              </select>
+              <PeriodFilter
+                value={period.period}
+                from={period.from}
+                to={period.to}
+                onChange={setPeriod}
+              />
+              {hasFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setQuery("");
+                    setStatus("todos");
+                    setPatientFilter("todos");
+                    setMethodFilter("todos");
+                    setPeriod({ period: "este_mes", from: "", to: "" });
+                  }}
+                >
+                  Limpar
+                </Button>
+              )}
             </div>
           </div>
-        ) : (
-          <>
-            <ul className="divide-y divide-border md:hidden">
-              {filtered.map((p) => (
-                <li key={p.id} className="space-y-2.5 p-4">
-                  <div className="flex items-start gap-3">
-                    <Initial name={p.patients?.name ?? "Avulso"} />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-semibold">{p.patients?.name ?? "Sem paciente"}</p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {date(p.paid_at ?? p.created_at)} ·{" "}
-                        {paymentMethod(p.payment_method)
-                          ? paymentMethodLabel(p.payment_method, p.installments)
-                          : "Forma não informada"}
-                      </p>
-                    </div>
-                    {menu(p)}
-                  </div>
-                  <div className="flex items-center justify-between gap-2">
-                    <span>
-                      <span className="block text-lg font-extrabold">
-                        <span
-                          className={
-                            p.status === "cancelado" ? "text-muted-foreground line-through" : ""
-                          }
-                        >
-                          {formatCurrency(Number(p.amount))}
-                        </span>
-                      </span>
-                      <AdjustNote p={p} />
-                    </span>
-                    {receiveButton(p) ?? (
-                      <StatusPill
-                        label={STATUS[p.status].label}
-                        className={STATUS[p.status].pill}
-                      />
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
-            <table className="hidden w-full text-sm md:table">
-              <thead className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                <tr>
-                  <th className="px-4 py-3 font-semibold">Paciente</th>
-                  <th className="px-4 py-3 text-right font-semibold">Valor</th>
-                  <th className="px-4 py-3 font-semibold">Forma</th>
-                  <th className="px-4 py-3 font-semibold">Status</th>
-                  <th className="px-4 py-3 text-right font-semibold">Ações</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {filtered.map((p) => (
-                  <tr key={p.id} className="transition-colors hover:bg-muted/30">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
+
+          <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+            {loading ? (
+              <p className="p-8 text-center text-sm text-muted-foreground">Carregando...</p>
+            ) : filtered.length === 0 ? (
+              <div className="p-2">
+                <EmptyState
+                  icon={Wallet}
+                  title={
+                    payments.length === 0
+                      ? "Nenhum lançamento ainda."
+                      : "Nenhum lançamento nesse período ou filtro."
+                  }
+                />
+                <div className="pb-6 text-center">
+                  <Button onClick={openCreate} variant={payments.length ? "outline" : "default"}>
+                    <Plus /> Novo lançamento
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <ul className="divide-y divide-border md:hidden">
+                  {filtered.map((p) => (
+                    <li key={p.id} className="space-y-2.5 p-4">
+                      <div className="flex items-start gap-3">
                         <Initial name={p.patients?.name ?? "Avulso"} />
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1">
                           <p className="truncate font-semibold">
                             {p.patients?.name ?? "Sem paciente"}
                           </p>
-                          <p className="text-xs text-muted-foreground">
-                            {p.status === "pago" ? "Recebido em " : "Lançado em "}
-                            {date(p.paid_at ?? p.created_at)}
+                          {p.description && (
+                            <p className="truncate text-xs text-foreground/80">{p.description}</p>
+                          )}
+                          <p className="truncate text-xs text-muted-foreground">
+                            {date(p.paid_at ?? p.created_at)} ·{" "}
+                            {paymentMethod(p.payment_method)
+                              ? paymentMethodLabel(p.payment_method, p.installments)
+                              : "Forma não informada"}
                           </p>
                         </div>
-                      </div>
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-right font-bold">
-                      {formatCurrency(Number(p.amount))}
-                      <AdjustNote p={p} />
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">
-                      {paymentMethodLabel(p.payment_method, p.installments)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <StatusPill
-                        label={STATUS[p.status].label}
-                        className={STATUS[p.status].pill}
-                      />
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-1.5">
-                        {receiveButton(p)}
                         {menu(p)}
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </>
-        )}
-      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span>
+                          <span className="block text-lg font-extrabold">
+                            <span
+                              className={
+                                p.status === "cancelado" ? "text-muted-foreground line-through" : ""
+                              }
+                            >
+                              {formatCurrency(Number(p.amount))}
+                            </span>
+                          </span>
+                          <AdjustNote p={p} />
+                        </span>
+                        {receiveButton(p) ?? (
+                          <StatusPill
+                            label={STATUS[p.status].label}
+                            className={STATUS[p.status].pill}
+                          />
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+                <table className="hidden w-full text-sm md:table">
+                  <thead className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                    <tr>
+                      <th className="px-4 py-3 font-semibold">Paciente</th>
+                      <th className="px-4 py-3 text-right font-semibold">Valor</th>
+                      <th className="px-4 py-3 font-semibold">Forma</th>
+                      <th className="px-4 py-3 font-semibold">Status</th>
+                      <th className="px-4 py-3 text-right font-semibold">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {filtered.map((p) => (
+                      <tr key={p.id} className="transition-colors hover:bg-muted/30">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <Initial name={p.patients?.name ?? "Avulso"} />
+                            <div className="min-w-0">
+                              <p className="truncate font-semibold">
+                                {p.patients?.name ?? "Sem paciente"}
+                              </p>
+                              {p.description && (
+                                <p
+                                  className="max-w-72 truncate text-xs text-foreground/80"
+                                  title={p.description}
+                                >
+                                  {p.description}
+                                </p>
+                              )}
+                              <p className="text-xs text-muted-foreground">
+                                {p.status === "pago" ? "Recebido em " : "Lançado em "}
+                                {date(p.paid_at ?? p.created_at)}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-right font-bold">
+                          {formatCurrency(Number(p.amount))}
+                          <AdjustNote p={p} />
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">
+                          {paymentMethodLabel(p.payment_method, p.installments)}
+                        </td>
+                        <td className="px-4 py-3">
+                          <StatusPill
+                            label={STATUS[p.status].label}
+                            className={STATUS[p.status].pill}
+                          />
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center justify-end gap-1.5">
+                            {receiveButton(p)}
+                            {menu(p)}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
+            )}
+          </div>
+        </TabsContent>
+      </Tabs>
 
       <Dialog open={!!receiving} onOpenChange={(o) => !o && setReceiving(null)}>
         <DialogContent className="max-h-[92dvh] max-w-md overflow-y-auto">

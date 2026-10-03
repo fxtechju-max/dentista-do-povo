@@ -241,10 +241,19 @@ export const TRAININGS: Training[] = [
           {
             id: "receber",
             title: "Receba o pagamento",
-            text: "No Financeiro, clique em Receber na linha da Ana, escolha a forma (ex.: PIX ou cartão em 2x) e, se combinado, use + Aplicar desconto ou acréscimo. Confirme.",
+            text: "No Financeiro, abra a aba Lançamentos e clique em Receber na linha da Ana. Escolha a forma (ex.: PIX ou cartão em 2x) e, se combinado, use + Aplicar desconto ou acréscimo. Confirme.",
             to: "/admin/financeiro",
             toLabel: "Abrir Financeiro",
             check: "A linha fica como Recebido e o valor soma em Recebido e no gráfico.",
+          },
+          {
+            id: "caixa",
+            title: "Ou cobre direto no Caixa (PDV)",
+            text: "Pagamento na hora, sem orçamento? No Financeiro › Caixa (PDV), busque “Restauração”, escolha a Ana como cliente, clique em Finalizar venda (F2), escolha a forma e confirme. Em dinheiro, informe o valor recebido para ver o troco.",
+            to: "/admin/financeiro",
+            toLabel: "Abrir o Caixa",
+            check:
+              "Aparece “Venda concluída” e a venda entra em Lançamentos com os itens vendidos.",
           },
           {
             id: "erro",
