@@ -84,7 +84,7 @@ function loadChartPrefs(): ChartPrefs {
 const FinanceChart = lazy(() => import("@/components/admin/finance/FinanceChart"));
 
 export const Route = createFileRoute("/admin/financeiro")({
-  // ?orcamento=<paciente>: vindo de Orçamentos › Finalizar no Caixa.
+  // ?orcamento=<id do orçamento>: vindo de Orçamentos › Finalizar no Caixa.
   validateSearch: (search: Record<string, unknown>): { orcamento?: string } =>
     typeof search["orcamento"] === "string" ? { orcamento: search["orcamento"] } : {},
   component: Financeiro,
@@ -425,7 +425,7 @@ function Financeiro() {
           <CaixaTab
             patients={patients}
             onSale={load}
-            budgetPatientId={orcamento ?? null}
+            budgetId={orcamento ?? null}
             onBudgetHandled={() =>
               orcamento && navigate({ to: "/admin/financeiro", search: {}, replace: true })
             }

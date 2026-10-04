@@ -47,9 +47,11 @@ const methodName = (m: string) => (m === "nao_informada" ? "Não informada" : pa
 export function ClosedCash({
   history,
   onOpened,
+  notice,
 }: {
   history: CashSession[];
   onOpened: () => void;
+  notice?: string | null | undefined;
 }) {
   const [open, setOpen] = useState(false);
   const [report, setReport] = useState<CashSession | null>(null);
@@ -69,6 +71,11 @@ export function ClosedCash({
           Para começar a vender, abra o caixa do dia informando quanto dinheiro há na gaveta (fundo
           de troco).
         </p>
+        {notice && (
+          <p className="relative mx-auto mt-4 max-w-md rounded-xl bg-violet-100 px-4 py-2.5 text-sm font-semibold text-violet-800 animate-in fade-in slide-in-from-top-1 dark:bg-violet-950 dark:text-violet-200">
+            🧾 {notice}
+          </p>
+        )}
         <Button
           size="lg"
           onClick={() => setOpen(true)}

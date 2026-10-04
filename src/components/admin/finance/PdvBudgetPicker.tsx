@@ -23,9 +23,17 @@ type OpenBudget = {
   created_at: string;
   payment_id: string | null;
   patients: { name: string } | null;
+  /** Lançado no Financeiro e ainda a receber: pode ser recebido no caixa. */
+  pending?: boolean;
 };
 
-export type LoadedBudget = { budgetId: string; name: string; price: number };
+export type LoadedBudget = {
+  budgetId: string;
+  name: string;
+  price: number;
+  /** Lançamento "a receber" que este pagamento no caixa substitui. */
+  pendingPaymentId?: string;
+};
 
 const STATUS: Record<OpenBudget["status"], { label: string; cls: string }> = {
   rascunho: {
@@ -51,11 +59,14 @@ export function PdvBudgetPicker({
   open,
   onOpenChange,
   initialPatientId,
+  initialBudgetId,
   onLoad,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
-  initialPatientId?: string | null;
+  /** Orçamento (ou paciente) para já abrir selecionado. */
+  initialPatientId?: string | null | undefined;
+  initialBudgetId?: string | null | undefined;
   onLoad: (patientId: string, items: LoadedBudget[]) => void;
 }) {
   const [budgets, setBudgets] = useState<OpenBudget[] | null>(null);
@@ -67,30 +78,39 @@ export function PdvBudgetPicker({
     if (!open) return;
     setQuery("");
     setBudgets(null);
-    db.from("budgets")
-      .select("id, patient_id, treatment, value, status, created_at, payment_id, patients(name)")
-      .order("created_at", { ascending: false })
-      .then(({ data }) => {
-        const list = ((data ?? []) as unknown as OpenBudget[]).filter(
-          (b) => !b.payment_id && b.status !== "recusado",
-        );
-        setBudgets(list);
-        const first =
-          initialPatientId && list.some((b) => b.patient_id === initialPatientId)
-            ? initialPatientId
-            : null;
-        setPatientId(first);
-        setChecked(
-          new Set(
-            first
-              ? list
-                  .filter((b) => b.patient_id === first && b.status === "aprovado")
-                  .map((b) => b.id)
-              : [],
-          ),
-        );
-      });
-  }, [open, initialPatientId]);
+    void (async () => {
+      const { data } = await db
+        .from("budgets")
+        .select("id, patient_id, treatment, value, status, created_at, payment_id, patients(name)")
+        .order("created_at", { ascending: false });
+      const all = (data ?? []) as unknown as OpenBudget[];
+      // Lançados no Financeiro: só voltam ao caixa se o lançamento ainda está a receber.
+      const linked = [...new Set(all.map((x) => x.payment_id).filter(Boolean))] as string[];
+      const pendingIds = new Set<string>();
+      if (linked.length) {
+        const { data: pays } = await db.from("payments").select("id, status").in("id", linked);
+        for (const pay of (pays ?? []) as { id: string; status: string }[])
+          if (pay.status === "pendente") pendingIds.add(pay.id);
+      }
+      const list = all
+        .filter((x) => x.status !== "recusado" && (!x.payment_id || pendingIds.has(x.payment_id)))
+        .map((x) => ({ ...x, pending: !!x.payment_id }));
+      setBudgets(list);
+      const fromBudget = initialBudgetId ? list.find((x) => x.id === initialBudgetId) : undefined;
+      const patient =
+        fromBudget?.patient_id ??
+        (initialPatientId && list.some((x) => x.patient_id === initialPatientId)
+          ? initialPatientId
+          : null);
+      setPatientId(patient);
+      if (!patient) return setChecked(new Set());
+      const mine = list.filter((x) => x.patient_id === patient);
+      const approved = mine.filter((x) => x.status === "aprovado" || x.pending);
+      const base = approved.length ? approved : mine;
+      // Veio de um orçamento específico: só ele marcado (os outros ficam para escolher).
+      setChecked(new Set(fromBudget ? [fromBudget.id] : base.map((x) => x.id)));
+    })();
+  }, [open, initialPatientId, initialBudgetId]);
 
   const groups = useMemo(() => {
     const map = new Map<string, { name: string; items: OpenBudget[] }>();
@@ -113,7 +133,7 @@ export function PdvBudgetPicker({
   function pick(id: string) {
     setPatientId(id);
     const g = groups.find((x) => x.id === id);
-    const approved = g?.items.filter((b) => b.status === "aprovado") ?? [];
+    const approved = g?.items.filter((b) => b.status === "aprovado" || b.pending) ?? [];
     setChecked(new Set((approved.length ? approved : (g?.items ?? [])).map((b) => b.id)));
   }
 
@@ -130,7 +150,12 @@ export function PdvBudgetPicker({
     if (!patientId || !selected.length) return;
     onLoad(
       patientId,
-      selected.map((b) => ({ budgetId: b.id, name: b.treatment, price: Number(b.value) })),
+      selected.map((b) => ({
+        budgetId: b.id,
+        name: b.treatment,
+        price: Number(b.value),
+        ...(b.pending && b.payment_id ? { pendingPaymentId: b.payment_id } : {}),
+      })),
     );
     onOpenChange(false);
   }
@@ -233,6 +258,11 @@ export function PdvBudgetPicker({
                             >
                               {STATUS[b.status].label}
                             </span>
+                            {b.pending && (
+                              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                                A receber
+                              </span>
+                            )}
                             {new Date(b.created_at).toLocaleDateString("pt-BR")}
                           </span>
                         </span>

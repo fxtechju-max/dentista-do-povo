@@ -102,6 +102,7 @@ function Orcamentos() {
   const navigate = useNavigate();
   const { paciente } = Route.useSearch();
   const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [paymentStatus, setPaymentStatus] = useState<Record<string, string>>({});
   const [patients, setPatients] = useState<Patient[]>([]);
   const [treatments, setTreatments] = useState<Treatment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -133,7 +134,17 @@ function Orcamentos() {
           .eq("active", true)
           .order("name"),
       ]);
-    setBudgets((budgetsData ?? []) as unknown as Budget[]);
+    const list = (budgetsData ?? []) as unknown as Budget[];
+    // Situação do lançamento ligado (a receber ou pago) para mostrar na linha.
+    const linked = [...new Set(list.map((b) => b.payment_id).filter(Boolean))] as string[];
+    const statuses: Record<string, string> = {};
+    if (linked.length) {
+      const { data: pays } = await db.from("payments").select("id, status").in("id", linked);
+      for (const pay of (pays ?? []) as { id: string; status: string }[])
+        statuses[pay.id] = pay.status;
+    }
+    setPaymentStatus(statuses);
+    setBudgets(list);
     setPatients((patientsData ?? []) as Patient[]);
     setTreatments((treatmentsData ?? []) as Treatment[]);
     setLoading(false);
@@ -214,7 +225,7 @@ function Orcamentos() {
   }
 
   function finishAtCashier(b: Budget) {
-    navigate({ to: "/admin/financeiro", search: { orcamento: b.patient_id } });
+    navigate({ to: "/admin/financeiro", search: { orcamento: b.id } });
   }
 
   async function remove() {
@@ -227,17 +238,49 @@ function Orcamentos() {
 
   // Ação principal conforme o momento do orçamento.
   function primaryAction(b: Budget) {
+    if (b.payment_id && paymentStatus[b.payment_id] === "pendente")
+      return (
+        <div className="flex items-center gap-1.5">
+          <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+            A receber
+          </span>
+          <Button
+            size="sm"
+            className="bg-violet-600 text-white hover:bg-violet-700"
+            onClick={() => finishAtCashier(b)}
+          >
+            <ShoppingCart className="h-3.5 w-3.5" /> Receber no Caixa
+          </Button>
+        </div>
+      );
     if (b.payment_id)
       return (
         <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
-          <Wallet className="h-3.5 w-3.5" /> No Financeiro
+          <Wallet className="h-3.5 w-3.5" /> Pago
         </span>
       );
+    const cashier =
+      b.status !== "recusado" ? (
+        <Button
+          size="sm"
+          variant="outline"
+          className="border-violet-300 text-violet-700 hover:bg-violet-50 dark:border-violet-800 dark:text-violet-300 dark:hover:bg-violet-950"
+          onClick={() => finishAtCashier(b)}
+          title="Finalizar no Caixa (PDV)"
+          aria-label="Finalizar no Caixa"
+        >
+          <ShoppingCart className="h-3.5 w-3.5" />
+          <span className="sr-only lg:not-sr-only">Caixa</span>
+        </Button>
+      ) : null;
     if (b.status === "rascunho")
       return (
-        <Button size="sm" variant="outline" onClick={() => setBudgetStatus(b, "enviado")}>
-          <Send className="h-3.5 w-3.5" /> Enviar
-        </Button>
+        <div className="flex gap-1.5">
+          <Button size="sm" variant="outline" onClick={() => setBudgetStatus(b, "enviado")}>
+            <Send className="h-3.5 w-3.5" /> Enviar
+          </Button>
+          {cashier}
+        </div>
       );
     if (b.status === "enviado")
       return (
@@ -253,6 +296,7 @@ function Orcamentos() {
             <ThumbsDown className="h-3.5 w-3.5" />
             <span className="sr-only sm:not-sr-only">Recusar</span>
           </Button>
+          {cashier}
         </div>
       );
     if (b.status === "aprovado")
@@ -296,6 +340,9 @@ function Orcamentos() {
                   onClick: () => setBudgetStatus(b, "aprovado"),
                 },
               ]
+            : []),
+          ...(b.payment_id && paymentStatus[b.payment_id] === "pendente"
+            ? [{ label: "Receber no Caixa", icon: ShoppingCart, onClick: () => finishAtCashier(b) }]
             : []),
           ...(!b.payment_id && b.status !== "recusado"
             ? [

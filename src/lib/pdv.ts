@@ -10,6 +10,8 @@ export type CartItem = {
   note: string;
   /** Item puxado de um orçamento (fica ligado ao pagamento ao finalizar). */
   budgetId?: string;
+  /** Lançamento "a receber" do orçamento, substituído ao finalizar no caixa. */
+  pendingPaymentId?: string;
 };
 
 const round = (n: number) => Math.round(n * 100) / 100;

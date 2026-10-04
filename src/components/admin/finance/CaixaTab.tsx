@@ -55,12 +55,12 @@ const LAYOUTS: {
 export function CaixaTab({
   patients,
   onSale,
-  budgetPatientId,
+  budgetId,
   onBudgetHandled,
 }: {
   patients: { id: string; name: string }[];
   onSale: () => void;
-  budgetPatientId?: string | null | undefined;
+  budgetId?: string | null | undefined;
   onBudgetHandled?: (() => void) | undefined;
 }) {
   const { status, error, refresh } = useCashStatus();
@@ -140,7 +140,7 @@ export function CaixaTab({
           <Pdv
             patients={patients}
             cashSessionId={status.open.id}
-            budgetPatientId={budgetPatientId}
+            budgetId={budgetId}
             onBudgetHandled={onBudgetHandled}
             onFinished={() => {
               onSale();
@@ -151,7 +151,15 @@ export function CaixaTab({
       ) : (
         <>
           <div className="flex justify-end">{adjust}</div>
-          <ClosedCash history={status.history} onOpened={refresh} />
+          <ClosedCash
+            history={status.history}
+            onOpened={refresh}
+            notice={
+              budgetId
+                ? "Há um orçamento esperando para ser finalizado. Abra o caixa do dia e ele aparece em seguida."
+                : null
+            }
+          />
         </>
       )}
     </div>

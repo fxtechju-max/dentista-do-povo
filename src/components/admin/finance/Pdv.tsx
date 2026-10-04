@@ -107,6 +107,7 @@ export function Pdv({
   onFinished,
   cashSessionId,
   budgetPatientId,
+  budgetId,
   onBudgetHandled,
 }: {
   patients: Patient[];
@@ -115,12 +116,13 @@ export function Pdv({
   cashSessionId: string;
   /** Veio de Orçamentos › Finalizar no Caixa: abre os orçamentos deste paciente. */
   budgetPatientId?: string | null | undefined;
+  budgetId?: string | null | undefined;
   onBudgetHandled?: (() => void) | undefined;
 }) {
   const [budgetOpen, setBudgetOpen] = useState(false);
   useEffect(() => {
-    if (budgetPatientId) setBudgetOpen(true);
-  }, [budgetPatientId]);
+    if (budgetPatientId || budgetId) setBudgetOpen(true);
+  }, [budgetPatientId, budgetId]);
   const [treatments, setTreatments] = useState<Treatment[]>([]);
   const [clinic, setClinic] = useState<{ name: string; phone: string; address: string }>({
     name: "Dentista do Povo",
@@ -826,6 +828,7 @@ export function Pdv({
           if (!o) onBudgetHandled?.();
         }}
         initialPatientId={budgetPatientId ?? sale.patientId}
+        initialBudgetId={budgetId}
         onLoad={(patientId, loaded) => {
           const items: CartItem[] = loaded.map((b) => ({
             key: key(),
@@ -834,6 +837,7 @@ export function Pdv({
             qty: 1,
             note: "",
             budgetId: b.budgetId,
+            ...(b.pendingPaymentId ? { pendingPaymentId: b.pendingPaymentId } : {}),
           }));
           const already = new Set(sale.items.map((i) => i.budgetId).filter(Boolean));
           const fresh = items.filter((i) => !already.has(i.budgetId));
@@ -1204,6 +1208,14 @@ function FinishDialog({
     if (error || !paid) {
       setSaving(false);
       return;
+    }
+    // Lançamentos "a receber" desses orçamentos foram pagos agora: saem da lista.
+    for (const old of new Set(sale.items.map((i) => i.pendingPaymentId).filter(Boolean))) {
+      await db
+        .from("payments")
+        .delete()
+        .eq("id", old as string)
+        .eq("status", "pendente");
     }
     // Orçamentos puxados para o caixa ficam aprovados e ligados a este pagamento.
     for (const budgetId of new Set(sale.items.map((i) => i.budgetId).filter(Boolean))) {

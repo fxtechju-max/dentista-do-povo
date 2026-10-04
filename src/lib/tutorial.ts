@@ -45,6 +45,17 @@ export type TutorialUpdate = {
 export const TUTORIAL_UPDATES: TutorialUpdate[] = [
   {
     date: "2026-10-03",
+    title: "Orçamento indo certo para o Caixa",
+    sections: ["orcamentos", "financeiro"],
+    items: [
+      "Finalizar no Caixa agora funciona para orçamento em rascunho, aguardando ou aprovado — e chega no Caixa já marcado.",
+      "Orçamento lançado “A receber” mostra Receber no Caixa; ao receber, o lançamento pendente é substituído, sem duplicar.",
+      "Com o caixa fechado, aparece o aviso do orçamento esperando; depois de abrir o caixa, a janela abre sozinha.",
+      "Na lista de Orçamentos, cada linha mostra se está A receber ou Pago.",
+    ],
+  },
+  {
+    date: "2026-10-03",
     title: "Finalizar orçamento no Caixa (PDV)",
     sections: ["orcamentos", "financeiro"],
     items: [
@@ -886,7 +897,7 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
     steps: [
       {
         title: "Puxe um orçamento para o caixa",
-        text: "No Caixa, clique em Puxar orçamento (F10) — ou, em Orçamentos, em Finalizar no Caixa. Escolha o paciente, marque os itens que ele vai pagar agora (os aprovados já vêm marcados) e clique em Levar para o carrinho. Ao finalizar a venda, os orçamentos ficam aprovados e ligados ao pagamento. Se o lançamento for cancelado, eles voltam a ficar disponíveis.",
+        text: "Em Orçamentos, clique em Finalizar no Caixa (ou no botão Caixa da linha) — vale para rascunho, aguardando ou aprovado; orçamento lançado “A receber” tem Receber no Caixa. O Caixa abre com aquele orçamento já marcado (se o caixa estiver fechado, abra-o e a janela aparece em seguida). No próprio Caixa, Puxar orçamento (F10) lista todos os orçamentos em aberto por paciente. Clique em Levar para o carrinho e finalize. O orçamento fica Aprovado e Pago; um lançamento “a receber” que existia é substituído (não duplica). Cancelou o pagamento? O orçamento volta a ficar disponível.",
       },
       {
         title: "Abra o caixa do dia",
