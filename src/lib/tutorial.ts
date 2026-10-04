@@ -45,6 +45,16 @@ export type TutorialUpdate = {
 export const TUTORIAL_UPDATES: TutorialUpdate[] = [
   {
     date: "2026-10-03",
+    title: "Barra do topo fixa e caixa inteiro na tela",
+    sections: ["painel", "financeiro"],
+    items: [
+      "A barra de cima do painel (voltar, nome do módulo e usuário) fica sempre visível, mesmo rolando a página.",
+      "Ao clicar em Caixa (PDV), a tela vai direto para o caixa e mostra tudo de uma vez — da barra do caixa até Finalizar venda — também em notebooks.",
+      "O botão Ajustar tela agora fica ao lado da barra do caixa aberto.",
+    ],
+  },
+  {
+    date: "2026-10-03",
     title: "Abertura e fechamento do caixa do dia",
     sections: ["financeiro"],
     items: [

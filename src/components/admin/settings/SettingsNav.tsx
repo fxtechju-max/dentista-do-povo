@@ -112,7 +112,7 @@ export function SettingsNav() {
   return (
     <>
       {/* Celular/tablet: faixa deslizante de atalhos no topo */}
-      <TabsList className="sticky top-0 z-10 flex h-auto w-full gap-1.5 rounded-2xl border border-border bg-card p-1.5 shadow-sm lg:hidden">
+      <TabsList className="sticky top-[4.5rem] z-10 flex h-auto w-full gap-1.5 rounded-2xl border border-border bg-card p-1.5 shadow-sm lg:hidden">
         {SECTIONS.map((section) => {
           const Icon = section.icon;
           return (
@@ -127,7 +127,7 @@ export function SettingsNav() {
         })}
       </TabsList>
       {/* Computador: menu lateral agrupado */}
-      <TabsList className="hidden h-auto w-full flex-col items-stretch gap-0 rounded-2xl border border-border bg-card p-2 shadow-sm lg:sticky lg:top-4 lg:flex">
+      <TabsList className="hidden h-auto w-full flex-col items-stretch gap-0 rounded-2xl border border-border bg-card p-2 shadow-sm lg:sticky lg:top-20 lg:flex">
         {SECTION_GROUPS.map((group, gi) => (
           <div
             key={group}

@@ -314,7 +314,7 @@ export function AppearanceSettings() {
           </div>
         </div>
 
-        <div className="lg:sticky lg:top-4 lg:self-start">
+        <div className="lg:sticky lg:top-20 lg:self-start">
           <p className="mb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
             Pré-visualização
           </p>

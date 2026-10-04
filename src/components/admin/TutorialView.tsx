@@ -76,7 +76,7 @@ export function TutorialView({
       />
 
       <div className="mt-5 grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[280px_minmax(0,1fr)]">
-        <aside className="space-y-3 lg:sticky lg:top-4 lg:self-start">
+        <aside className="space-y-3 lg:sticky lg:top-20 lg:self-start">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input

@@ -456,7 +456,7 @@ function Generate({
         </div>
       </div>
 
-      <div className="xl:sticky xl:top-4 xl:self-start">
+      <div className="xl:sticky xl:top-20 xl:self-start">
         <p className="mb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
           Pré-visualização (A4)
         </p>

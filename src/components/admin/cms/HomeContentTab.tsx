@@ -334,7 +334,7 @@ export function HomeContentTab() {
 
   return (
     <div className="space-y-4">
-      <div className="sticky top-2 z-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card/95 p-3 shadow-sm backdrop-blur">
+      <div className="sticky top-[4.5rem] z-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card/95 p-3 shadow-sm backdrop-blur">
         <p className="text-sm">
           {dirty ? (
             <span className="font-semibold text-amber-600">● Alterações não publicadas</span>

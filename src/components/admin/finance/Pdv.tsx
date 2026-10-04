@@ -554,9 +554,9 @@ export function Pdv({
             />
           </div>
 
-          <div className="min-h-[18rem] flex-1 overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+          <div className="min-h-[14rem] flex-1 overflow-y-auto rounded-2xl border border-border bg-card shadow-sm xl:max-h-[calc(100dvh-24rem)]">
             {sale.items.length === 0 ? (
-              <div className="flex h-full min-h-[18rem] flex-col items-center justify-center gap-2 p-8 text-center text-muted-foreground">
+              <div className="flex h-full min-h-[14rem] flex-col items-center justify-center gap-2 p-6 text-center text-muted-foreground">
                 <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
                   <ShoppingCart className="h-8 w-8" />
                 </span>
@@ -687,7 +687,7 @@ export function Pdv({
         </div>
 
         {/* Direita: resumo */}
-        <aside className="flex flex-col rounded-2xl border border-border bg-card p-5 shadow-lg xl:sticky xl:top-4 xl:self-start">
+        <aside className="flex flex-col rounded-2xl border border-border bg-card p-5 shadow-lg xl:sticky xl:top-20 xl:self-start [@media(max-height:860px)]:p-4">
           <h3 className="text-lg font-extrabold">Resumo da venda</h3>
           <div className="mt-4 space-y-2 border-b border-border pb-3 text-sm">
             <div className="flex justify-between text-muted-foreground">
@@ -729,11 +729,11 @@ export function Pdv({
               </div>
             )}
           </div>
-          <div className="py-5 text-center">
+          <div className="py-5 text-center [@media(max-height:860px)]:py-2">
             <p className="text-sm font-semibold text-muted-foreground">Total</p>
             <p
               key={totals.total}
-              className="text-5xl font-extrabold tracking-tight text-emerald-600 tabular-nums animate-in zoom-in-95 duration-200"
+              className="text-5xl font-extrabold tracking-tight text-emerald-600 tabular-nums animate-in zoom-in-95 duration-200 [@media(max-height:860px)]:text-4xl"
             >
               {formatCurrency(totals.total)}
             </p>
@@ -745,7 +745,7 @@ export function Pdv({
                 type="button"
                 onClick={a.onClick}
                 disabled={a.disabled}
-                className={`relative flex h-14 items-center justify-center gap-2 rounded-xl text-sm font-bold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:pointer-events-none disabled:opacity-40 ${a.tone}`}
+                className={`relative flex h-14 items-center justify-center gap-2 rounded-xl [@media(max-height:860px)]:h-11 text-sm font-bold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:pointer-events-none disabled:opacity-40 ${a.tone}`}
               >
                 <a.icon className="h-5 w-5" /> {a.label}
                 <span className="absolute right-2 top-1.5 text-[9px] font-bold opacity-70">
@@ -762,7 +762,7 @@ export function Pdv({
             type="button"
             onClick={() => setFinishOpen(true)}
             disabled={!sale.items.length}
-            className="mt-5 flex h-16 flex-col items-center justify-center rounded-xl bg-emerald-600 text-white shadow-lg shadow-emerald-600/25 transition-all hover:-translate-y-0.5 hover:bg-emerald-700 active:translate-y-0 disabled:pointer-events-none disabled:opacity-40"
+            className="mt-5 flex h-16 flex-col items-center justify-center rounded-xl bg-emerald-600 [@media(max-height:860px)]:mt-3 [@media(max-height:860px)]:h-14 text-white shadow-lg shadow-emerald-600/25 transition-all hover:-translate-y-0.5 hover:bg-emerald-700 active:translate-y-0 disabled:pointer-events-none disabled:opacity-40"
           >
             <span className="flex items-center gap-2 text-lg font-extrabold">
               <Check className="h-5 w-5" /> Finalizar venda

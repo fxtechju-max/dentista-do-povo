@@ -913,7 +913,7 @@ export function OdontogramModule({
       </div>
 
       {isDesktop ? (
-        <aside className="rounded-2xl border border-border bg-card p-4 xl:sticky xl:top-4 xl:self-start">
+        <aside className="rounded-2xl border border-border bg-card p-4 xl:sticky xl:top-20 xl:self-start">
           {panel}
         </aside>
       ) : (

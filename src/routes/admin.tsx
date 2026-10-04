@@ -163,7 +163,7 @@ function AdminLayout() {
         {"ins.adsbygoogle,.google-auto-placed,.adsbygoogle-noablate{display:none!important}"}
       </style>
       {isLauncher ? (
-        <header className="flex flex-wrap items-center justify-between gap-4 border-b border-border bg-card px-6 py-4 sm:px-10 print:hidden">
+        <header className="sticky top-0 z-40 flex flex-wrap items-center justify-between gap-4 border-b border-border bg-card px-6 py-4 sm:px-10 print:hidden">
           <Link to="/admin" className="flex items-center gap-3">
             <ToothIcon className="h-10 w-10 text-primary" />
             <span className="text-xl font-extrabold tracking-tight">
@@ -184,7 +184,7 @@ function AdminLayout() {
           </div>
         </header>
       ) : (
-        <header className="flex items-center justify-between border-b border-border bg-card px-4 py-3 sm:px-6 print:hidden">
+        <header className="sticky top-0 z-40 flex items-center justify-between border-b border-border bg-card px-4 py-3 shadow-sm sm:px-6 print:hidden">
           <div className="flex items-center gap-3">
             <Link
               to="/admin"
