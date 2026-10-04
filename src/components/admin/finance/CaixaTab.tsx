@@ -55,9 +55,13 @@ const LAYOUTS: {
 export function CaixaTab({
   patients,
   onSale,
+  budgetPatientId,
+  onBudgetHandled,
 }: {
   patients: { id: string; name: string }[];
   onSale: () => void;
+  budgetPatientId?: string | null | undefined;
+  onBudgetHandled?: (() => void) | undefined;
 }) {
   const { status, error, refresh } = useCashStatus();
   const [layout, setLayoutState] = useState<Layout>(() => readPreference("pdvLayout") ?? "centro");
@@ -136,6 +140,8 @@ export function CaixaTab({
           <Pdv
             patients={patients}
             cashSessionId={status.open.id}
+            budgetPatientId={budgetPatientId}
+            onBudgetHandled={onBudgetHandled}
             onFinished={() => {
               onSale();
               void refresh();

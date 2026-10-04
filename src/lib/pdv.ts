@@ -8,6 +8,8 @@ export type CartItem = {
   price: number;
   qty: number;
   note: string;
+  /** Item puxado de um orçamento (fica ligado ao pagamento ao finalizar). */
+  budgetId?: string;
 };
 
 const round = (n: number) => Math.round(n * 100) / 100;

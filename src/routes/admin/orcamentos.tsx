@@ -10,6 +10,7 @@ import {
   Receipt,
   Search,
   Send,
+  ShoppingCart,
   ThumbsDown,
   ThumbsUp,
   Trash2,
@@ -59,6 +60,7 @@ type Budget = {
   status: BudgetStatus;
   notes: string | null;
   created_at: string;
+  payment_id: string | null;
   patients: { name: string } | null;
 };
 type Patient = { id: string; name: string };
@@ -120,7 +122,9 @@ function Orcamentos() {
       await Promise.all([
         db
           .from("budgets")
-          .select("id, patient_id, treatment, value, status, notes, created_at, patients(name)")
+          .select(
+            "id, patient_id, treatment, value, status, notes, created_at, payment_id, patients(name)",
+          )
           .order("created_at", { ascending: false }),
         db.from("patients").select("id, name").order("name"),
         db
@@ -191,13 +195,26 @@ function Orcamentos() {
   }
 
   async function sendToFinance(b: Budget) {
-    const { error } = await db
+    const { data, error } = await db
       .from("payments")
-      .insert({ patient_id: b.patient_id, amount: Number(b.value), status: "pendente" });
-    if (error) return;
+      .insert({
+        patient_id: b.patient_id,
+        amount: Number(b.value),
+        status: "pendente",
+        description: b.treatment,
+      })
+      .select("id")
+      .single();
+    if (error || !data) return;
+    await db.from("budgets").update({ payment_id: data.id }).eq("id", b.id);
     toast.success("Lançado no Financeiro como pendente.", {
       action: { label: "Abrir", onClick: () => navigate({ to: "/admin/financeiro" }) },
     });
+    load();
+  }
+
+  function finishAtCashier(b: Budget) {
+    navigate({ to: "/admin/financeiro", search: { orcamento: b.patient_id } });
   }
 
   async function remove() {
@@ -210,6 +227,12 @@ function Orcamentos() {
 
   // Ação principal conforme o momento do orçamento.
   function primaryAction(b: Budget) {
+    if (b.payment_id)
+      return (
+        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+          <Wallet className="h-3.5 w-3.5" /> No Financeiro
+        </span>
+      );
     if (b.status === "rascunho")
       return (
         <Button size="sm" variant="outline" onClick={() => setBudgetStatus(b, "enviado")}>
@@ -234,8 +257,12 @@ function Orcamentos() {
       );
     if (b.status === "aprovado")
       return (
-        <Button size="sm" variant="outline" onClick={() => sendToFinance(b)}>
-          <Wallet className="h-3.5 w-3.5" /> Lançar no Financeiro
+        <Button
+          size="sm"
+          className="bg-violet-600 text-white hover:bg-violet-700"
+          onClick={() => finishAtCashier(b)}
+        >
+          <ShoppingCart className="h-3.5 w-3.5" /> Finalizar no Caixa
         </Button>
       );
     return null;
@@ -270,8 +297,23 @@ function Orcamentos() {
                 },
               ]
             : []),
-          ...(b.status === "aprovado"
-            ? [{ label: "Lançar no Financeiro", icon: Wallet, onClick: () => sendToFinance(b) }]
+          ...(!b.payment_id && b.status !== "recusado"
+            ? [
+                {
+                  label: "Finalizar no Caixa",
+                  icon: ShoppingCart,
+                  onClick: () => finishAtCashier(b),
+                },
+                ...(b.status === "aprovado"
+                  ? [
+                      {
+                        label: "Lançar no Financeiro (a receber)",
+                        icon: Wallet,
+                        onClick: () => sendToFinance(b),
+                      },
+                    ]
+                  : []),
+              ]
             : []),
           { label: "Excluir", icon: Trash2, onClick: () => setDeleteTarget(b), danger: true },
         ]}

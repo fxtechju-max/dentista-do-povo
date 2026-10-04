@@ -35,6 +35,7 @@ import {
   useEnabledPaymentMethods,
 } from "@/lib/payment-methods";
 import { Calculator } from "@/components/admin/finance/Calculator";
+import { PdvBudgetPicker } from "@/components/admin/finance/PdvBudgetPicker";
 import { MoneyInput } from "@/components/admin/finance/FinanceUI";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -92,6 +93,7 @@ const SHORTCUTS = [
   ["F6", "Orçamento"],
   ["F9", "Limpar"],
   ["F8", "Imprimir"],
+  ["F10", "Puxar orçamento"],
 ] as const;
 
 /**
@@ -104,12 +106,21 @@ export function Pdv({
   patients,
   onFinished,
   cashSessionId,
+  budgetPatientId,
+  onBudgetHandled,
 }: {
   patients: Patient[];
   onFinished: () => void;
   /** Caixa do dia aberto: as vendas ficam ligadas a ele para o fechamento. */
   cashSessionId: string;
+  /** Veio de Orçamentos › Finalizar no Caixa: abre os orçamentos deste paciente. */
+  budgetPatientId?: string | null | undefined;
+  onBudgetHandled?: (() => void) | undefined;
 }) {
+  const [budgetOpen, setBudgetOpen] = useState(false);
+  useEffect(() => {
+    if (budgetPatientId) setBudgetOpen(true);
+  }, [budgetPatientId]);
   const [treatments, setTreatments] = useState<Treatment[]>([]);
   const [clinic, setClinic] = useState<{ name: string; phone: string; address: string }>({
     name: "Dentista do Povo",
@@ -249,8 +260,13 @@ export function Pdv({
       toast.error("Escolha o paciente para gerar o orçamento.");
       return;
     }
+    const fresh = sale.items.filter((i) => !i.budgetId);
+    if (!fresh.length) {
+      toast.info("Esses itens já são de um orçamento.");
+      return;
+    }
     let created = 0;
-    for (const i of sale.items) {
+    for (const i of fresh) {
       const { error } = await db.from("budgets").insert({
         patient_id: sale.patientId,
         treatment: `${i.qty !== 1 ? `${qtyText(i.qty)}x ` : ""}${i.name}${i.note ? ` — ${i.note}` : ""}`,
@@ -341,6 +357,7 @@ export function Pdv({
         F6: () => void makeBudget(),
         F9: () => sale.items.length && setClearOpen(true),
         F8: printCurrent,
+        F10: () => setBudgetOpen(true),
       };
       const fn = map[e.key];
       if (fn) {
@@ -456,7 +473,14 @@ export function Pdv({
                 </div>
               );
             })}
-            <Button variant="outline" size="sm" className="ml-auto shrink-0" onClick={openNewSale}>
+            <Button
+              size="sm"
+              className="ml-auto shrink-0 bg-violet-600 text-white hover:bg-violet-700"
+              onClick={() => setBudgetOpen(true)}
+            >
+              <FileText className="h-4 w-4" /> Puxar orçamento
+            </Button>
+            <Button variant="outline" size="sm" className="shrink-0" onClick={openNewSale}>
               <Plus className="h-4 w-4" /> Nova venda
             </Button>
           </div>
@@ -795,6 +819,38 @@ export function Pdv({
 
       <Calculator open={calcOpen} onOpenChange={setCalcOpen} />
 
+      <PdvBudgetPicker
+        open={budgetOpen}
+        onOpenChange={(o) => {
+          setBudgetOpen(o);
+          if (!o) onBudgetHandled?.();
+        }}
+        initialPatientId={budgetPatientId ?? sale.patientId}
+        onLoad={(patientId, loaded) => {
+          const items: CartItem[] = loaded.map((b) => ({
+            key: key(),
+            name: b.name,
+            price: b.price,
+            qty: 1,
+            note: "",
+            budgetId: b.budgetId,
+          }));
+          const already = new Set(sale.items.map((i) => i.budgetId).filter(Boolean));
+          const fresh = items.filter((i) => !already.has(i.budgetId));
+          if (sale.items.length && sale.patientId !== patientId) {
+            // Outra pessoa no carrinho atual: abre uma venda nova para não misturar.
+            const number = Math.max(...sales.map((x) => x.number)) + 1;
+            const next = { ...newSale(number), patientId, items: fresh };
+            setSales((list) => [...list, next]);
+            setActiveId(next.id);
+          } else {
+            updateSale((cur) => ({ patientId, items: [...cur.items, ...fresh] }));
+          }
+          toast.success(`${fresh.length} item(ns) do orçamento no carrinho.`);
+          setTimeout(() => searchRef.current?.focus(), 100);
+        }}
+      />
+
       <AdjustDialog
         kind={adjustOpen}
         subtotal={totals.subtotal}
@@ -1129,20 +1185,34 @@ function FinishDialog({
   async function confirm() {
     if (saving || missing) return;
     setSaving(true);
-    const { error } = await db.from("payments").insert({
-      patient_id: sale.patientId,
-      amount: totals.total,
-      discount: totals.discount,
-      surcharge: totals.surcharge,
-      status: later ? "pendente" : "pago",
-      paid_at: later ? null : new Date().toISOString(),
-      payment_method: method || null,
-      installments: parseInstallments(method, installments),
-      description: saleDescription(sale.items),
-      cash_session_id: cashSessionId,
-    });
+    const { data: paid, error } = await db
+      .from("payments")
+      .insert({
+        patient_id: sale.patientId,
+        amount: totals.total,
+        discount: totals.discount,
+        surcharge: totals.surcharge,
+        status: later ? "pendente" : "pago",
+        paid_at: later ? null : new Date().toISOString(),
+        payment_method: method || null,
+        installments: parseInstallments(method, installments),
+        description: saleDescription(sale.items),
+        cash_session_id: cashSessionId,
+      })
+      .select("id")
+      .single();
+    if (error || !paid) {
+      setSaving(false);
+      return;
+    }
+    // Orçamentos puxados para o caixa ficam aprovados e ligados a este pagamento.
+    for (const budgetId of new Set(sale.items.map((i) => i.budgetId).filter(Boolean))) {
+      await db
+        .from("budgets")
+        .update({ payment_id: paid.id, status: "aprovado" })
+        .eq("id", budgetId as string);
+    }
     setSaving(false);
-    if (error) return;
     const receipt: Receipt = {
       number: sale.number,
       patient: patientName ?? "Cliente à vista",

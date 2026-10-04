@@ -378,6 +378,7 @@ export type Database = {
       };
       budgets: {
         Row: {
+          payment_id: string | null;
           created_at: string;
           id: string;
           notes: string | null;
@@ -387,6 +388,7 @@ export type Database = {
           value: number;
         };
         Insert: {
+          payment_id?: string | null;
           created_at?: string;
           id?: string;
           notes?: string | null;
@@ -396,6 +398,7 @@ export type Database = {
           value: number;
         };
         Update: {
+          payment_id?: string | null;
           created_at?: string;
           id?: string;
           notes?: string | null;

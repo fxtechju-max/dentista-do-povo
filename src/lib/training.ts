@@ -232,8 +232,8 @@ export const TRAININGS: Training[] = [
         steps: [
           {
             id: "lancar",
-            title: "Lance no Financeiro",
-            text: "Em Orçamentos, no orçamento aprovado, clique em Lançar no Financeiro. Ele entra como “A receber”.",
+            title: "Leve o orçamento ao Caixa",
+            text: "Em Orçamentos, no orçamento aprovado, clique em Finalizar no Caixa (abre o Caixa com os itens da Ana) — ou, se ela vai pagar depois, use ⋯ › Lançar no Financeiro (a receber).",
             to: "/admin/orcamentos",
             toLabel: "Abrir Orçamentos",
             check: "O valor aparece no Financeiro em A receber.",
@@ -428,7 +428,7 @@ export const TRAININGS: Training[] = [
           {
             id: "financeiro",
             title: "Envie ao Financeiro",
-            text: "No orçamento aprovado, clique em Lançar no Financeiro para que a recepção receba o valor (à vista, parcelado, com desconto ou acréscimo).",
+            text: "No orçamento aprovado, clique em Finalizar no Caixa: a recepção recebe ali mesmo (à vista, parcelado, com desconto ou acréscimo). Se o paciente vai pagar depois, use ⋯ › Lançar no Financeiro (a receber).",
             to: "/admin/financeiro",
             toLabel: "Abrir Financeiro",
           },
@@ -481,11 +481,11 @@ export const TRAININGS: Training[] = [
         options: [
           "Odontograma › Concluído (o pagamento entra sozinho)",
           "Configurações › Formas de pagamento",
-          "Orçamentos › Aprovar › Lançar no Financeiro › Financeiro › Receber",
+          "Orçamentos › Aprovar › Finalizar no Caixa › Finalizar venda",
         ],
         answer: 2,
         explain:
-          "Aprovado o orçamento, Lançar no Financeiro cria o valor A receber; na hora do pagamento, use Receber e escolha a forma.",
+          "Aprovado o orçamento, Finalizar no Caixa leva os itens para o Caixa (PDV); em Finalizar venda você escolhe a forma de pagamento e o orçamento fica ligado ao pagamento.",
       },
     ],
   },

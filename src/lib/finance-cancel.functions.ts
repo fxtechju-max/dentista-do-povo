@@ -43,6 +43,8 @@ export const cancelPayment = createServerFn({ method: "POST" })
               cancelled_at=now(), cancelled_by=? WHERE id=?`,
       [data.reason.trim(), refund, user.email, data.id],
     );
+    // Orçamentos pagos por este lançamento voltam a poder ser cobrados.
+    await pool.execute("UPDATE budgets SET payment_id=NULL WHERE payment_id=?", [data.id]);
     await pool.execute(
       "INSERT INTO audit_log (user_id, action, table_name, record_id, record_label) VALUES (?,?,?,?,?)",
       [user.id, "update", "payments", data.id, `Cancelado: ${data.reason.trim().slice(0, 120)}`],

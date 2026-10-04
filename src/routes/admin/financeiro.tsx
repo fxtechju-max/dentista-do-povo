@@ -84,6 +84,9 @@ function loadChartPrefs(): ChartPrefs {
 const FinanceChart = lazy(() => import("@/components/admin/finance/FinanceChart"));
 
 export const Route = createFileRoute("/admin/financeiro")({
+  // ?orcamento=<paciente>: vindo de Orçamentos › Finalizar no Caixa.
+  validateSearch: (search: Record<string, unknown>): { orcamento?: string } =>
+    typeof search["orcamento"] === "string" ? { orcamento: search["orcamento"] } : {},
   component: Financeiro,
 });
 
@@ -181,6 +184,10 @@ function Financeiro() {
   const [deleteTarget, setDeleteTarget] = useState<Payment | null>(null);
   // O Financeiro abre no Caixa (PDV); Lançamentos traz a lista, o gráfico e os filtros.
   const [tab, setTab] = useState<"caixa" | "lancamentos">("caixa");
+  const { orcamento } = Route.useSearch();
+  useEffect(() => {
+    if (orcamento) setTab("caixa");
+  }, [orcamento]);
   const [cancelTarget, setCancelTarget] = useState<Payment | null>(null);
   const [cancelDetails, setCancelDetails] = useState<Payment | null>(null);
 
@@ -415,7 +422,14 @@ function Financeiro() {
           </TabsTrigger>
         </TabsList>
         <TabsContent value="caixa" className="mt-4">
-          <CaixaTab patients={patients} onSale={load} />
+          <CaixaTab
+            patients={patients}
+            onSale={load}
+            budgetPatientId={orcamento ?? null}
+            onBudgetHandled={() =>
+              orcamento && navigate({ to: "/admin/financeiro", search: {}, replace: true })
+            }
+          />
         </TabsContent>
         <TabsContent value="lancamentos" className="mt-4 space-y-5">
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">

@@ -45,6 +45,16 @@ export type TutorialUpdate = {
 export const TUTORIAL_UPDATES: TutorialUpdate[] = [
   {
     date: "2026-10-03",
+    title: "Finalizar orçamento no Caixa (PDV)",
+    sections: ["orcamentos", "financeiro"],
+    items: [
+      "Em Orçamentos, o orçamento aprovado tem o botão Finalizar no Caixa: abre o Caixa com os itens do paciente.",
+      "No Caixa, Puxar orçamento (F10) lista os orçamentos em aberto por paciente para levar ao carrinho.",
+      "Depois de pago, o orçamento mostra No Financeiro e não aparece de novo para cobrar (cancelou o pagamento? ele volta).",
+    ],
+  },
+  {
+    date: "2026-10-03",
     title: "Barra do topo fixa e caixa inteiro na tela",
     sections: ["painel", "financeiro"],
     items: [
@@ -846,7 +856,7 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
       },
       {
         title: "Avance cada orçamento",
-        text: "Use os botões da própria linha: Enviar (rascunho), Aprovar ou Recusar (aguardando) e Lançar no Financeiro (aprovado). No ⋯ ficam Editar, Abrir paciente, Gerar proposta e Excluir.",
+        text: "Use os botões da própria linha: Enviar (rascunho), Aprovar ou Recusar (aguardando) e Finalizar no Caixa (aprovado) — abre o Caixa (PDV) já com os orçamentos do paciente para cobrar. No ⋯ ficam Editar, Abrir paciente, Gerar proposta, Lançar no Financeiro (a receber) e Excluir. Orçamento já cobrado mostra a etiqueta No Financeiro e não pode ser cobrado de novo.",
       },
       {
         title: "Novo orçamento",
@@ -874,6 +884,10 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
     to: "/admin/financeiro",
     summary: "Caixa (PDV) para cobrar na hora, pagamentos e recebimentos dos pacientes.",
     steps: [
+      {
+        title: "Puxe um orçamento para o caixa",
+        text: "No Caixa, clique em Puxar orçamento (F10) — ou, em Orçamentos, em Finalizar no Caixa. Escolha o paciente, marque os itens que ele vai pagar agora (os aprovados já vêm marcados) e clique em Levar para o carrinho. Ao finalizar a venda, os orçamentos ficam aprovados e ligados ao pagamento. Se o lançamento for cancelado, eles voltam a ficar disponíveis.",
+      },
       {
         title: "Abra o caixa do dia",
         text: "Antes da primeira venda, a aba Caixa (PDV) mostra Caixa fechado. Clique em Abrir caixa do dia e informe o fundo de troco (o dinheiro que já está na gaveta). Só existe um caixa aberto por vez.",
