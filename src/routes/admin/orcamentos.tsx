@@ -7,6 +7,7 @@ import {
   FileText,
   Pencil,
   Plus,
+  Printer,
   Receipt,
   Search,
   Send,
@@ -20,6 +21,7 @@ import {
 } from "lucide-react";
 import { db } from "@/integrations/mysql/client";
 import { BudgetDialog } from "@/components/admin/finance/BudgetDialog";
+import { NoteDialog, type NoteSource } from "@/components/admin/finance/NoteDialog";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { EmptyState } from "@/components/admin/EmptyState";
 import {
@@ -117,6 +119,7 @@ function Orcamentos() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Budget | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Budget | null>(null);
+  const [noteSource, setNoteSource] = useState<NoteSource | null>(null);
 
   async function load() {
     const [{ data: budgetsData }, { data: patientsData }, { data: treatmentsData }] =
@@ -225,7 +228,7 @@ function Orcamentos() {
   }
 
   function finishAtCashier(b: Budget) {
-    navigate({ to: "/admin/financeiro", search: { orcamento: b.id } });
+    navigate({ to: "/admin/caixa", search: { orcamento: b.id } });
   }
 
   async function remove() {
@@ -316,6 +319,11 @@ function Orcamentos() {
     return (
       <RowMenu
         items={[
+          {
+            label: "Emitir: A4, PDF ou cupom",
+            icon: Printer,
+            onClick: () => setNoteSource({ type: "budget", budgetId: b.id }),
+          },
           { label: "Editar", icon: Pencil, onClick: () => openEdit(b) },
           {
             label: "Abrir paciente",
@@ -579,6 +587,8 @@ function Orcamentos() {
           </>
         )}
       </div>
+
+      <NoteDialog source={noteSource} onClose={() => setNoteSource(null)} />
 
       <BudgetDialog
         open={dialogOpen}

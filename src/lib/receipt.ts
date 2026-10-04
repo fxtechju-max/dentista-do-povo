@@ -4,7 +4,9 @@ import { formatCurrency } from "./admin/labels";
 import { itemTotal, type CartItem } from "./pdv";
 
 export type ReceiptData = {
-  kind: "venda" | "conferencia";
+  kind: "venda" | "conferencia" | "orcamento";
+  /** Orçamento: validade em dias. */
+  validityDays?: number | undefined;
   number: number;
   code?: string | undefined;
   patient: string;
@@ -49,7 +51,12 @@ export function receiptHtml(r: ReceiptData, clinic: ClinicHeader) {
     .join("");
   const kv = (k: string, v: string, cls = "") =>
     `<div class="row ${cls}"><span>${k}</span><span>${v}</span></div>`;
-  const title = r.kind === "conferencia" ? "CONFERÊNCIA DE VENDA" : "CUPOM NÃO FISCAL";
+  const title =
+    r.kind === "conferencia"
+      ? "CONFERÊNCIA DE VENDA"
+      : r.kind === "orcamento"
+        ? "ORÇAMENTO"
+        : "CUPOM NÃO FISCAL";
   const code = r.code ?? receiptCode(r.date, r.number);
   return `<!doctype html><html><head><meta charset="utf-8"><title>${title}</title><style>
     @page { size: 80mm auto; margin: 0; }
@@ -76,7 +83,7 @@ export function receiptHtml(r: ReceiptData, clinic: ClinicHeader) {
     <div class="title">${title}</div>
     <div class="c muted">NÃO É DOCUMENTO FISCAL</div>
     ${line}
-    ${kv("Venda", `Nº ${pad(r.number)}`)}
+    ${kv(r.kind === "orcamento" ? "Orçamento" : "Venda", r.code && r.kind === "orcamento" ? r.code : `Nº ${pad(r.number)}`)}
     ${kv("Data", r.date.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }))}
     ${kv("Cliente", esc(r.patient))}
     ${r.operator ? kv("Atendente", esc(r.operator)) : ""}
@@ -96,7 +103,9 @@ export function receiptHtml(r: ReceiptData, clinic: ClinicHeader) {
            ${r.cashReceived ? kv("Valor recebido", money(r.cashReceived)) : ""}
            ${r.change ? kv("Troco", money(r.change), "b") : ""}
            ${r.received ? "" : `<div class="warn">*** VALOR A RECEBER ***</div>`}`
-        : `<div class="warn">*** NÃO VALE COMO COMPROVANTE DE PAGAMENTO ***</div>`
+        : r.kind === "orcamento"
+          ? `<div class="c">Válido por ${r.validityDays ?? 15} dias</div><div class="warn">*** NÃO VALE COMO COMPROVANTE DE PAGAMENTO ***</div>`
+          : `<div class="warn">*** NÃO VALE COMO COMPROVANTE DE PAGAMENTO ***</div>`
     }
     ${line}
     <div class="c">Obrigado pela preferência!</div>

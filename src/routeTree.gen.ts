@@ -21,6 +21,7 @@ import { Route as TermosRouteImport } from './routes/termos'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as AdminAgendaRouteImport } from './routes/admin/agenda'
 import { Route as AdminBackupRouteImport } from './routes/admin/backup'
+import { Route as AdminCaixaRouteImport } from './routes/admin/caixa'
 import { Route as AdminCmsSiteRouteImport } from './routes/admin/cms-site'
 import { Route as AdminConfiguracoesRouteImport } from './routes/admin/configuracoes'
 import { Route as AdminContasRouteImport } from './routes/admin/contas'
@@ -101,6 +102,11 @@ const AdminAgendaRoute = AdminAgendaRouteImport.update({
 const AdminBackupRoute = AdminBackupRouteImport.update({
   id: '/backup',
   path: '/backup',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminCaixaRoute = AdminCaixaRouteImport.update({
+  id: '/caixa',
+  path: '/caixa',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminCmsSiteRoute = AdminCmsSiteRouteImport.update({
@@ -222,6 +228,7 @@ export interface FileRoutesByFullPath {
   '/termos': typeof TermosRoute
   '/admin/agenda': typeof AdminAgendaRoute
   '/admin/backup': typeof AdminBackupRoute
+  '/admin/caixa': typeof AdminCaixaRoute
   '/admin/cms-site': typeof AdminCmsSiteRoute
   '/admin/configuracoes': typeof AdminConfiguracoesRoute
   '/admin/contas': typeof AdminContasRoute
@@ -256,6 +263,7 @@ export interface FileRoutesByTo {
   '/termos': typeof TermosRoute
   '/admin/agenda': typeof AdminAgendaRoute
   '/admin/backup': typeof AdminBackupRoute
+  '/admin/caixa': typeof AdminCaixaRoute
   '/admin/cms-site': typeof AdminCmsSiteRoute
   '/admin/configuracoes': typeof AdminConfiguracoesRoute
   '/admin/contas': typeof AdminContasRoute
@@ -292,6 +300,7 @@ export interface FileRoutesById {
   '/termos': typeof TermosRoute
   '/admin/agenda': typeof AdminAgendaRoute
   '/admin/backup': typeof AdminBackupRoute
+  '/admin/caixa': typeof AdminCaixaRoute
   '/admin/cms-site': typeof AdminCmsSiteRoute
   '/admin/configuracoes': typeof AdminConfiguracoesRoute
   '/admin/contas': typeof AdminContasRoute
@@ -329,6 +338,7 @@ export interface FileRouteTypes {
     | '/termos'
     | '/admin/agenda'
     | '/admin/backup'
+    | '/admin/caixa'
     | '/admin/cms-site'
     | '/admin/configuracoes'
     | '/admin/contas'
@@ -363,6 +373,7 @@ export interface FileRouteTypes {
     | '/termos'
     | '/admin/agenda'
     | '/admin/backup'
+    | '/admin/caixa'
     | '/admin/cms-site'
     | '/admin/configuracoes'
     | '/admin/contas'
@@ -398,6 +409,7 @@ export interface FileRouteTypes {
     | '/termos'
     | '/admin/agenda'
     | '/admin/backup'
+    | '/admin/caixa'
     | '/admin/cms-site'
     | '/admin/configuracoes'
     | '/admin/contas'
@@ -519,6 +531,13 @@ declare module '@tanstack/react-router' {
       path: '/backup'
       fullPath: '/admin/backup'
       preLoaderRoute: typeof AdminBackupRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/caixa': {
+      id: '/admin/caixa'
+      path: '/caixa'
+      fullPath: '/admin/caixa'
+      preLoaderRoute: typeof AdminCaixaRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/cms-site': {
@@ -674,6 +693,7 @@ declare module '@tanstack/react-router' {
 interface AdminRouteChildren {
   AdminAgendaRoute: typeof AdminAgendaRoute
   AdminBackupRoute: typeof AdminBackupRoute
+  AdminCaixaRoute: typeof AdminCaixaRoute
   AdminCmsSiteRoute: typeof AdminCmsSiteRoute
   AdminConfiguracoesRoute: typeof AdminConfiguracoesRoute
   AdminContasRoute: typeof AdminContasRoute
@@ -700,6 +720,7 @@ interface AdminRouteChildren {
 const AdminRouteChildren: AdminRouteChildren = {
   AdminAgendaRoute: AdminAgendaRoute,
   AdminBackupRoute: AdminBackupRoute,
+  AdminCaixaRoute: AdminCaixaRoute,
   AdminCmsSiteRoute: AdminCmsSiteRoute,
   AdminConfiguracoesRoute: AdminConfiguracoesRoute,
   AdminContasRoute: AdminContasRoute,

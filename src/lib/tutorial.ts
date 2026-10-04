@@ -45,6 +45,17 @@ export type TutorialUpdate = {
 export const TUTORIAL_UPDATES: TutorialUpdate[] = [
   {
     date: "2026-10-03",
+    title: "Nota grande A4, PDF e cupom do orçamento",
+    sections: ["orcamentos", "financeiro"],
+    items: [
+      "Novo Emitir documento: nota grande A4 profissional (cabeçalho da clínica, dados do paciente, tabela de itens, total e assinaturas).",
+      "Imprimir em folha A4, Baixar PDF ou imprimir Cupom não fiscal 80 mm — de orçamento ou de recibo.",
+      "Recibo com o valor por extenso; orçamento com validade em dias e condições.",
+      "Disponível em Orçamentos (⋯ › Emitir), Lançamentos (⋯ › Emitir recibo) e no Caixa depois da venda (Nota A4 / PDF).",
+    ],
+  },
+  {
+    date: "2026-10-03",
     title: "Cupom não fiscal no Caixa",
     sections: ["financeiro"],
     items: [
@@ -906,6 +917,10 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
     to: "/admin/financeiro",
     summary: "Caixa (PDV) para cobrar na hora, pagamentos e recebimentos dos pacientes.",
     steps: [
+      {
+        title: "Emita a nota (A4, PDF ou cupom)",
+        text: "Em Orçamentos, no ⋯ da linha, clique em Emitir: A4, PDF ou cupom. Escolha Orçamento ou Recibo, marque os itens do paciente, ajuste a validade e as observações e veja a pré-visualização. Depois: Imprimir folha A4 (nota grande com cabeçalho da clínica, tabela, total e assinaturas), Baixar PDF ou Cupom 80 mm. No recibo aparece o valor por extenso. Também dá para emitir em Lançamentos (⋯ › Emitir recibo) e no Caixa, depois de concluir a venda (Nota A4 / PDF).",
+      },
       {
         title: "Puxe um orçamento para o caixa",
         text: "Em Orçamentos, clique em Finalizar no Caixa (ou no botão Caixa da linha) — vale para rascunho, aguardando ou aprovado; orçamento lançado “A receber” tem Receber no Caixa. O Caixa abre com aquele orçamento já marcado (se o caixa estiver fechado, abra-o e a janela aparece em seguida). No próprio Caixa, Puxar orçamento (F10) lista todos os orçamentos em aberto por paciente. Clique em Levar para o carrinho e finalize. O orçamento fica Aprovado e Pago; um lançamento “a receber” que existia é substituído (não duplica). Cancelou o pagamento? O orçamento volta a ficar disponível.",

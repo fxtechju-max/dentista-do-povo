@@ -10,6 +10,7 @@ import {
   DollarSign,
   Pencil,
   Plus,
+  Printer,
   Receipt,
   Search,
   ShoppingCart,
@@ -20,6 +21,7 @@ import {
 } from "lucide-react";
 import { db } from "@/integrations/mysql/client";
 import { CaixaTab } from "@/components/admin/finance/CaixaTab";
+import { NoteDialog, type NoteSource } from "@/components/admin/finance/NoteDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ChartSize } from "@/components/admin/finance/FinanceChart";
 import {
@@ -182,8 +184,9 @@ function Financeiro() {
   });
   const [receiveAdjustOpen, setReceiveAdjustOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Payment | null>(null);
+  const [noteSource, setNoteSource] = useState<NoteSource | null>(null);
   // O Financeiro abre no Caixa (PDV); Lançamentos traz a lista, o gráfico e os filtros.
-  const [tab, setTab] = useState<"caixa" | "lancamentos">("caixa");
+  const [tab, setTab] = useState<"caixa" | "lancamentos">("lancamentos");
   const { orcamento } = Route.useSearch();
   useEffect(() => {
     if (orcamento) setTab("caixa");
@@ -366,6 +369,37 @@ function Financeiro() {
           ...(p.status === "cancelado"
             ? [{ label: "Ver justificativa", icon: FileText, onClick: () => setCancelDetails(p) }]
             : [
+                {
+                  label: "Emitir recibo: A4, PDF ou cupom",
+                  icon: Printer,
+                  onClick: () =>
+                    setNoteSource({
+                      type: "data",
+                      kind: "recibo",
+                      id: p.id,
+                      patientId: p.patient_id,
+                      patientName: p.patients?.name ?? "Cliente",
+                      items: [
+                        {
+                          key: p.id,
+                          name: p.description || "Serviços odontológicos",
+                          price: baseOf(p),
+                          qty: 1,
+                          note: "",
+                        },
+                      ],
+                      discount: Number(p.discount ?? 0),
+                      surcharge: Number(p.surcharge ?? 0),
+                      method: p.payment_method
+                        ? paymentMethodLabel(p.payment_method, p.installments)
+                            .replace(/\p{Extended_Pictographic}|\uFE0F/gu, "")
+                            .trim()
+                        : null,
+                      installments: p.installments,
+                      received: p.status === "pago",
+                      date: new Date(p.paid_at ?? p.created_at),
+                    }),
+                },
                 { label: "Editar", icon: Pencil, onClick: () => openEdit(p) },
                 { label: "Cancelar lançamento", icon: Ban, onClick: () => setCancelTarget(p) },
               ]),
@@ -910,6 +944,7 @@ function Financeiro() {
         onCancelled={load}
       />
       <CancelDetailsDialog payment={cancelDetails} onClose={() => setCancelDetails(null)} />
+      <NoteDialog source={noteSource} onClose={() => setNoteSource(null)} />
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>

@@ -63,7 +63,7 @@ async function admin() {
   return { user, pool: getPool() };
 }
 
-type Pool = Awaited<ReturnType<typeof admin>>["pool"];
+type Pool = import("@/integrations/mysql/pool.server").Executor;
 
 async function summaryFor(pool: Pool, session: CashSession) {
   const [payments] = await pool.execute(
@@ -124,14 +124,26 @@ export const openCash = createServerFn({ method: "POST" })
       .parse(data),
   )
   .handler(async ({ data }) => {
-    const { user, pool } = await admin();
-    const [open] = await pool.execute("SELECT id FROM cash_sessions WHERE status='aberto' LIMIT 1");
+    const { user, pool: source } = await admin();
+    const pool = await source.getConnection();
+    try {
+      await pool.beginTransaction();
+      await pool.execute("SELECT pg_advisory_xact_lock(7426032)");
+    const [open] = await pool.execute("SELECT id FROM cash_sessions WHERE status='aberto' LIMIT 1 FOR UPDATE");
     if ((open as Row[]).length) return { error: { message: "Já existe um caixa aberto." } };
     await pool.execute(
       "INSERT INTO cash_sessions (opening_amount, opening_notes, opened_by) VALUES (?,?,?)",
       [data.amount, data.notes?.trim() || null, user.email],
     );
+    await pool.commit();
     return { error: null };
+    } catch (error) {
+      await pool.rollback();
+      throw error;
+    } finally {
+      await pool.rollback();
+      pool.release();
+    }
   });
 
 export const addCashMovement = createServerFn({ method: "POST" })
@@ -145,15 +157,27 @@ export const addCashMovement = createServerFn({ method: "POST" })
       .parse(data),
   )
   .handler(async ({ data }) => {
-    const { user, pool } = await admin();
-    const [open] = await pool.execute("SELECT id FROM cash_sessions WHERE status='aberto' LIMIT 1");
+    const { user, pool: source } = await admin();
+    const pool = await source.getConnection();
+    try {
+      await pool.beginTransaction();
+      await pool.execute("SELECT pg_advisory_xact_lock(7426032)");
+    const [open] = await pool.execute("SELECT id FROM cash_sessions WHERE status='aberto' LIMIT 1 FOR UPDATE");
     const id = (open as Row[])[0]?.["id"];
     if (!id) return { error: { message: "Abra o caixa primeiro." } };
     await pool.execute(
       "INSERT INTO cash_movements (session_id, type, amount, reason, created_by) VALUES (?,?,?,?,?)",
       [String(id), data.type, data.amount, data.reason?.trim() || null, user.email],
     );
+    await pool.commit();
     return { error: null };
+    } catch (error) {
+      await pool.rollback();
+      throw error;
+    } finally {
+      await pool.rollback();
+      pool.release();
+    }
   });
 
 export const closeCash = createServerFn({ method: "POST" })
@@ -166,9 +190,13 @@ export const closeCash = createServerFn({ method: "POST" })
       .parse(data),
   )
   .handler(async ({ data }) => {
-    const { user, pool } = await admin();
+    const { user, pool: source } = await admin();
+    const pool = await source.getConnection();
+    try {
+      await pool.beginTransaction();
+      await pool.execute("SELECT pg_advisory_xact_lock(7426032)");
     const [rows] = await pool.execute(
-      "SELECT * FROM cash_sessions WHERE status='aberto' ORDER BY opened_at DESC LIMIT 1",
+      "SELECT * FROM cash_sessions WHERE status='aberto' ORDER BY opened_at DESC LIMIT 1 FOR UPDATE",
     );
     const row = (rows as Row[])[0];
     if (!row) return { error: { message: "Nenhum caixa aberto." }, session: null };
@@ -188,6 +216,7 @@ export const closeCash = createServerFn({ method: "POST" })
         session.id,
       ],
     );
+    await pool.commit();
     return {
       error: null,
       session: {
@@ -203,4 +232,11 @@ export const closeCash = createServerFn({ method: "POST" })
       },
       summary,
     };
+    } catch (error) {
+      await pool.rollback();
+      throw error;
+    } finally {
+      await pool.rollback();
+      pool.release();
+    }
   });

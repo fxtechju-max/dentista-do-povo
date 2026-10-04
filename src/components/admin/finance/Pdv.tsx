@@ -24,11 +24,12 @@ import {
   X,
 } from "lucide-react";
 import { db } from "@/integrations/mysql/client";
+import { finishCashSale } from "@/lib/cash-checkout.functions";
 import { formatCurrency } from "@/lib/admin/labels";
 import { parseMoney } from "@/lib/admin/finance-period";
 import { moneyText, noAdjust, type Adjust } from "@/lib/admin/finance-adjust";
 import { normalizeName } from "@/lib/odontogram-plan";
-import { change, itemTotal, saleDescription, saleTotals, type CartItem } from "@/lib/pdv";
+import { change, itemTotal, saleTotals, type CartItem } from "@/lib/pdv";
 import {
   paymentMethod,
   paymentMethodLabel,
@@ -36,6 +37,7 @@ import {
   useEnabledPaymentMethods,
 } from "@/lib/payment-methods";
 import { Calculator } from "@/components/admin/finance/Calculator";
+import { NoteDialog, type NoteSource } from "@/components/admin/finance/NoteDialog";
 import { printHtml, receiptHtml, type ReceiptData } from "@/lib/receipt";
 import { readPreference, savePreference, subscribePreferences } from "@/lib/preferences";
 import { PdvBudgetPicker } from "@/components/admin/finance/PdvBudgetPicker";
@@ -1129,6 +1131,10 @@ function FinishDialog({
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState<Receipt | null>(null);
   const [doneChange, setDoneChange] = useState(0);
+  const checkoutId = useRef(crypto.randomUUID());
+  useEffect(() => { checkoutId.current = crypto.randomUUID(); }, [sale.id]);
+  const [doneNote, setDoneNote] = useState<NoteSource | null>(null);
+  const [noteOpen, setNoteOpen] = useState<NoteSource | null>(null);
   const [printChoice, setPrintChoiceState] = useState<"imprimir" | "nao">(
     () => readPreference("pdvPrint") ?? "imprimir",
   );
@@ -1160,44 +1166,28 @@ function FinishDialog({
   const missing = isCash && received.trim() !== "" && receivedValue < totals.total;
 
   async function confirm() {
-    if (saving || missing) return;
+    if (saving || (!later && missing)) return;
+    if (!later && !method) { toast.error("Escolha a forma de pagamento."); return; }
     setSaving(true);
-    const { data: paid, error } = await db
-      .from("payments")
-      .insert({
-        patient_id: sale.patientId,
-        amount: totals.total,
-        discount: totals.discount,
-        surcharge: totals.surcharge,
-        status: later ? "pendente" : "pago",
-        paid_at: later ? null : new Date().toISOString(),
-        payment_method: method || null,
+    let paid: { id: string };
+    try {
+      paid = await finishCashSale({ data: {
+        requestId: checkoutId.current,
+        sessionId: cashSessionId,
+        patientId: sale.patientId,
+        items: sale.items,
+        discount: sale.discount,
+        surcharge: sale.surcharge,
+        later,
+        method: method || null,
         installments: parseInstallments(method, installments),
-        description: saleDescription(sale.items),
-        cash_session_id: cashSessionId,
-      })
-      .select("id")
-      .single();
-    if (error || !paid) {
-      setSaving(false);
+      } });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "N?o foi poss?vel finalizar a venda. Tente novamente.");
       return;
+    } finally {
+      setSaving(false);
     }
-    // Lançamentos "a receber" desses orçamentos foram pagos agora: saem da lista.
-    for (const old of new Set(sale.items.map((i) => i.pendingPaymentId).filter(Boolean))) {
-      await db
-        .from("payments")
-        .delete()
-        .eq("id", old as string)
-        .eq("status", "pendente");
-    }
-    // Orçamentos puxados para o caixa ficam aprovados e ligados a este pagamento.
-    for (const budgetId of new Set(sale.items.map((i) => i.budgetId).filter(Boolean))) {
-      await db
-        .from("budgets")
-        .update({ payment_id: paid.id, status: "aprovado" })
-        .eq("id", budgetId as string);
-    }
-    setSaving(false);
     const receipt: Receipt = {
       kind: "venda",
       number: sale.number,
@@ -1218,12 +1208,31 @@ function FinishDialog({
     };
     if (printChoice === "imprimir") onPrint(receipt);
     setDoneChange(troco);
+    setDoneNote({
+      type: "data",
+      kind: later ? "orcamento" : "recibo",
+      id: paid.id,
+      patientId: sale.patientId,
+      patientName: patientName ?? "Cliente à vista",
+      items: sale.items,
+      discount: totals.discount,
+      surcharge: totals.surcharge,
+      method: method
+        ? paymentMethodLabel(method, parseInstallments(method, installments))
+            .replace(/\p{Extended_Pictographic}|\uFE0F/gu, "")
+            .trim()
+        : null,
+      installments: parseInstallments(method, installments),
+      received: !later,
+      date: new Date(),
+    });
     setDone(receipt);
     onDone();
   }
 
   return (
     <Dialog open={open} onOpenChange={(o) => !saving && onOpenChange(o)}>
+      <NoteDialog source={noteOpen} onClose={() => setNoteOpen(null)} />
       <DialogContent className="max-h-[92dvh] max-w-lg overflow-y-auto">
         {done ? (
           <div className="space-y-5 py-3 text-center animate-in zoom-in-95 duration-300">
@@ -1247,10 +1256,13 @@ function FinishDialog({
                 ? "Cupom não fiscal enviado para a impressora."
                 : "Cupom não impresso (opção Não imprimir)."}
             </p>
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid gap-2 sm:grid-cols-3">
               <Button variant="outline" onClick={() => onPrint(done)}>
                 <Printer className="h-4 w-4" />{" "}
-                {printChoice === "imprimir" ? "Imprimir de novo" : "Imprimir cupom"}
+                {printChoice === "imprimir" ? "Cupom de novo" : "Imprimir cupom"}
+              </Button>
+              <Button variant="outline" onClick={() => setNoteOpen(doneNote)} disabled={!doneNote}>
+                <FileText className="h-4 w-4" /> Nota A4 / PDF
               </Button>
               <Button onClick={() => onOpenChange(false)} autoFocus>
                 <Plus className="h-4 w-4" /> Próxima venda
