@@ -7,6 +7,7 @@ import {
   signOut,
   hasRole,
   updateEmail,
+  updateUsername,
   updatePassword,
   listAdmins,
   createAdmin,
@@ -36,7 +37,9 @@ export const db = {
   chat: { resume: () => resumeConversation() },
   auth: {
     getUser: () => getUser(),
-    signInWithPassword: (data: { email: string; password: string }) => signIn({ data }),
+    /** login = e-mail ou nome de usuário. */
+    signInWithPassword: (data: { login: string; password: string }) => signIn({ data }),
+    updateUsername: (data: { password: string; username: string }) => updateUsername({ data }),
     signOut: () => signOut(),
     updateEmail: (data: { password: string; newEmail: string }) => updateEmail({ data }),
     updatePassword: (data: { currentPassword: string; newPassword: string }) =>
@@ -46,7 +49,7 @@ export const db = {
   },
   admins: {
     list: () => listAdmins(),
-    create: (data: { email: string; password: string }) => createAdmin({ data }),
+    create: (data: { email: string; password: string; username?: string }) => createAdmin({ data }),
     remove: (data: { userId: string }) => removeAdmin({ data }),
   },
   aiGateway: {

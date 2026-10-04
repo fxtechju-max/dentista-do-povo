@@ -45,6 +45,16 @@ export type TutorialUpdate = {
 export const TUTORIAL_UPDATES: TutorialUpdate[] = [
   {
     date: "2026-10-04",
+    title: "Entrar com e-mail ou nome de usuário",
+    sections: ["primeiro-acesso", "configuracoes"],
+    items: [
+      "Na tela de entrar, o campo E-mail ou usuário aceita os dois; também dá para mostrar a senha digitada.",
+      "Cada administrador tem um nome de usuário — quem já tinha conta recebeu a parte do e-mail antes do @.",
+      "Troque o seu em Configurações › Segurança (pede a senha atual) e defina o de novos administradores ao criá-los.",
+    ],
+  },
+  {
+    date: "2026-10-04",
     title: "Agenda com tratamentos cadastrados",
     sections: ["agenda"],
     items: [
@@ -501,7 +511,11 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
       },
       {
         title: "Acessos seguintes",
-        text: "Entre com o email e a senha cadastrados. Você será levado ao painel com todos os módulos.",
+        text: "Em E-mail ou usuário, digite o seu e-mail OU o seu nome de usuário, depois a senha (o olho mostra a senha digitada). Você será levado ao painel com todos os módulos.",
+      },
+      {
+        title: "Seu nome de usuário",
+        text: "Em Configurações › Segurança, no quadro Nome de usuário para entrar, veja ou troque seu usuário (ex.: dr.alvaro) confirmando com a senha atual. Quem já tinha conta recebeu como usuário a parte do e-mail antes do @. Ao criar outro administrador, dá para definir o usuário dele também.",
       },
     ],
     tips: [

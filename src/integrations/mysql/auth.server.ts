@@ -18,11 +18,17 @@ export async function currentUser() {
   const token = getCookie(SESSION);
   if (!token || !/^[a-f0-9]{64}$/.test(token)) return null;
   const [rows] = await getPool().execute<RowDataPacket[]>(
-    "SELECT u.id, u.email FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>now()",
+    "SELECT u.id, u.email, u.username FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>now()",
     [digest(token)],
   );
   const row = rows[0];
-  return row ? { id: String(row["id"]), email: String(row["email"]) } : null;
+  return row
+    ? {
+        id: String(row["id"]),
+        email: String(row["email"]),
+        username: row["username"] ? String(row["username"]) : null,
+      }
+    : null;
 }
 
 export async function requestActor(): Promise<Actor> {

@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
+  AtSign,
   Check,
   Sparkles,
   User as UserIcon,
@@ -26,6 +27,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { db } from "@/integrations/mysql/client";
+import { normalizeUsername, usernameError } from "@/lib/username";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { EmptyState } from "@/components/admin/EmptyState";
 import { ADMIN_MODULES } from "@/lib/modules";
@@ -73,6 +75,11 @@ export const Route = createFileRoute("/admin/configuracoes")({
 function Configuracoes() {
   const [userId, setUserId] = useState<string | null>(null);
   const [email, setEmail] = useState("");
+  const [username, setUsername] = useState<string | null>(null);
+  const [newUsername, setNewUsername] = useState("");
+  const [usernamePassword, setUsernamePassword] = useState("");
+  const [usernameMsg, setUsernameMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [savingUsername, setSavingUsername] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const [clinicName, setClinicName] = useState("");
   const [phone, setPhone] = useState("");
@@ -109,11 +116,18 @@ function Configuracoes() {
   const [savingPassword, setSavingPassword] = useState(false);
   const [savedPassword, setSavedPassword] = useState(false);
 
-  type Admin = { id: string; email: string; created_at: string; display_name: string | null };
+  type Admin = {
+    id: string;
+    email: string;
+    username: string | null;
+    created_at: string;
+    display_name: string | null;
+  };
   const [admins, setAdmins] = useState<Admin[]>([]);
   const [adminsError, setAdminsError] = useState<string | null>(null);
   const [newAdminDialogOpen, setNewAdminDialogOpen] = useState(false);
   const [newAdminEmail, setNewAdminEmail] = useState("");
+  const [newAdminUsername, setNewAdminUsername] = useState("");
   const [newAdminPassword, setNewAdminPassword] = useState("");
   const [newAdminError, setNewAdminError] = useState<string | null>(null);
   const [creatingAdmin, setCreatingAdmin] = useState(false);
@@ -149,6 +163,8 @@ function Configuracoes() {
       if (userData.user) {
         setUserId(userData.user.id);
         setEmail(userData.user.email ?? "");
+        setUsername(userData.user.username ?? null);
+        setNewUsername(userData.user.username ?? "");
         const { data: profile } = await db
           .from("profiles")
           .select("display_name")
@@ -213,6 +229,22 @@ function Configuracoes() {
     setTimeout(() => setSavedProfile(false), 2000);
   }
 
+  async function changeUsername() {
+    setUsernameMsg(null);
+    const problem = usernameError(newUsername);
+    if (problem) return setUsernameMsg({ ok: false, text: problem });
+    if (!usernamePassword) return setUsernameMsg({ ok: false, text: "Confirme com sua senha." });
+    setSavingUsername(true);
+    const r = await db.auth.updateUsername({ password: usernamePassword, username: newUsername });
+    setSavingUsername(false);
+    if (r.error) return setUsernameMsg({ ok: false, text: r.error.message });
+    const saved = "username" in r && r.username ? r.username : normalizeUsername(newUsername);
+    setUsername(saved);
+    setNewUsername(saved);
+    setUsernamePassword("");
+    setUsernameMsg({ ok: true, text: `Pronto! Agora você também entra com o usuário “${saved}”.` });
+  }
+
   async function changeEmail() {
     setEmailError(null);
     if (!emailPassword.trim() || !newEmail.trim()) return;
@@ -267,6 +299,7 @@ function Configuracoes() {
     setCreatingAdmin(true);
     const { error } = await db.admins.create({
       email: newAdminEmail.trim(),
+      ...(newAdminUsername.trim() ? { username: newAdminUsername } : {}),
       password: newAdminPassword,
     });
     setCreatingAdmin(false);
@@ -275,6 +308,7 @@ function Configuracoes() {
       return;
     }
     setNewAdminEmail("");
+    setNewAdminUsername("");
     setNewAdminPassword("");
     setNewAdminDialogOpen(false);
     loadAdmins();
@@ -457,6 +491,69 @@ function Configuracoes() {
             <SectionHeader id="seguranca" />
             <div className="rounded-2xl border border-border bg-card p-6">
               <h2 className="flex items-center gap-2 font-bold">
+                <AtSign className="h-4 w-4 text-primary" /> Nome de usuário para entrar
+              </h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Na tela de entrar você pode usar o e-mail ({email}) ou o nome de usuário.
+                {username ? (
+                  <>
+                    {" "}
+                    Usuário atual: <b className="text-foreground">{username}</b>
+                  </>
+                ) : (
+                  " Você ainda não tem nome de usuário."
+                )}
+              </p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="new-username">Nome de usuário</Label>
+                  <Input
+                    id="new-username"
+                    value={newUsername}
+                    onChange={(e) => setNewUsername(e.target.value)}
+                    placeholder="ex.: dr.alvaro"
+                    autoCapitalize="none"
+                    spellCheck={false}
+                  />
+                  {newUsername.trim() && normalizeUsername(newUsername) !== newUsername.trim() && (
+                    <p className="text-[11px] text-muted-foreground">
+                      Vai ficar: <b>{normalizeUsername(newUsername)}</b>
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="username-password">Senha atual</Label>
+                  <Input
+                    id="username-password"
+                    type="password"
+                    value={usernamePassword}
+                    onChange={(e) => setUsernamePassword(e.target.value)}
+                    placeholder="Confirme sua senha"
+                  />
+                </div>
+              </div>
+              {usernameMsg && (
+                <p
+                  className={`mt-3 text-sm font-semibold ${usernameMsg.ok ? "text-emerald-600" : "text-destructive"}`}
+                >
+                  {usernameMsg.text}
+                </p>
+              )}
+              <p className="mt-2 text-[11px] text-muted-foreground">
+                De 3 a 30 caracteres: letras, números, ponto, hífen ou sublinhado (sem espaço e sem
+                @).
+              </p>
+              <Button
+                className="mt-3"
+                onClick={changeUsername}
+                disabled={!newUsername.trim() || !usernamePassword || savingUsername}
+              >
+                {savingUsername ? "Salvando..." : username ? "Alterar usuário" : "Criar usuário"}
+              </Button>
+            </div>
+
+            <div className="rounded-2xl border border-border bg-card p-6">
+              <h2 className="flex items-center gap-2 font-bold">
                 <Mail className="h-4 w-4 text-primary" /> Alterar email
               </h2>
               <p className="mt-1 text-xs text-muted-foreground">Email atual: {email}</p>
@@ -594,7 +691,9 @@ function Configuracoes() {
                       <div className="min-w-0">
                         <p className="truncate font-semibold">{a.display_name || a.email}</p>
                         <p className="truncate text-xs text-muted-foreground">
-                          {a.email} · desde {new Date(a.created_at).toLocaleDateString("pt-BR")}
+                          {a.email}
+                          {a.username ? ` · usuário ${a.username}` : ""} · desde{" "}
+                          {new Date(a.created_at).toLocaleDateString("pt-BR")}
                           {a.id === userId ? " · você" : ""}
                         </p>
                       </div>
@@ -1022,6 +1121,20 @@ function Configuracoes() {
                 onChange={(e) => setNewAdminEmail(e.target.value)}
                 placeholder="colega@dentistadopovo.com"
               />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="new-admin-username">Nome de usuário (opcional)</Label>
+              <Input
+                id="new-admin-username"
+                value={newAdminUsername}
+                onChange={(e) => setNewAdminUsername(e.target.value)}
+                placeholder="ex.: recepcao"
+                autoCapitalize="none"
+                spellCheck={false}
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Com ele, a pessoa pode entrar usando o usuário ou o e-mail.
+              </p>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="new-admin-password">Senha</Label>

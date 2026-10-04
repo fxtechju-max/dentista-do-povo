@@ -61,7 +61,13 @@ export const getUser = createServerFn({ method: "POST" }).handler(async () => {
 export const signIn = createServerFn({ method: "POST" })
   .validator((data: unknown) =>
     z
-      .object({ email: z.string().email().max(254), password: z.string().min(1).max(200) })
+      .object({
+        // "login" aceita e-mail ou nome de usuário; "email" fica por compatibilidade.
+        login: z.string().trim().min(1).max(254).optional(),
+        email: z.string().trim().min(1).max(254).optional(),
+        password: z.string().min(1).max(200),
+      })
+      .refine((d) => !!(d.login || d.email), "Informe o e-mail ou o usuário.")
       .parse(data),
   )
   .handler(async ({ data }) => {
@@ -69,17 +75,20 @@ export const signIn = createServerFn({ method: "POST" })
     const { rateLimit, createSession, digest } = await import("./auth.server");
     const { getRequest } = await import("@tanstack/react-start/server");
     const { compare } = await import("bcryptjs");
-    const email = data.email.trim().toLowerCase();
+    const login = (data.login ?? data.email ?? "").trim().toLowerCase();
+    const byEmail = login.includes("@");
     try {
-      await rateLimit(`login-email:${email}`, 10, 900);
+      await rateLimit(`login-email:${login}`, 10, 900);
       await rateLimit(
         `login-ip:${digest(getRequest().headers.get("x-vercel-forwarded-for") ?? "local")}`,
         50,
         900,
       );
       const [rows] = await getPool().execute<import("@/integrations/mysql/pool.server").Row[]>(
-        "SELECT id,password_hash FROM users WHERE email=?",
-        [email],
+        byEmail
+          ? "SELECT id,password_hash FROM users WHERE email=?"
+          : "SELECT id,password_hash FROM users WHERE lower(username)=?",
+        [login],
       );
       const row = rows[0];
       // Always perform a hash comparison, including unknown users.
@@ -90,7 +99,7 @@ export const signIn = createServerFn({ method: "POST" })
         ),
       );
       if (!valid || !row?.["password_hash"])
-        return { error: { message: "Email ou senha incorretos." } };
+        return { error: { message: "E-mail/usuário ou senha incorretos." } };
       await createSession(String(row["id"]));
       return { error: null };
     } catch {
@@ -134,6 +143,37 @@ export const updateEmail = createServerFn({ method: "POST" })
     return { error: null };
   });
 
+export const updateUsername = createServerFn({ method: "POST" })
+  .validator((data: unknown) =>
+    z.object({ password: z.string().min(1).max(200), username: z.string().max(60) }).parse(data),
+  )
+  .handler(async ({ data }) => {
+    const { getPool } = await import("./pool.server");
+    const { currentUser, rateLimit } = await import("./auth.server");
+    const { compare } = await import("bcryptjs");
+    const { normalizeUsername, usernameError } = await import("@/lib/username");
+    const user = await currentUser();
+    if (!user) return { error: { message: "Sessão expirada. Entre novamente." } };
+    await rateLimit(`account-update:${user.id}`, 10, 900);
+    const problem = usernameError(data.username);
+    if (problem) return { error: { message: problem } };
+    const username = normalizeUsername(data.username);
+    const pool = getPool();
+    const [rows] = await pool.execute<import("@/integrations/mysql/pool.server").Row[]>(
+      "SELECT password_hash FROM users WHERE id=?",
+      [user.id],
+    );
+    const valid = await compare(data.password, String(rows[0]?.["password_hash"] ?? ""));
+    if (!valid) return { error: { message: "Senha atual incorreta." } };
+    const [taken] = await pool.execute<import("@/integrations/mysql/pool.server").Row[]>(
+      "SELECT id FROM users WHERE lower(username)=? AND id<>?",
+      [username, user.id],
+    );
+    if (taken.length) return { error: { message: "Este nome de usuário já está em uso." } };
+    await pool.execute("UPDATE users SET username=? WHERE id=?", [username, user.id]);
+    return { error: null, username };
+  });
+
 export const updatePassword = createServerFn({ method: "POST" })
   .validator((data: unknown) =>
     z
@@ -171,12 +211,13 @@ export const listAdmins = createServerFn({ method: "POST" }).handler(async () =>
   const actor = await requestActor();
   if (!actor.admin) return { data: null, error: { message: "Acesso negado." } };
   const [rows] = await getPool().execute<import("@/integrations/mysql/pool.server").Row[]>(
-    "SELECT u.id, u.email, u.created_at, p.display_name FROM users u JOIN user_roles r ON r.user_id=u.id AND r.role='admin' LEFT JOIN profiles p ON p.id=u.id ORDER BY u.created_at",
+    "SELECT u.id, u.email, u.username, u.created_at, p.display_name FROM users u JOIN user_roles r ON r.user_id=u.id AND r.role='admin' LEFT JOIN profiles p ON p.id=u.id ORDER BY u.created_at",
   );
   return {
     data: rows.map((r) => ({
       id: String(r["id"]),
       email: String(r["email"]),
+      username: r["username"] ? String(r["username"]) : null,
       created_at: (r["created_at"] as Date).toISOString(),
       display_name: r["display_name"] ? String(r["display_name"]) : null,
     })),
@@ -187,13 +228,18 @@ export const listAdmins = createServerFn({ method: "POST" }).handler(async () =>
 export const createAdmin = createServerFn({ method: "POST" })
   .validator((data: unknown) =>
     z
-      .object({ email: z.string().email().max(254), password: z.string().min(12).max(72) })
+      .object({
+        email: z.string().email().max(254),
+        password: z.string().min(12).max(72),
+        username: z.string().max(60).optional(),
+      })
       .parse(data),
   )
   .handler(async ({ data }) => {
     const { getPool } = await import("./pool.server");
     const { requestActor } = await import("./auth.server");
     const { randomUUID } = await import("node:crypto");
+    const { normalizeUsername, usernameError } = await import("@/lib/username");
     const { hash } = await import("bcryptjs");
     const actor = await requestActor();
     if (!actor.admin) return { error: { message: "Acesso negado." } };
@@ -205,12 +251,24 @@ export const createAdmin = createServerFn({ method: "POST" })
       [email],
     );
     if (existing.length) return { error: { message: "Este email já está cadastrado." } };
+    let username: string | null = null;
+    if (data.username?.trim()) {
+      const problem = usernameError(data.username);
+      if (problem) return { error: { message: problem } };
+      username = normalizeUsername(data.username);
+      const [taken] = await pool.execute<import("@/integrations/mysql/pool.server").Row[]>(
+        "SELECT id FROM users WHERE lower(username)=?",
+        [username],
+      );
+      if (taken.length) return { error: { message: "Este nome de usuário já está em uso." } };
+    }
     const id = randomUUID();
     const passwordHash = await hash(data.password, 12);
-    await pool.execute("INSERT INTO users (id,email,password_hash) VALUES (?,?,?)", [
+    await pool.execute("INSERT INTO users (id,email,password_hash,username) VALUES (?,?,?,?)", [
       id,
       email,
       passwordHash,
+      username,
     ]);
     await pool.execute("INSERT INTO user_roles (id,user_id,role) VALUES (?,?,'admin')", [
       randomUUID(),

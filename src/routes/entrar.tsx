@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, Lock, UserRound } from "lucide-react";
 import { db } from "@/integrations/mysql/client";
 
 export const Route = createFileRoute("/entrar")({
@@ -19,6 +19,7 @@ function Entrar() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [firstAdmin, setFirstAdmin] = useState(false);
@@ -45,7 +46,7 @@ function Entrar() {
     try {
       const { error } = firstAdmin
         ? await db.auth.createFirstAdmin({ email, password })
-        : await db.auth.signInWithPassword({ email, password });
+        : await db.auth.signInWithPassword({ login: email.trim(), password });
       if (error) setError(error.message);
       else navigate({ to: "/admin" });
     } catch {
@@ -76,28 +77,58 @@ function Entrar() {
           </h1>
           <p className="mt-1 text-center text-sm text-muted-foreground">
             {firstAdmin
-              ? "Crie o email e a senha do administrador (mínimo 12 caracteres)"
+              ? "Crie o e-mail e a senha do administrador (mínimo 12 caracteres). O nome de usuário pode ser definido depois em Configurações › Perfil."
               : "Acesso da equipe ao painel de atendimento"}
           </p>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-3">
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Email"
-              className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring"
-            />
-            <input
-              type="password"
-              required
-              minLength={firstAdmin ? 12 : 6}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Senha"
-              className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring"
-            />
+            <div className="space-y-1.5">
+              <label htmlFor="login" className="text-sm font-semibold">
+                {firstAdmin ? "E-mail" : "E-mail ou usuário"}
+              </label>
+              <div className="relative">
+                <UserRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  id="login"
+                  type={firstAdmin ? "email" : "text"}
+                  required
+                  autoComplete="username"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder={firstAdmin ? "Email do administrador" : "Email ou nome de usuário"}
+                  className="w-full rounded-lg border border-input bg-background py-2.5 pl-9 pr-3 text-sm outline-none transition-shadow focus:ring-2 focus:ring-ring"
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label htmlFor="password" className="text-sm font-semibold">
+                Senha
+              </label>
+              <div className="relative">
+                <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  required
+                  minLength={firstAdmin ? 12 : 6}
+                  autoComplete={firstAdmin ? "new-password" : "current-password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Senha"
+                  className="w-full rounded-lg border border-input bg-background py-2.5 pl-9 pr-10 text-sm outline-none transition-shadow focus:ring-2 focus:ring-ring"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? "Esconder senha" : "Mostrar senha"}
+                  className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:bg-accent"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
             {error && <p className="text-sm font-semibold text-destructive">{error}</p>}
             <button
               type="submit"
