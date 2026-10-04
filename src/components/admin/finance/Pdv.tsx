@@ -15,6 +15,7 @@ import {
   Percent,
   Plus,
   Printer,
+  PrinterX,
   Search,
   ShoppingCart,
   Stethoscope,
@@ -35,6 +36,8 @@ import {
   useEnabledPaymentMethods,
 } from "@/lib/payment-methods";
 import { Calculator } from "@/components/admin/finance/Calculator";
+import { printHtml, receiptHtml, type ReceiptData } from "@/lib/receipt";
+import { readPreference, savePreference, subscribePreferences } from "@/lib/preferences";
 import { PdvBudgetPicker } from "@/components/admin/finance/PdvBudgetPicker";
 import { MoneyInput } from "@/components/admin/finance/FinanceUI";
 import { Button } from "@/components/ui/button";
@@ -59,18 +62,7 @@ type Sale = {
   discount: Adjust;
   surcharge: Adjust;
 };
-type Receipt = {
-  number: number;
-  patient: string;
-  items: CartItem[];
-  subtotal: number;
-  discount: number;
-  surcharge: number;
-  total: number;
-  method: string;
-  received: boolean;
-  date: Date;
-};
+type Receipt = ReceiptData;
 
 let seq = 0;
 const key = () => `k${Date.now()}${++seq}`;
@@ -288,39 +280,7 @@ export function Pdv({
   }
 
   function printReceipt(r: Receipt) {
-    const rows = r.items
-      .map(
-        (i) =>
-          `<tr><td>${qtyText(i.qty)}x ${esc(i.name)}${i.note ? `<br><small>${esc(i.note)}</small>` : ""}</td><td class="r">${formatCurrency(itemTotal(i))}</td></tr>`,
-      )
-      .join("");
-    const html = `<!doctype html><html><head><meta charset="utf-8"><title>Recibo</title><style>
-      body{font-family:Arial,sans-serif;width:300px;margin:0 auto;padding:16px;color:#111;font-size:13px}
-      h1{font-size:16px;margin:0;text-align:center}.c{text-align:center;color:#555;font-size:11px;margin:2px 0}
-      hr{border:0;border-top:1px dashed #999;margin:10px 0}table{width:100%;border-collapse:collapse}
-      td{padding:3px 0;vertical-align:top}.r{text-align:right;white-space:nowrap}.t{font-size:16px;font-weight:bold}
-      small{color:#666}</style></head><body>
-      <h1>${esc(clinic.name)}</h1>${clinic.address ? `<p class="c">${esc(clinic.address)}</p>` : ""}${clinic.phone ? `<p class="c">${esc(clinic.phone)}</p>` : ""}
-      <hr><p><b>${r.received ? "RECIBO" : "COMPROVANTE (A RECEBER)"}</b> · Venda ${pad(r.number)}<br>${r.date.toLocaleString("pt-BR")}<br>Cliente: ${esc(r.patient)}</p><hr>
-      <table>${rows}</table><hr><table>
-      <tr><td>Subtotal</td><td class="r">${formatCurrency(r.subtotal)}</td></tr>
-      ${r.discount ? `<tr><td>Desconto</td><td class="r">− ${formatCurrency(r.discount)}</td></tr>` : ""}
-      ${r.surcharge ? `<tr><td>Acréscimo</td><td class="r">+ ${formatCurrency(r.surcharge)}</td></tr>` : ""}
-      <tr class="t"><td>Total</td><td class="r">${formatCurrency(r.total)}</td></tr>
-      <tr><td>Forma</td><td class="r">${esc(r.method)}</td></tr></table>
-      <hr><p class="c">Obrigado pela preferência!</p></body></html>`;
-    const frame = document.createElement("iframe");
-    frame.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0";
-    document.body.appendChild(frame);
-    const doc = frame.contentWindow!.document;
-    doc.open();
-    doc.write(html);
-    doc.close();
-    setTimeout(() => {
-      frame.contentWindow!.focus();
-      frame.contentWindow!.print();
-      setTimeout(() => frame.remove(), 1000);
-    }, 150);
+    printHtml(receiptHtml(r, clinic));
   }
 
   function printCurrent() {
@@ -329,6 +289,7 @@ export function Pdv({
       return;
     }
     printReceipt({
+      kind: "conferencia",
       number: sale.number,
       patient: patient?.name ?? "Cliente à vista",
       items: sale.items,
@@ -336,7 +297,6 @@ export function Pdv({
       discount: totals.discount,
       surcharge: totals.surcharge,
       total: totals.total,
-      method: "A definir",
       received: false,
       date: new Date(),
     });
@@ -1169,6 +1129,19 @@ function FinishDialog({
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState<Receipt | null>(null);
   const [doneChange, setDoneChange] = useState(0);
+  const [printChoice, setPrintChoiceState] = useState<"imprimir" | "nao">(
+    () => readPreference("pdvPrint") ?? "imprimir",
+  );
+  // A preferência pode chegar depois que a tela montou: sincroniza ao abrir.
+  useEffect(() => {
+    const sync = () => setPrintChoiceState(readPreference("pdvPrint") ?? "imprimir");
+    sync();
+    return subscribePreferences(sync);
+  }, [open]);
+  function setPrintChoice(v: "imprimir" | "nao") {
+    setPrintChoiceState(v);
+    void savePreference({ key: "pdvPrint", value: v });
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -1226,6 +1199,7 @@ function FinishDialog({
     }
     setSaving(false);
     const receipt: Receipt = {
+      kind: "venda",
       number: sale.number,
       patient: patientName ?? "Cliente à vista",
       items: sale.items,
@@ -1236,9 +1210,13 @@ function FinishDialog({
       method: method
         ? paymentMethodLabel(method, parseInstallments(method, installments))
         : "Não informada",
+      installments: parseInstallments(method, installments),
+      cashReceived: isCash && !later && receivedValue > 0 ? receivedValue : undefined,
+      change: troco || undefined,
       received: !later,
       date: new Date(),
     };
+    if (printChoice === "imprimir") onPrint(receipt);
     setDoneChange(troco);
     setDone(receipt);
     onDone();
@@ -1264,9 +1242,15 @@ function FinishDialog({
                 </p>
               )}
             </div>
+            <p className="text-xs text-muted-foreground">
+              {printChoice === "imprimir"
+                ? "Cupom não fiscal enviado para a impressora."
+                : "Cupom não impresso (opção Não imprimir)."}
+            </p>
             <div className="grid gap-2 sm:grid-cols-2">
               <Button variant="outline" onClick={() => onPrint(done)}>
-                <Printer className="h-4 w-4" /> Imprimir recibo
+                <Printer className="h-4 w-4" />{" "}
+                {printChoice === "imprimir" ? "Imprimir de novo" : "Imprimir cupom"}
               </Button>
               <Button onClick={() => onOpenChange(false)} autoFocus>
                 <Plus className="h-4 w-4" /> Próxima venda
@@ -1360,6 +1344,33 @@ function FinishDialog({
                 </span>
               </span>
             </label>
+            <div className="space-y-1.5">
+              <Label>Cupom não fiscal</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {(
+                  [
+                    ["imprimir", "Imprimir cupom", Printer],
+                    ["nao", "Não imprimir", PrinterX],
+                  ] as const
+                ).map(([id, label, Icon]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setPrintChoice(id)}
+                    aria-pressed={printChoice === id}
+                    className={`flex items-center justify-center gap-2 rounded-xl border-2 px-3 py-2.5 text-sm font-bold transition-all ${
+                      printChoice === id
+                        ? id === "imprimir"
+                          ? "border-sky-500 bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300"
+                          : "border-slate-400 bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                        : "border-border text-muted-foreground hover:bg-accent"
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" /> {label}
+                  </button>
+                ))}
+              </div>
+            </div>
             <DialogFooter className="gap-2">
               <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
                 Voltar

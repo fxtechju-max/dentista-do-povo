@@ -9,6 +9,10 @@ const preference = z.discriminatedUnion("key", [
   z.object({ key: z.literal("adminZoom"), value: z.number().int().min(80).max(150) }),
   z.object({ key: z.literal("publicZoom"), value: z.number().int().min(80).max(150) }),
   z.object({
+    key: z.literal("pdvPrint"),
+    value: z.enum(["imprimir", "nao"]),
+  }),
+  z.object({
     key: z.literal("pdvLayout"),
     value: z.enum(["largo", "centro", "compacto"]),
   }),
@@ -32,24 +36,34 @@ export type Preference = z.infer<typeof preference>;
 // Todos leem; só administradores alteram.
 const OWNER = "clinic";
 
+/**
+ * Lê uma preferência salva. Registros antigos guardavam o JSON como texto
+ * dentro do jsonb ("{\"mode\":...}"); valores de texto simples ("nao",
+ * "centro") também chegam como string. Tenta o texto decodificado e, se não
+ * servir, o próprio texto.
+ */
+export function parsePreferenceRow(key: unknown, raw: unknown): Preference[] {
+  const candidates: unknown[] = [raw];
+  if (typeof raw === "string") {
+    try {
+      candidates.unshift(JSON.parse(raw));
+    } catch {
+      // texto simples: fica só o próprio valor
+    }
+  }
+  for (const value of candidates) {
+    const parsed = preference.safeParse({ key, value });
+    if (parsed.success) return [parsed.data];
+  }
+  return [];
+}
+
 export const getPreferences = createServerFn({ method: "POST" }).handler(async () => {
   const { getPool } = await import("@/integrations/mysql/pool.server");
   const [rows] = await getPool().execute("SELECT key,value FROM preferences WHERE owner=?", [
     OWNER,
   ]);
-  return rows.flatMap((row) => {
-    // Registros antigos foram gravados como texto JSON dentro do jsonb; aceita os dois.
-    let value = row["value"];
-    if (typeof value === "string") {
-      try {
-        value = JSON.parse(value);
-      } catch {
-        return [];
-      }
-    }
-    const parsed = preference.safeParse({ key: row["key"], value });
-    return parsed.success ? [parsed.data] : [];
-  });
+  return rows.flatMap((row) => parsePreferenceRow(row["key"], row["value"]));
 });
 
 export const setPreference = createServerFn({ method: "POST" })

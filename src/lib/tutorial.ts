@@ -45,6 +45,17 @@ export type TutorialUpdate = {
 export const TUTORIAL_UPDATES: TutorialUpdate[] = [
   {
     date: "2026-10-03",
+    title: "Cupom não fiscal no Caixa",
+    sections: ["financeiro"],
+    items: [
+      "Comprovante no formato de cupom não fiscal (bobina térmica 80 mm), com itens, quantidades, desconto, total, forma de pagamento, valor recebido e troco.",
+      "Ao finalizar a venda: escolha Imprimir cupom ou Não imprimir — a escolha fica salva para as próximas vendas.",
+      "Imprimir (F8) com o carrinho aberto sai como Conferência de venda (não vale como comprovante).",
+      "Correção: as escolhas do caixa (largura e impressão) agora continuam salvas depois de recarregar a página.",
+    ],
+  },
+  {
+    date: "2026-10-03",
     title: "Orçamento indo certo para o Caixa",
     sections: ["orcamentos", "financeiro"],
     items: [
@@ -925,7 +936,7 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
       },
       {
         title: "Caixa: finalize",
-        text: "Finalizar venda (F2): escolha a forma de pagamento (e parcelas). Em dinheiro, digite o valor recebido para ver o troco. Marque Fica a receber se o paciente vai pagar depois. Ao concluir, dá para imprimir o recibo; a venda entra em Lançamentos com os itens vendidos.",
+        text: "Finalizar venda (F2): escolha a forma de pagamento (e parcelas). Em dinheiro, digite o valor recebido para ver o troco. Marque Fica a receber se o paciente vai pagar depois. Em Cupom não fiscal, escolha Imprimir cupom ou Não imprimir (a escolha fica salva). O cupom sai no formato de bobina 80 mm, com itens, desconto, total, forma de pagamento e troco. Depois de concluir ainda dá para imprimir de novo. A venda entra em Lançamentos com os itens vendidos.",
       },
       {
         title: "Calculadora",
