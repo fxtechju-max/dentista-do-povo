@@ -11,6 +11,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
+  CheckCircle2,
+  Sparkles,
 } from "lucide-react";
 import {
   addDays,
@@ -28,6 +30,11 @@ import {
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { db } from "@/integrations/mysql/client";
+import {
+  AppointmentDialog,
+  type AgendaTreatment,
+} from "@/components/admin/agenda/AppointmentDialog";
+import { STATUS_STYLE } from "@/lib/agenda-status";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { EmptyState } from "@/components/admin/EmptyState";
 import {
@@ -88,25 +95,6 @@ type Appointment = {
 
 type Patient = { id: string; name: string };
 
-function toDatetimeLocal(iso: string) {
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
-function dayKey(iso: string) {
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T09:00`;
-}
-
-const emptyForm = {
-  patient_id: "",
-  treatment: "",
-  scheduled_at: "",
-  status: "agendado" as AppointmentStatus,
-};
-
 function Agenda() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -119,19 +107,26 @@ function Agenda() {
   const [navDirection, setNavDirection] = useState<1 | -1>(1);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Appointment | null>(null);
-  const [form, setForm] = useState(emptyForm);
-  const [saving, setSaving] = useState(false);
+  const [prefill, setPrefill] = useState<Date | null>(null);
+  const [treatments, setTreatments] = useState<AgendaTreatment[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<Appointment | null>(null);
 
   async function load() {
     setLoading(true);
-    const [{ data: appointmentsData }, { data: patientsData }] = await Promise.all([
-      db
-        .from("appointments")
-        .select("id, patient_id, treatment, scheduled_at, status, patients(name)")
-        .order("scheduled_at", { ascending: false }),
-      db.from("patients").select("id, name").order("name"),
-    ]);
+    const [{ data: appointmentsData }, { data: patientsData }, { data: treatmentsData }] =
+      await Promise.all([
+        db
+          .from("appointments")
+          .select("id, patient_id, treatment, scheduled_at, status, patients(name)")
+          .order("scheduled_at", { ascending: false }),
+        db.from("patients").select("id, name").order("name"),
+        db
+          .from("treatments")
+          .select("id, name, price, duration_minutes, description")
+          .eq("active", true)
+          .order("name"),
+      ]);
+    setTreatments((treatmentsData ?? []) as AgendaTreatment[]);
     setAppointments((appointmentsData ?? []) as unknown as Appointment[]);
     setPatients((patientsData ?? []) as Patient[]);
     setLoading(false);
@@ -204,6 +199,55 @@ function Agenda() {
 
   const dayAppointments = useMemo(() => appointmentsForDay(anchor), [anchor, appointmentsForDay]);
 
+  const stats = useMemo(() => {
+    const now = new Date();
+    const week = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const active = appointments.filter((a) => a.status !== "cancelado");
+    return [
+      {
+        label: "Consultas hoje",
+        value: active.filter((a) => isToday(new Date(a.scheduled_at))).length,
+        icon: CalendarDays,
+        tone: "bg-primary/10 text-primary",
+        onClick: () => {
+          setAnchor(new Date());
+          setCalendarView("dia");
+        },
+      },
+      {
+        label: "Próximos 7 dias",
+        value: active.filter((a) => {
+          const d = new Date(a.scheduled_at);
+          return d >= now && d <= week;
+        }).length,
+        icon: Clock,
+        tone: "bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300",
+        onClick: () => {
+          setAnchor(new Date());
+          setCalendarView("semana");
+        },
+      },
+      {
+        label: "Confirmadas",
+        value: appointments.filter(
+          (a) => a.status === "confirmado" && new Date(a.scheduled_at) >= now,
+        ).length,
+        icon: CheckCircle2,
+        tone: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
+        onClick: undefined,
+      },
+      {
+        label: "Concluídas no mês",
+        value: appointments.filter(
+          (a) => a.status === "concluido" && isSameMonth(new Date(a.scheduled_at), now),
+        ).length,
+        icon: Sparkles,
+        tone: "bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300",
+        onClick: undefined,
+      },
+    ];
+  }, [appointments]);
+
   function navigate(direction: 1 | -1) {
     setNavDirection(direction);
     setAnchor((d) => {
@@ -215,38 +259,13 @@ function Agenda() {
 
   function openCreate(prefillIso?: string) {
     setEditing(null);
-    setForm(prefillIso ? { ...emptyForm, scheduled_at: dayKey(prefillIso) } : emptyForm);
+    setPrefill(prefillIso ? new Date(prefillIso) : null);
     setDialogOpen(true);
   }
 
   function openEdit(a: Appointment) {
     setEditing(a);
-    setForm({
-      patient_id: a.patient_id,
-      treatment: a.treatment,
-      scheduled_at: toDatetimeLocal(a.scheduled_at),
-      status: a.status,
-    });
     setDialogOpen(true);
-  }
-
-  async function save() {
-    if (!form.patient_id || !form.treatment.trim() || !form.scheduled_at) return;
-    setSaving(true);
-    const payload = {
-      patient_id: form.patient_id,
-      treatment: form.treatment.trim(),
-      scheduled_at: new Date(form.scheduled_at).toISOString(),
-      status: form.status,
-    };
-    if (editing) {
-      await db.from("appointments").update(payload).eq("id", editing.id);
-    } else {
-      await db.from("appointments").insert(payload);
-    }
-    setSaving(false);
-    setDialogOpen(false);
-    load();
   }
 
   async function remove() {
@@ -273,6 +292,35 @@ function Agenda() {
           Cadastre um paciente antes de marcar uma consulta.
         </p>
       )}
+
+      <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {stats.map((k, i) => (
+          <button
+            key={k.label}
+            type="button"
+            onClick={k.onClick}
+            style={{ animationDelay: `${i * 70}ms` }}
+            className="group flex items-center gap-3 rounded-2xl border border-border bg-card p-4 text-left shadow-sm transition-all duration-200 animate-in fade-in slide-in-from-bottom-3 fill-mode-both hover:-translate-y-0.5 hover:shadow-md"
+          >
+            <span
+              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110 ${k.tone}`}
+            >
+              <k.icon className="h-5 w-5" />
+            </span>
+            <span>
+              <span
+                key={k.value}
+                className="block text-2xl font-extrabold leading-none tabular-nums animate-in zoom-in-50 duration-500"
+              >
+                {k.value}
+              </span>
+              <span className="mt-1 block text-xs font-semibold text-muted-foreground">
+                {k.label}
+              </span>
+            </span>
+          </button>
+        ))}
+      </div>
 
       <Tabs defaultValue="calendario" className="mt-4">
         <TabsList>
@@ -431,11 +479,7 @@ function Agenda() {
                         {visible.map((a) => (
                           <span
                             key={a.id}
-                            className={`block truncate rounded px-1 py-0.5 text-[10px] font-semibold ${
-                              STATUS_VARIANT[a.status] === "destructive"
-                                ? "bg-destructive/10 text-destructive"
-                                : "bg-primary/10 text-primary"
-                            }`}
+                            className={`block truncate rounded px-1 py-0.5 text-[10px] font-semibold transition-transform hover:scale-[1.02] ${STATUS_STYLE[a.status].chip}`}
                           >
                             {format(new Date(a.scheduled_at), "HH:mm")} {a.patients?.name ?? "—"}
                           </span>
@@ -516,8 +560,11 @@ function Agenda() {
                             key={a.id}
                             onClick={() => openEdit(a)}
                             style={{ animationDelay: `${i * 40 + ai * 60}ms` }}
-                            className="animate-in fade-in w-full rounded-lg border border-border bg-background p-2 text-left text-xs fill-mode-both transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-accent hover:shadow-sm"
+                            className="animate-in fade-in relative w-full overflow-hidden rounded-lg border border-border bg-background p-2 pl-3 text-left text-xs fill-mode-both transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-accent hover:shadow-sm"
                           >
+                            <span
+                              className={`absolute inset-y-0 left-0 w-1 ${STATUS_STYLE[a.status].dot}`}
+                            />
                             <span className="flex items-center gap-1 font-bold text-foreground">
                               <Clock className="h-3 w-3 text-primary" />
                               {format(new Date(a.scheduled_at), "HH:mm")}
@@ -555,8 +602,11 @@ function Agenda() {
                   <div
                     key={a.id}
                     style={{ animationDelay: `${ai * 50}ms` }}
-                    className="animate-in fade-in slide-in-from-bottom-2 flex items-center gap-4 rounded-2xl border border-border bg-card p-4 fill-mode-both transition-shadow hover:shadow-md"
+                    className="animate-in fade-in slide-in-from-bottom-2 relative flex items-center gap-4 overflow-hidden rounded-2xl border border-border bg-card p-4 pl-5 fill-mode-both transition-all hover:-translate-y-0.5 hover:shadow-md"
                   >
+                    <span
+                      className={`absolute inset-y-0 left-0 w-1.5 ${STATUS_STYLE[a.status].dot}`}
+                    />
                     <div className="flex w-16 shrink-0 flex-col items-center justify-center rounded-xl bg-primary/10 py-2 text-primary">
                       <Clock className="h-4 w-4" />
                       <span className="text-sm font-extrabold">
@@ -710,82 +760,16 @@ function Agenda() {
         </TabsContent>
       </Tabs>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editing ? "Editar consulta" : "Nova consulta"}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label>Paciente</Label>
-              <Select
-                value={form.patient_id}
-                onValueChange={(patient_id) => setForm((f) => ({ ...f, patient_id }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o paciente" />
-                </SelectTrigger>
-                <SelectContent>
-                  {patients.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="a-treatment">Tratamento</Label>
-              <Input
-                id="a-treatment"
-                value={form.treatment}
-                onChange={(e) => setForm((f) => ({ ...f, treatment: e.target.value }))}
-                placeholder="Ex: Limpeza, Avaliação..."
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="a-date">Data e hora</Label>
-              <Input
-                id="a-date"
-                type="datetime-local"
-                value={form.scheduled_at}
-                onChange={(e) => setForm((f) => ({ ...f, scheduled_at: e.target.value }))}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Status</Label>
-              <Select
-                value={form.status}
-                onValueChange={(status) =>
-                  setForm((f) => ({ ...f, status: status as AppointmentStatus }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(STATUS_LABEL).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button
-              onClick={save}
-              disabled={!form.patient_id || !form.treatment.trim() || !form.scheduled_at || saving}
-            >
-              {saving ? "Salvando..." : "Salvar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AppointmentDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        editing={editing}
+        prefillDate={prefill}
+        patients={patients}
+        treatments={treatments}
+        appointments={appointments}
+        onSaved={load}
+      />
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>

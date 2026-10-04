@@ -44,6 +44,16 @@ export type TutorialUpdate = {
 // Mais recente primeiro.
 export const TUTORIAL_UPDATES: TutorialUpdate[] = [
   {
+    date: "2026-10-04",
+    title: "Agenda com tratamentos cadastrados",
+    sections: ["agenda"],
+    items: [
+      "Nova consulta com todos os tratamentos cadastrados para selecionar — um ou vários, com busca, duração e valor.",
+      "Horários rápidos de 07:00 às 18:00, com os já ocupados riscados e término previsto.",
+      "Indicadores animados no topo e consultas coloridas pela situação no calendário.",
+    ],
+  },
+  {
     date: "2026-10-03",
     title: "Nota grande A4, PDF e cupom do orçamento",
     sections: ["orcamentos", "financeiro"],
@@ -586,7 +596,15 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
     steps: [
       {
         title: "Nova consulta",
-        text: "Clique em Nova consulta, selecione o paciente, informe o tratamento (ex.: Limpeza), a data/hora e o status.",
+        text: "Clique em Nova consulta. Busque o paciente pelo nome e, na lista de Tratamentos cadastrados, toque nos tratamentos da consulta (pode ser mais de um — use a busca para achar rápido). Para algo fora do catálogo, use o campo Outro. A janela mostra a duração estimada e o valor de tabela.",
+      },
+      {
+        title: "Dia e horário",
+        text: "Escolha o dia e toque num horário rápido (07:00 às 18:00) ou digite. Horários riscados já estão ocupados naquele dia; se escolher um ocupado, aparece um aviso. O término previsto é calculado pela duração dos tratamentos. Escolha a situação (Agendado, Confirmado, Concluído, Cancelado) e clique em Marcar consulta.",
+      },
+      {
+        title: "Indicadores e cores",
+        text: "No topo: Consultas hoje, Próximos 7 dias, Confirmadas e Concluídas no mês (clique em Hoje ou Próximos 7 dias para abrir o calendário). Cada consulta tem a cor da sua situação: azul agendado, verde confirmado, roxo concluído, vermelho cancelado.",
       },
       {
         title: "Visualize",
