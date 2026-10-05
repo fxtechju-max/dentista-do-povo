@@ -45,6 +45,16 @@ export type TutorialUpdate = {
 export const TUTORIAL_UPDATES: TutorialUpdate[] = [
   {
     date: "2026-10-04",
+    title: "Agenda mostra todos os tratamentos cadastrados",
+    sections: ["agenda"],
+    items: [
+      "Na Nova consulta, a lista de tratamentos agora traz tudo o que está cadastrado: ativos, inativos e os Serviços do site.",
+      "Primeiro vêm os tratamentos ativos, depois os serviços do site e por último os inativos, cada um com sua etiqueta.",
+      "Use os botões Todos, Ativos, Inativos e Serviços do site (com a quantidade de cada) para filtrar.",
+    ],
+  },
+  {
+    date: "2026-10-04",
     title: "Entrar com e-mail ou nome de usuário",
     sections: ["primeiro-acesso", "configuracoes"],
     items: [
@@ -621,7 +631,7 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
     steps: [
       {
         title: "Nova consulta",
-        text: "Clique em Nova consulta. Busque o paciente pelo nome e, na lista de Tratamentos cadastrados, toque nos tratamentos da consulta (pode ser mais de um — use a busca para achar rápido). Para algo fora do catálogo, use o campo Outro. A janela mostra a duração estimada e o valor de tabela.",
+        text: "Clique em Nova consulta. Busque o paciente pelo nome e, na lista de Tratamentos cadastrados, toque nos tratamentos da consulta (pode ser mais de um — use a busca para achar rápido). A lista traz tudo o que está cadastrado na plataforma: tratamentos ativos, inativos (com a etiqueta Inativo) e os Serviços do site; use os botões Todos, Ativos, Inativos e Serviços do site para filtrar. Para algo fora do catálogo, use o campo Outro. A janela mostra a duração estimada e o valor de tabela.",
       },
       {
         title: "Dia e horário",

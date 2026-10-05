@@ -23,13 +23,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 
-export type AgendaTreatment = {
-  id: string;
-  name: string;
-  price: number | string | null;
-  duration_minutes: number | null;
-  description: string | null;
-};
+export type { AgendaTreatment } from "@/lib/agenda-treatments";
+import type { AgendaTreatment } from "@/lib/agenda-treatments";
+
 export type AgendaAppointment = {
   id: string;
   patient_id: string;
@@ -77,6 +73,7 @@ export function AppointmentDialog({
   const [selected, setSelected] = useState<string[]>([]);
   const [custom, setCustom] = useState("");
   const [query, setQuery] = useState("");
+  const [kind, setKind] = useState<"todos" | "ativos" | "inativos" | "servicos">("todos");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [status, setStatus] = useState<AppointmentStatus>("agendado");
@@ -85,6 +82,7 @@ export function AppointmentDialog({
   useEffect(() => {
     if (!open) return;
     setQuery("");
+    setKind("todos");
     setPatientQuery("");
     setPatientOpen(false);
     if (editing) {
@@ -119,10 +117,23 @@ export function AppointmentDialog({
 
   const results = useMemo(() => {
     const words = normalizeName(query).split(" ").filter(Boolean);
-    return treatments.filter((t) =>
-      words.every((w) => normalizeName(`${t.name} ${t.description ?? ""}`).includes(w)),
-    );
-  }, [treatments, query]);
+    return treatments.filter((t) => {
+      if (kind === "ativos" && (t.source === "servico" || t.active === false)) return false;
+      if (kind === "inativos" && (t.source === "servico" || t.active !== false)) return false;
+      if (kind === "servicos" && t.source !== "servico") return false;
+      return words.every((w) => normalizeName(`${t.name} ${t.description ?? ""}`).includes(w));
+    });
+  }, [treatments, query, kind]);
+
+  const counts = useMemo(
+    () => ({
+      todos: treatments.length,
+      ativos: treatments.filter((t) => t.source !== "servico" && t.active !== false).length,
+      inativos: treatments.filter((t) => t.source !== "servico" && t.active === false).length,
+      servicos: treatments.filter((t) => t.source === "servico").length,
+    }),
+    [treatments],
+  );
 
   const chosen = treatments.filter((t) => selected.includes(t.name));
   const duration = chosen.reduce((s, t) => s + (t.duration_minutes ?? 0), 0);
@@ -223,6 +234,32 @@ export function AppointmentDialog({
                   aria-label="Buscar tratamento"
                 />
               </div>
+              <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filtrar tratamentos">
+                {(
+                  [
+                    ["todos", "Todos"],
+                    ["ativos", "Ativos"],
+                    ["inativos", "Inativos"],
+                    ["servicos", "Serviços do site"],
+                  ] as const
+                )
+                  .filter(([k]) => k === "todos" || counts[k] > 0)
+                  .map(([k, label]) => (
+                    <button
+                      key={k}
+                      type="button"
+                      onClick={() => setKind(k)}
+                      aria-pressed={kind === k}
+                      className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
+                        kind === k
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border bg-background text-muted-foreground hover:bg-accent"
+                      }`}
+                    >
+                      {label} <span className="opacity-70">{counts[k]}</span>
+                    </button>
+                  ))}
+              </div>
             </div>
             <ul className="grid flex-1 grid-cols-1 content-start gap-2 overflow-y-auto px-4 pb-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
               {results.map((t, i) => {
@@ -254,6 +291,17 @@ export function AppointmentDialog({
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block text-sm font-semibold leading-snug">{t.name}</span>
+                        {(t.source === "servico" || t.active === false) && (
+                          <span
+                            className={`mt-1 inline-block rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                              t.source === "servico"
+                                ? "bg-sky-500/15 text-sky-700 dark:text-sky-300"
+                                : "bg-muted text-muted-foreground"
+                            }`}
+                          >
+                            {t.source === "servico" ? "Serviço do site" : "Inativo"}
+                          </span>
+                        )}
                         <span className="mt-1 flex flex-wrap items-center gap-x-2 text-[11px] text-muted-foreground">
                           {t.duration_minutes ? (
                             <span className="inline-flex items-center gap-0.5">

@@ -34,6 +34,7 @@ import {
   AppointmentDialog,
   type AgendaTreatment,
 } from "@/components/admin/agenda/AppointmentDialog";
+import { mergeAgendaTreatments } from "@/lib/agenda-treatments";
 import { STATUS_STYLE } from "@/lib/agenda-status";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { EmptyState } from "@/components/admin/EmptyState";
@@ -113,20 +114,29 @@ function Agenda() {
 
   async function load() {
     setLoading(true);
-    const [{ data: appointmentsData }, { data: patientsData }, { data: treatmentsData }] =
-      await Promise.all([
-        db
-          .from("appointments")
-          .select("id, patient_id, treatment, scheduled_at, status, patients(name)")
-          .order("scheduled_at", { ascending: false }),
-        db.from("patients").select("id, name").order("name"),
-        db
-          .from("treatments")
-          .select("id, name, price, duration_minutes, description")
-          .eq("active", true)
-          .order("name"),
-      ]);
-    setTreatments((treatmentsData ?? []) as AgendaTreatment[]);
+    const [
+      { data: appointmentsData },
+      { data: patientsData },
+      { data: treatmentsData },
+      { data: servicesData },
+    ] = await Promise.all([
+      db
+        .from("appointments")
+        .select("id, patient_id, treatment, scheduled_at, status, patients(name)")
+        .order("scheduled_at", { ascending: false }),
+      db.from("patients").select("id, name").order("name"),
+      db
+        .from("treatments")
+        .select("id, name, price, duration_minutes, description, active")
+        .order("name"),
+      db.from("services").select("id, name, price, description, active").order("name"),
+    ]);
+    setTreatments(
+      mergeAgendaTreatments(
+        (treatmentsData ?? []) as AgendaTreatment[],
+        (servicesData ?? []) as AgendaTreatment[],
+      ),
+    );
     setAppointments((appointmentsData ?? []) as unknown as Appointment[]);
     setPatients((patientsData ?? []) as Patient[]);
     setLoading(false);
