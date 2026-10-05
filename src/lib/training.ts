@@ -249,8 +249,8 @@ export const TRAININGS: Training[] = [
           {
             id: "caixa",
             title: "Ou cobre direto no Caixa (PDV)",
-            text: "Pagamento na hora, sem orçamento? No Financeiro › Caixa (PDV), abra o caixa do dia (se ainda estiver fechado), busque “Restauração”, escolha a Ana como cliente, clique em Finalizar venda (F2), escolha a forma e confirme. Em dinheiro, informe o valor recebido para ver o troco.",
-            to: "/admin/financeiro",
+            text: "Pagamento na hora, sem orçamento? No módulo Caixa, abra o caixa do dia (se ainda estiver fechado), busque “Restauração”, escolha a Ana como cliente, clique em Finalizar venda (F2), escolha a forma e confirme. Em dinheiro, informe o valor recebido para ver o troco.",
+            to: "/admin/caixa",
             toLabel: "Abrir o Caixa",
             check:
               "Aparece “Venda concluída” e a venda entra em Lançamentos com os itens vendidos.",
@@ -427,10 +427,10 @@ export const TRAININGS: Training[] = [
           },
           {
             id: "financeiro",
-            title: "Envie ao Financeiro",
+            title: "Receba no Caixa",
             text: "No orçamento aprovado, clique em Finalizar no Caixa: a recepção recebe ali mesmo (à vista, parcelado, com desconto ou acréscimo). Se o paciente vai pagar depois, use ⋯ › Lançar no Financeiro (a receber).",
-            to: "/admin/financeiro",
-            toLabel: "Abrir Financeiro",
+            to: "/admin/caixa",
+            toLabel: "Abrir Caixa",
           },
         ],
       },

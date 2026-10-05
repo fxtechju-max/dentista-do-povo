@@ -124,9 +124,15 @@ export function CaixaTab({
       className={`mx-auto w-full scroll-mt-20 space-y-4 transition-[max-width] duration-500 ease-out ${current.width}`}
     >
       {error ? (
-        <p className="rounded-2xl border border-destructive/30 bg-destructive/5 p-6 text-center text-sm text-destructive">
-          {error}
-        </p>
+        <div
+          role="alert"
+          className="space-y-3 rounded-2xl border border-destructive/30 bg-destructive/5 p-6 text-center text-sm text-destructive"
+        >
+          <p>{error}</p>
+          <Button variant="outline" onClick={() => void refresh()}>
+            Tentar novamente
+          </Button>
+        </div>
       ) : !status ? (
         <div className="h-72 animate-pulse rounded-3xl border border-border bg-card" />
       ) : status.open && status.summary ? (

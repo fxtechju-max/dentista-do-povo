@@ -64,6 +64,17 @@ export const TUTORIAL_UPDATES: TutorialUpdate[] = [
     ],
   },
   {
+    date: "2026-10-04",
+    title: "Módulo Caixa com acesso próprio",
+    sections: ["caixa", "financeiro", "orcamentos"],
+    items: [
+      "Abra o módulo Caixa pelo painel ou pelo menu para vender, registrar sangrias e suprimentos e fechar o dia.",
+      "Finalizar no Caixa, em Orçamentos, leva diretamente ao novo módulo. Se estiver fechado, abra o caixa para continuar.",
+      "A venda e os orçamentos são salvos juntos. Uma tentativa repetida após falha de conexão não gera outra cobrança.",
+      "O Financeiro agora abre em Lançamentos para consultar os pagamentos; a aba Caixa (PDV) continua disponível.",
+    ],
+  },
+  {
     date: "2026-10-03",
     title: "Nota grande A4, PDF e cupom do orçamento",
     sections: ["orcamentos", "financeiro"],
@@ -942,12 +953,50 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
     ],
   },
   {
+    id: "caixa",
+    group: "financeiro",
+    emoji: "💵",
+    title: "Caixa",
+    to: "/admin/caixa",
+    summary: "Da abertura ao fechamento: vendas, troco e conferência do dinheiro.",
+    steps: [
+      {
+        title: "Abra o caixa",
+        text: "No painel ou menu, entre em Caixa. Clique em Abrir caixa do dia e informe o fundo de troco. Um caixa já aberto aparece para toda a equipe.",
+      },
+      {
+        title: "Monte a venda",
+        text: "Escolha o paciente, busque os tratamentos e ajuste quantidades e valores. Use Puxar orçamento (F10) ou Finalizar no Caixa em Orçamentos para trazer uma proposta existente.",
+      },
+      {
+        title: "Receba",
+        text: "Clique em Finalizar venda (F2), escolha a forma de pagamento e as parcelas. Em dinheiro, informe o recebido para conferir o troco. Fica a receber registra uma pendência. Escolha se deseja imprimir o cupom.",
+      },
+      {
+        title: "Confira o lançamento",
+        text: "Depois da confirmação, use Ver lançamentos para abrir o Financeiro. O pagamento fica ligado aos orçamentos cobrados, sem duplicar o valor a receber que já existia.",
+      },
+      {
+        title: "Registre movimentos",
+        text: "Use Sangria para retirar dinheiro e Suprimento para colocar troco. Informe o valor e o motivo; confira o saldo na barra do caixa.",
+      },
+      {
+        title: "Feche o dia",
+        text: "Clique em Fechar caixa, confira os totais por forma de pagamento e informe o dinheiro contado. Confira a sobra ou falta antes de confirmar. Imprima o relatório e consulte os últimos fechamentos na tela de caixa fechado.",
+      },
+    ],
+    tips: [
+      "Se a venda não for confirmada, confira o aviso antes de tentar novamente. Um caixa fechado em outro computador não aceita novas vendas.",
+      "Ajustar tela muda a largura do caixa. As opções de impressão continuam salvas.",
+    ],
+  },
+  {
     id: "financeiro",
     group: "financeiro",
     emoji: "💰",
     title: "Financeiro",
     to: "/admin/financeiro",
-    summary: "Caixa (PDV) para cobrar na hora, pagamentos e recebimentos dos pacientes.",
+    summary: "Lançamentos, pagamentos e recebimentos dos pacientes, integrado ao módulo Caixa.",
     steps: [
       {
         title: "Emita a nota (A4, PDF ou cupom)",
@@ -975,7 +1024,7 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
       },
       {
         title: "Caixa (PDV): monte a venda",
-        text: "O Financeiro abre na aba Caixa (PDV). Busque o tratamento e aperte Enter (ou clique). Ajuste a quantidade (aceita 1,5), use Observação ou Alterar preço no item e escolha o paciente em Cliente à vista. Nova venda abre outra venda ao mesmo tempo (Venda 01, 02...).",
+        text: "Abra o módulo Caixa ou a aba Caixa (PDV) do Financeiro. Busque o tratamento e aperte Enter (ou clique). Ajuste a quantidade (aceita 1,5), use Observação ou Alterar preço no item e escolha o paciente em Cliente à vista. Nova venda abre outra venda ao mesmo tempo (Venda 01, 02...).",
       },
       {
         title: "Caixa: desconto, acréscimo, orçamento e recibo",

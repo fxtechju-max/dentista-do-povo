@@ -31,21 +31,40 @@ function Caixa() {
       setLoading(false);
     }
   }, []);
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   return (
     <div className="animate-in fade-in space-y-5 duration-300">
-      <PageHeader title="💵 Caixa" description="Abra o caixa, receba os tratamentos e confira o fechamento do dia." action={
-        <Button asChild variant="outline"><Link to="/admin/financeiro"><Receipt /> Ver lançamentos</Link></Button>
-      } />
-      {error ? <div role="alert" className="space-y-3 rounded-xl border border-destructive/30 p-6">
-        <p className="text-destructive">{error}</p><Button onClick={load}>Tentar novamente</Button>
-      </div> : loading ? <p role="status">Carregando pacientes...</p> : <CaixaTab
-        patients={patients}
-        onSale={() => {}}
-        budgetId={orcamento ?? null}
-        onBudgetHandled={() => { if (orcamento) void navigate({ to: "/admin/caixa", search: {}, replace: true }); }}
-      />}
+      <PageHeader
+        title="💵 Caixa"
+        description="Abra o caixa, receba os tratamentos e confira o fechamento do dia."
+        action={
+          <Button asChild variant="outline">
+            <Link to="/admin/financeiro">
+              <Receipt /> Ver lançamentos
+            </Link>
+          </Button>
+        }
+      />
+      {error ? (
+        <div role="alert" className="space-y-3 rounded-xl border border-destructive/30 p-6">
+          <p className="text-destructive">{error}</p>
+          <Button onClick={load}>Tentar novamente</Button>
+        </div>
+      ) : loading ? (
+        <p role="status">Carregando pacientes...</p>
+      ) : (
+        <CaixaTab
+          patients={patients}
+          onSale={() => {}}
+          budgetId={orcamento ?? null}
+          onBudgetHandled={() => {
+            if (orcamento) void navigate({ to: "/admin/caixa", search: {}, replace: true });
+          }}
+        />
+      )}
     </div>
   );
 }

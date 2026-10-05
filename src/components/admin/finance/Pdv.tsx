@@ -1132,7 +1132,9 @@ function FinishDialog({
   const [done, setDone] = useState<Receipt | null>(null);
   const [doneChange, setDoneChange] = useState(0);
   const checkoutId = useRef(crypto.randomUUID());
-  useEffect(() => { checkoutId.current = crypto.randomUUID(); }, [sale.id]);
+  useEffect(() => {
+    checkoutId.current = crypto.randomUUID();
+  }, [sale.id]);
   const [doneNote, setDoneNote] = useState<NoteSource | null>(null);
   const [noteOpen, setNoteOpen] = useState<NoteSource | null>(null);
   const [printChoice, setPrintChoiceState] = useState<"imprimir" | "nao">(
@@ -1167,23 +1169,32 @@ function FinishDialog({
 
   async function confirm() {
     if (saving || (!later && missing)) return;
-    if (!later && !method) { toast.error("Escolha a forma de pagamento."); return; }
+    if (!later && !method) {
+      toast.error("Escolha a forma de pagamento.");
+      return;
+    }
     setSaving(true);
     let paid: { id: string };
     try {
-      paid = await finishCashSale({ data: {
-        requestId: checkoutId.current,
-        sessionId: cashSessionId,
-        patientId: sale.patientId,
-        items: sale.items,
-        discount: sale.discount,
-        surcharge: sale.surcharge,
-        later,
-        method: method || null,
-        installments: parseInstallments(method, installments),
-      } });
+      paid = await finishCashSale({
+        data: {
+          requestId: checkoutId.current,
+          sessionId: cashSessionId,
+          patientId: sale.patientId,
+          items: sale.items,
+          discount: sale.discount,
+          surcharge: sale.surcharge,
+          later,
+          method: method || null,
+          installments: parseInstallments(method, installments),
+        },
+      });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "N?o foi poss?vel finalizar a venda. Tente novamente.");
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível finalizar a venda. Tente novamente.",
+      );
       return;
     } finally {
       setSaving(false);
@@ -1389,7 +1400,7 @@ function FinishDialog({
               </Button>
               <Button
                 onClick={confirm}
-                disabled={saving || missing}
+                disabled={saving || (!later && (missing || !method))}
                 className="min-w-44 bg-emerald-600 text-white hover:bg-emerald-700"
               >
                 <Check className="h-4 w-4" />
